@@ -772,15 +772,31 @@ export default function App() {
   const loadUserData = async (userId) => {
     setAppLoading(true);
     try {
-      // Load profile
-      const { data: prof, error: profError } = await supabase
-        .from("profiles").select("*").eq("id", userId).single();
-      if (profError || !prof) throw new Error("Profile not found");
+      // Load profile — retry up to 3 times to handle RLS propagation delay
+      let prof = null;
+      let profError = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const result = await supabase
+          .from("profiles").select("*").eq("id", userId).single();
+        prof = result.data;
+        profError = result.error;
+        if (prof) break;
+        // Wait 1 second before retrying
+        await new Promise(r => setTimeout(r, 1000));
+      }
+
+      if (!prof) {
+        console.error("Profile not found after retries:", profError);
+        showToast("Hindi mahanap ang profile. Subukan muli.", "error");
+        setAppLoading(false);
+        return;
+      }
       setProfile(prof);
 
       // Load business
-      const { data: biz } = await supabase
+      const { data: biz, error: bizError } = await supabase
         .from("businesses").select("*").eq("id", prof.business_id).single();
+      if (bizError) console.error("Business load error:", bizError);
       setBusiness(biz);
 
       // Load branch if staff
@@ -791,8 +807,7 @@ export default function App() {
       }
     } catch (err) {
       console.error("Error loading user data:", err);
-      showToast("May error sa pag-load ng account. Mag-login muli.", "error");
-      await supabase.auth.signOut();
+      showToast("May error sa pag-load ng account. Subukan muli.", "error");
     } finally {
       setAppLoading(false);
     }
