@@ -1270,7 +1270,7 @@ export default function App() {
       }
 
       // Check if super admin
-      const { data: sa } = await supabase.from("super_admins").select("id").eq("user_id", userId).single();
+      const { data: sa } = await supabase.from("super_admins").select("id").eq("user_id", userId).maybeSingle();
       setIsSuperAdmin(!!sa);
 
     } catch (err) {
