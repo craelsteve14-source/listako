@@ -1470,28 +1470,27 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       const { error: itemsError } = await supabase.from("transaction_items").insert(items);
       if (itemsError) throw itemsError;
 
-      // Deduct stock from products
+      // Deduct stock from products — non-blocking, errors ignored
       for (const item of cart) {
-        await supabase.rpc("decrement_stock", {
-          p_product_id: item.product_id,
-          p_quantity: item.quantity
-        }).catch(() => {
-          // Fallback if RPC not available
-          supabase.from("products")
+        try {
+          const { data: prod } = await supabase
+            .from("products")
             .select("stock_quantity")
             .eq("id", item.product_id)
-            .single()
-            .then(({ data }) => {
-              if (data) {
-                supabase.from("products")
-                  .update({ stock_quantity: Math.max(0, data.stock_quantity - item.quantity) })
-                  .eq("id", item.product_id);
-              }
-            });
-        });
+            .single();
+          if (prod) {
+            await supabase
+              .from("products")
+              .update({ stock_quantity: Math.max(0, prod.stock_quantity - item.quantity) })
+              .eq("id", item.product_id);
+          }
+        } catch (stockErr) {
+          // Stock deduction failure should not block receipt
+          console.warn("Stock deduction skipped:", stockErr);
+        }
       }
 
-      // Show receipt
+      // Show receipt — always show this even if stock deduction had issues
       setReceiptItems(cart.map(i => ({ ...i })));
       setReceipt(txn);
       setCart([]);
@@ -1499,8 +1498,8 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       setCheckoutMode(false);
 
     } catch (err) {
-      showToast("Transaction failed. Please try again.", "error");
-      console.error(err);
+      showToast("Transaction failed: " + (err?.message || "Unknown error"), "error");
+      console.error("Checkout error:", err);
     } finally {
       setProcessing(false);
     }
