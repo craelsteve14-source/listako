@@ -1616,7 +1616,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
         } catch (stockErr) {
           console.warn("Stock deduction skipped:", stockErr);
         }
-      }
+      
 
       // Show receipt
       setReceiptItems(cart.map(i => ({ ...i })));
