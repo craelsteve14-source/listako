@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 // ─── Supabase Client ───────────────────────────────────────────────────────────
@@ -1179,23 +1179,641 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast, 
   );
 }
 
-// ─── Staff Dashboard ───────────────────────────────────────────────────────────
-function StaffDashboard({ profile, business, branch, onLogout }) {
+// ─── PHASE 2: POS SYSTEM ──────────────────────────────────────────────────────
+
+// ── Barcode Scanner ──
+function BarcodeScanner({ onDetected, onClose }) {
+  const videoRef = useRef(null);
+  const [error, setError] = useState(null);
+  const [scanning, setScanning] = useState(false);
+
+  useEffect(() => {
+    let stream = null;
+    let interval = null;
+
+    const startCamera = async () => {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play();
+          setScanning(true);
+        }
+      } catch (err) {
+        setError("Hindi ma-access ang camera. Siguraduhing binigyan mo ng permiso ang app.");
+      }
+    };
+
+    startCamera();
+
+    return () => {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      if (interval) clearInterval(interval);
+    };
+  }, []);
+
+  // Manual barcode input fallback
+  const [manualCode, setManualCode] = useState("");
+  const handleManual = () => {
+    if (manualCode.trim()) { onDetected(manualCode.trim()); setManualCode(""); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black z-50 flex flex-col">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-4 bg-black bg-opacity-80">
+        <button onClick={onClose} className="text-white text-sm font-medium px-3 py-2 bg-white bg-opacity-10 rounded-xl">✕ Close</button>
+        <p className="text-white text-sm font-semibold">Scan Barcode</p>
+        <div className="w-16"></div>
+      </div>
+
+      {/* Camera view */}
+      <div className="flex-1 relative flex items-center justify-center overflow-hidden">
+        {error ? (
+          <div className="text-center px-6">
+            <p className="text-white text-sm mb-4">{error}</p>
+          </div>
+        ) : (
+          <>
+            <video ref={videoRef} className="w-full h-full object-cover" playsInline muted />
+            {/* Targeting overlay */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="relative w-64 h-40">
+                <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-green-400 rounded-tl-lg"></div>
+                <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-green-400 rounded-tr-lg"></div>
+                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-green-400 rounded-bl-lg"></div>
+                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-green-400 rounded-br-lg"></div>
+                <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-green-400 opacity-60 animate-pulse"></div>
+              </div>
+            </div>
+            <div className="absolute bottom-32 left-0 right-0 text-center">
+              <p className="text-white text-xs opacity-60">Point camera at the barcode</p>
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Manual input fallback */}
+      <div className="bg-black bg-opacity-90 px-4 py-4">
+        <p className="text-gray-400 text-xs text-center mb-3 font-medium uppercase tracking-wide">Or type barcode manually</p>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={manualCode}
+            onChange={e => setManualCode(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && handleManual()}
+            placeholder="Enter barcode number..."
+            className="flex-1 bg-white bg-opacity-10 text-white border border-white border-opacity-20 rounded-xl px-4 py-3 text-sm placeholder-gray-500 focus:outline-none focus:border-green-400"
+          />
+          <button onClick={handleManual} className="bg-green-600 text-white px-4 py-3 rounded-xl font-bold text-sm">Search</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Receipt View ──
+function ReceiptView({ transaction, items, business, branch, cashier, onClose, onNewTransaction }) {
+  const formatDate = (d) => new Date(d).toLocaleString("en-PH", {
+    month: "short", day: "numeric", year: "numeric",
+    hour: "numeric", minute: "2-digit", hour12: true
+  });
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 px-4">
+      <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl">
+        {/* Receipt header */}
+        <div className="bg-green-700 px-5 py-5 text-center">
+          <p className="text-green-200 text-xs font-medium uppercase tracking-widest mb-1">Official Receipt</p>
+          <h2 className="text-white font-black text-lg">{business?.name}</h2>
+          <p className="text-green-300 text-xs mt-1">{branch?.name || ""}</p>
+        </div>
+
+        {/* Receipt body */}
+        <div className="px-5 py-4">
+          <div className="flex justify-between text-xs text-gray-400 mb-3">
+            <span>{transaction?.receipt_number}</span>
+            <span>{formatDate(transaction?.created_at || new Date())}</span>
+          </div>
+          <div className="border-t border-dashed border-gray-200 mb-3"></div>
+
+          {/* Items */}
+          <div className="space-y-2 mb-3">
+            {items.map((item, i) => (
+              <div key={i} className="flex justify-between text-sm">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-800 truncate">{item.product_name}</p>
+                  <p className="text-xs text-gray-400">₱{Number(item.unit_price).toFixed(2)} × {item.quantity}</p>
+                </div>
+                <p className="font-semibold text-gray-800 ml-2">₱{Number(item.subtotal).toFixed(2)}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="border-t border-dashed border-gray-200 mb-3"></div>
+
+          {/* Totals */}
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Subtotal</span>
+              <span className="font-medium text-gray-800">₱{Number(transaction?.total_amount).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Cash Tendered</span>
+              <span className="font-medium text-gray-800">₱{Number(transaction?.amount_tendered).toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-base font-black">
+              <span className="text-gray-800">Change</span>
+              <span className="text-green-700">₱{Number(transaction?.change_amount).toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="border-t border-dashed border-gray-200 mt-3 mb-3"></div>
+
+          <div className="text-center">
+            <p className="text-xs text-gray-400">Cashier: {cashier?.full_name}</p>
+            <p className="text-xs text-gray-300 mt-1">Powered by ListaKo</p>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="px-5 pb-5 flex gap-3">
+          <button onClick={onClose} className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm">Close</button>
+          <button onClick={onNewTransaction} className="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl text-sm">New Sale</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Cashier POS Dashboard ──
+function CashierPOS({ profile, business, branch, onLogout, showToast }) {
+  const [posTab, setPosTab] = useState("pos"); // pos | history
+  const [cart, setCart] = useState([]);
+  const [scanning, setScanning] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [checkoutMode, setCheckoutMode] = useState(false);
+  const [amountTendered, setAmountTendered] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [processing, setProcessing] = useState(false);
+  const [receipt, setReceipt] = useState(null);
+  const [receiptItems, setReceiptItems] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
+  const change = Math.max(0, Number(amountTendered) - total);
+  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+  // Search products
+  useEffect(() => {
+    if (!searchQuery.trim()) { setSearchResults([]); return; }
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      const { data } = await supabase
+        .from("products")
+        .select("*")
+        .eq("business_id", business.id)
+        .ilike("name", `%${searchQuery}%`)
+        .limit(8);
+      setSearchResults(data || []);
+      setSearching(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, business.id]);
+
+  // Search by barcode
+  const handleBarcode = async (code) => {
+    setScanning(false);
+    const { data } = await supabase
+      .from("products")
+      .select("*")
+      .eq("business_id", business.id)
+      .eq("barcode", code)
+      .single();
+    if (!data) return showToast("Product not found. Try searching by name.", "error");
+    addToCart(data);
+    showToast(`${data.name} added to cart!`, "success");
+  };
+
+  // Add to cart
+  const addToCart = (product) => {
+    setCart(prev => {
+      const existing = prev.find(i => i.product_id === product.id);
+      if (existing) {
+        return prev.map(i => i.product_id === product.id
+          ? { ...i, quantity: i.quantity + 1, subtotal: (i.quantity + 1) * i.unit_price }
+          : i
+        );
+      }
+      return [...prev, {
+        product_id: product.id,
+        product_name: product.name,
+        unit_price: Number(product.price),
+        quantity: 1,
+        subtotal: Number(product.price),
+        stock: product.stock_quantity,
+      }];
+    });
+    setSearchQuery("");
+    setSearchResults([]);
+  };
+
+  // Update quantity
+  const updateQty = (productId, delta) => {
+    setCart(prev => prev
+      .map(i => i.product_id === productId
+        ? { ...i, quantity: i.quantity + delta, subtotal: (i.quantity + delta) * i.unit_price }
+        : i
+      )
+      .filter(i => i.quantity > 0)
+    );
+  };
+
+  // Process checkout
+  const processCheckout = async () => {
+    if (cart.length === 0) return showToast("Cart is empty.", "error");
+    if (paymentMethod === "cash" && (!amountTendered || Number(amountTendered) < total)) {
+      return showToast("Amount tendered is less than the total.", "error");
+    }
+    setProcessing(true);
+    try {
+      // Create transaction
+      const { data: txn, error: txnError } = await supabase
+        .from("transactions")
+        .insert({
+          business_id: business.id,
+          branch_id: branch?.id || null,
+          cashier_id: profile.id,
+          total_amount: total,
+          payment_method: paymentMethod,
+          amount_tendered: paymentMethod === "cash" ? Number(amountTendered) : total,
+          change_amount: paymentMethod === "cash" ? change : 0,
+          status: "completed",
+        })
+        .select()
+        .single();
+      if (txnError) throw txnError;
+
+      // Create transaction items
+      const items = cart.map(item => ({
+        transaction_id: txn.id,
+        product_id: item.product_id,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        subtotal: item.subtotal,
+      }));
+      const { error: itemsError } = await supabase.from("transaction_items").insert(items);
+      if (itemsError) throw itemsError;
+
+      // Deduct stock from products
+      for (const item of cart) {
+        await supabase.rpc("decrement_stock", {
+          p_product_id: item.product_id,
+          p_quantity: item.quantity
+        }).catch(() => {
+          // Fallback if RPC not available
+          supabase.from("products")
+            .select("stock_quantity")
+            .eq("id", item.product_id)
+            .single()
+            .then(({ data }) => {
+              if (data) {
+                supabase.from("products")
+                  .update({ stock_quantity: Math.max(0, data.stock_quantity - item.quantity) })
+                  .eq("id", item.product_id);
+              }
+            });
+        });
+      }
+
+      // Show receipt
+      setReceiptItems(cart.map(i => ({ ...i })));
+      setReceipt(txn);
+      setCart([]);
+      setAmountTendered("");
+      setCheckoutMode(false);
+
+    } catch (err) {
+      showToast("Transaction failed. Please try again.", "error");
+      console.error(err);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Load transaction history
+  const loadHistory = async () => {
+    setLoadingHistory(true);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const { data } = await supabase
+      .from("transactions")
+      .select("*, transaction_items(*, products(name))")
+      .eq("cashier_id", profile.id)
+      .gte("created_at", today.toISOString())
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setHistory(data || []);
+    setLoadingHistory(false);
+  };
+
+  useEffect(() => {
+    if (posTab === "history") loadHistory();
+  }, [posTab]);
+
+  const PAYMENT_METHODS = [
+    { key: "cash", label: "Cash" },
+    { key: "gcash", label: "GCash" },
+    { key: "maya", label: "Maya" },
+    { key: "card", label: "Card" },
+    { key: "utang", label: "Utang" },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col max-w-lg mx-auto">
+      {/* Header */}
+      <div className="bg-green-700 px-4 pt-5 pb-4 flex-shrink-0">
+        <div className="flex items-center justify-between mb-1">
+          <div>
+            <p className="text-green-200 text-xs font-medium uppercase tracking-widest">Cashier</p>
+            <h1 className="text-white font-black text-lg leading-tight">{business.name}</h1>
+          </div>
+          <button onClick={onLogout} className="bg-green-800 bg-opacity-50 text-green-100 text-xs px-3 py-2 rounded-xl font-medium">Logout</button>
+        </div>
+        <p className="text-green-300 text-xs">{branch?.name || "No branch"} · {profile.full_name}</p>
+      </div>
+
+      {/* Tab bar */}
+      <div className="bg-green-800 flex px-4 gap-1 flex-shrink-0">
+        {[{ key: "pos", label: "Point of Sale" }, { key: "history", label: "Today's Sales" }].map(t => (
+          <button key={t.key} onClick={() => setPosTab(t.key)}
+            className={`flex-1 py-2.5 text-xs font-semibold rounded-t-lg transition-colors ${posTab === t.key ? "bg-gray-50 text-green-700" : "text-green-300"}`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* POS Tab */}
+      {posTab === "pos" && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Search bar */}
+          <div className="px-4 py-3 bg-white border-b border-gray-100 flex gap-2 flex-shrink-0">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search product by name..."
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 pr-8"
+              />
+              {searching && <div className="absolute right-3 top-3 w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>}
+            </div>
+            <button onClick={() => setScanning(true)} className="bg-green-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm">
+              📷 Scan
+            </button>
+          </div>
+
+          {/* Search results dropdown */}
+          {searchResults.length > 0 && (
+            <div className="mx-4 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-10 flex-shrink-0">
+              {searchResults.map(p => (
+                <button key={p.id} onClick={() => addToCart(p)}
+                  className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-gray-50 border-b border-gray-50 last:border-0 active:bg-green-50">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">{p.name}</p>
+                    <p className="text-xs text-gray-400">Stock: {p.stock_quantity}</p>
+                  </div>
+                  <span className="text-sm font-black text-green-700">₱{Number(p.price).toFixed(2)}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Cart */}
+          <div className="flex-1 overflow-y-auto px-4 py-3">
+            {cart.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                    <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="#16a34a" strokeWidth="1.5" strokeLinejoin="round"/>
+                    <line x1="3" y1="6" x2="21" y2="6" stroke="#16a34a" strokeWidth="1.5"/>
+                    <path d="M16 10a4 4 0 01-8 0" stroke="#16a34a" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                </div>
+                <p className="font-semibold text-gray-500 text-sm">Cart is empty</p>
+                <p className="text-xs text-gray-400 mt-1">Scan a barcode or search a product to start</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {cart.map((item) => (
+                  <div key={item.product_id} className="bg-white rounded-xl p-3 flex items-center gap-3 border border-gray-100 shadow-sm">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 text-sm truncate">{item.product_name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">₱{item.unit_price.toFixed(2)} each</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button onClick={() => updateQty(item.product_id, -1)}
+                        className="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 font-bold text-base flex items-center justify-center active:bg-gray-200">−</button>
+                      <span className="text-sm font-black text-gray-800 w-5 text-center">{item.quantity}</span>
+                      <button onClick={() => updateQty(item.product_id, 1)}
+                        className="w-7 h-7 rounded-lg bg-green-100 text-green-700 font-bold text-base flex items-center justify-center active:bg-green-200">+</button>
+                    </div>
+                    <p className="text-sm font-black text-green-700 w-16 text-right">₱{item.subtotal.toFixed(2)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Checkout bar */}
+          {cart.length > 0 && !checkoutMode && (
+            <div className="px-4 py-3 bg-white border-t border-gray-100 flex-shrink-0">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm text-gray-500">{itemCount} item{itemCount !== 1 ? "s" : ""}</p>
+                <p className="text-xl font-black text-gray-800">₱{total.toFixed(2)}</p>
+              </div>
+              <button onClick={() => setCheckoutMode(true)}
+                className="w-full bg-green-600 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-transform">
+                Proceed to Checkout →
+              </button>
+            </div>
+          )}
+
+          {/* Checkout mode */}
+          {checkoutMode && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-40">
+              <div className="bg-white w-full rounded-t-3xl p-5 max-h-screen overflow-y-auto">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-black text-gray-800 text-lg">Checkout</h3>
+                  <button onClick={() => setCheckoutMode(false)} className="text-gray-400 text-xl">✕</button>
+                </div>
+
+                {/* Order summary */}
+                <div className="bg-gray-50 rounded-2xl p-4 mb-4">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Order Summary</p>
+                  {cart.map(item => (
+                    <div key={item.product_id} className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-600">{item.product_name} × {item.quantity}</span>
+                      <span className="font-semibold text-gray-800">₱{item.subtotal.toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="border-t border-gray-200 mt-2 pt-2 flex justify-between">
+                    <span className="font-black text-gray-800">Total</span>
+                    <span className="font-black text-green-700 text-lg">₱{total.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                {/* Payment method */}
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Payment Method</p>
+                <div className="flex gap-2 mb-4 flex-wrap">
+                  {PAYMENT_METHODS.map(m => (
+                    <button key={m.key} onClick={() => setPaymentMethod(m.key)}
+                      className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${paymentMethod === m.key ? "bg-green-600 text-white border-green-600" : "bg-white text-gray-600 border-gray-200"}`}>
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Cash tendered */}
+                {paymentMethod === "cash" && (
+                  <div className="mb-4">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Cash Tendered</p>
+                    <input
+                      type="number"
+                      value={amountTendered}
+                      onChange={e => setAmountTendered(e.target.value)}
+                      placeholder="Enter amount..."
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    {amountTendered && Number(amountTendered) >= total && (
+                      <div className="mt-2 bg-green-50 rounded-xl px-4 py-3 flex justify-between">
+                        <span className="font-semibold text-green-700">Change</span>
+                        <span className="font-black text-green-700 text-lg">₱{change.toFixed(2)}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Quick cash buttons */}
+                {paymentMethod === "cash" && (
+                  <div className="flex gap-2 mb-4 flex-wrap">
+                    {[Math.ceil(total / 50) * 50, Math.ceil(total / 100) * 100, Math.ceil(total / 500) * 500, 1000].map(amt => (
+                      <button key={amt} onClick={() => setAmountTendered(String(amt))}
+                        className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium">
+                        ₱{amt}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  onClick={processCheckout}
+                  disabled={processing || (paymentMethod === "cash" && (!amountTendered || Number(amountTendered) < total))}
+                  className="w-full bg-green-600 text-white font-black py-4 rounded-2xl text-lg disabled:opacity-50 active:scale-95 transition-transform">
+                  {processing ? "Processing..." : `Confirm Payment · ₱${total.toFixed(2)}`}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* History Tab */}
+      {posTab === "history" && (
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+          {loadingHistory ? (
+            <div className="flex justify-center py-8">
+              <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : history.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-3xl mb-2">🧾</p>
+              <p className="font-semibold text-gray-500 text-sm">No transactions today</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex justify-between items-center mb-1">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Today's Transactions</p>
+                <p className="text-xs font-bold text-green-700">
+                  ₱{history.reduce((s, t) => s + Number(t.total_amount), 0).toFixed(2)} total
+                </p>
+              </div>
+              {history.map(txn => (
+                <div key={txn.id} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="text-xs font-mono text-gray-400">{txn.receipt_number}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {new Date(txn.created_at).toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit", hour12: true })}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-black text-green-700">₱{Number(txn.total_amount).toFixed(2)}</p>
+                      <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-medium capitalize">{txn.payment_method}</span>
+                    </div>
+                  </div>
+                  {txn.transaction_items && txn.transaction_items.length > 0 && (
+                    <div className="text-xs text-gray-400 space-y-0.5">
+                      {txn.transaction_items.map((item, i) => (
+                        <p key={i}>{item.products?.name || "Product"} × {item.quantity}</p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Barcode scanner overlay */}
+      {scanning && <BarcodeScanner onDetected={handleBarcode} onClose={() => setScanning(false)} />}
+
+      {/* Receipt overlay */}
+      {receipt && (
+        <ReceiptView
+          transaction={receipt}
+          items={receiptItems}
+          business={business}
+          branch={branch}
+          cashier={profile}
+          onClose={() => setReceipt(null)}
+          onNewTransaction={() => { setReceipt(null); setPosTab("pos"); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Staff Dashboard (Branch Manager / Inventory Staff) ────────────────────────
+function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
+  if (profile.role === "cashier") {
+    return <CashierPOS profile={profile} business={business} branch={branch} onLogout={onLogout} showToast={showToast} />;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm text-center">
-        <div className="w-20 h-20 bg-green-100 rounded-3xl flex items-center justify-center mx-auto mb-4 text-4xl">
-          {profile.role === "cashier" ? "🧾" : profile.role === "inventory_staff" ? "📦" : "🏪"}
+        <div className="w-20 h-20 bg-green-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="#16a34a" strokeWidth="1.5" strokeLinejoin="round"/>
+            <polyline points="9 22 9 12 15 12 15 22" stroke="#16a34a" strokeWidth="1.5" strokeLinejoin="round"/>
+          </svg>
         </div>
         <h1 className="text-2xl font-black text-gray-800">{business.name}</h1>
-        <p className="text-gray-500 text-sm mt-1">{branch?.name || "Walang branch"}</p>
+        <p className="text-gray-500 text-sm mt-1">{branch?.name || "No branch"}</p>
         <span className={`inline-block mt-2 text-xs px-3 py-1 rounded-full font-semibold ${ROLE_COLORS[profile.role]}`}>
           {ROLE_LABELS[profile.role]}
         </span>
         <div className="mt-8 bg-white rounded-2xl border border-gray-100 p-5 text-left space-y-3 shadow-sm">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Impormasyon</p>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Information</p>
           <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Pangalan</span>
+            <span className="text-gray-500">Name</span>
             <span className="font-semibold text-gray-800">{profile.full_name}</span>
           </div>
           <div className="flex justify-between text-sm">
@@ -1208,10 +1826,10 @@ function StaffDashboard({ profile, business, branch, onLogout }) {
           </div>
         </div>
         <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
-          <p className="text-sm font-semibold text-yellow-800">🚧 POS at Inventory</p>
-          <p className="text-xs text-yellow-600 mt-1">Darating sa Phase 2. Abangan!</p>
+          <p className="text-sm font-semibold text-yellow-800">Inventory Management</p>
+          <p className="text-xs text-yellow-600 mt-1">Coming in Phase 4. Stay tuned!</p>
         </div>
-        <button onClick={onLogout} className="mt-6 w-full bg-gray-100 text-gray-600 font-semibold py-3 rounded-2xl text-sm">Mag-logout</button>
+        <button onClick={onLogout} className="mt-6 w-full bg-gray-100 text-gray-600 font-semibold py-3 rounded-2xl text-sm">Sign Out</button>
       </div>
     </div>
   );
@@ -1326,7 +1944,7 @@ export default function App() {
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         {profile.role === "owner"
           ? <OwnerDashboard profile={profile} business={business} isSuperAdmin={isSuperAdmin} onLogout={handleLogout} showToast={showToast} />
-          : <StaffDashboard profile={profile} business={business} branch={branch} onLogout={handleLogout} />
+          : <StaffDashboard profile={profile} business={business} branch={branch} onLogout={handleLogout} showToast={showToast} />
         }
       </>
     );
