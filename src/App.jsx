@@ -831,16 +831,42 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast, 
   const [showAddStaff, setShowAddStaff] = useState(false);
   const [editProduct, setEditProduct] = useState(null);
 
+  const [todayRevenue, setTodayRevenue] = useState(0);
+  const [todayTxCount, setTodayTxCount] = useState(0);
+  const [utangTotal, setUtangTotal] = useState(0);
+  const [recentTx, setRecentTx] = useState([]);
+
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const [b, p, s] = await Promise.all([
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const [b, p, s, tx, utang] = await Promise.all([
       supabase.from("branches").select("*").eq("business_id", business.id).order("created_at"),
       supabase.from("products").select("*").eq("business_id", business.id).order("name"),
       supabase.from("profiles").select("*").eq("business_id", business.id).neq("role", "owner").order("full_name"),
+      supabase.from("transactions").select("*")
+        .eq("business_id", business.id)
+        .eq("status", "completed")
+        .gte("created_at", today.toISOString())
+        .order("created_at", { ascending: false }),
+      supabase.from("utang_records").select("*")
+        .eq("business_id", business.id)
+        .in("status", ["unpaid", "partial"]),
     ]);
+
     setBranches(b.data || []);
     setProducts(p.data || []);
     setStaff(s.data || []);
+    setRecentTx((tx.data || []).slice(0, 5));
+
+    const revenue = (tx.data || []).reduce((sum, t) => sum + Number(t.total_amount), 0);
+    setTodayRevenue(revenue);
+    setTodayTxCount((tx.data || []).length);
+
+    const utangAmt = (utang.data || []).reduce((sum, u) => sum + Number(u.balance || u.amount), 0);
+    setUtangTotal(utangAmt);
+
     setLoading(false);
   }, [business.id]);
 
@@ -1031,32 +1057,53 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast, 
 
             {tab === "dashboard" && (
               <div className="p-4 space-y-4">
-                <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide">Pangkalahatang Buod</h2>
+                {/* Real revenue card */}
+                <div className="bg-green-700 rounded-2xl p-4">
+                  <p className="text-green-200 text-xs font-semibold uppercase tracking-widest mb-1">Today's Revenue</p>
+                  <p className="text-3xl font-black text-white tracking-tight">₱{todayRevenue.toFixed(2)}</p>
+                  <p className="text-green-300 text-xs mt-1">{todayTxCount} transaction{todayTxCount !== 1 ? "s" : ""} completed today</p>
+                </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <StatCard icon="₱" label="Kita Ngayon" value="₱0.00" color="bg-green-50 text-green-700" />
-                  <StatCard icon="📦" label="Mga Produkto" value={products.length} color="bg-blue-50 text-blue-700" />
-                  <StatCard icon="🏪" label="Mga Branch" value={branches.length} color="bg-purple-50 text-purple-700" />
-                  <StatCard icon="👥" label="Mga Staff" value={staff.length} color="bg-yellow-50 text-yellow-700" />
+                  <StatCard icon="📦" label="Products" value={products.length} color="bg-blue-50 text-blue-700" />
+                  <StatCard icon="🏪" label="Branches" value={branches.length} color="bg-purple-50 text-purple-700" />
+                  <StatCard icon="👥" label="Staff" value={staff.length} color="bg-yellow-50 text-yellow-700" />
+                  <StatCard icon="💳" label="Utang Balance" value={`₱${utangTotal.toFixed(0)}`} color="bg-red-50 text-red-600" />
                 </div>
                 {branches.length === 0 && (
                   <Card className="p-4 border-l-4 border-yellow-400">
-                    <p className="text-sm font-semibold text-gray-700">Simulan ang Setup 🚀</p>
-                    <p className="text-xs text-gray-500 mt-1">Gumawa ng branch, magdagdag ng produkto, at mag-invite ng staff.</p>
+                    <p className="text-sm font-semibold text-gray-700">Start Setup 🚀</p>
+                    <p className="text-xs text-gray-500 mt-1">Create a branch, add products, and invite staff to get started.</p>
                     <div className="flex gap-2 mt-3">
-                      <button onClick={() => setTab("branches")} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg font-medium">Gumawa ng Branch</button>
-                      <button onClick={() => setTab("products")} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg font-medium">Magdagdag ng Produkto</button>
+                      <button onClick={() => setTab("branches")} className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg font-medium">Add Branch</button>
+                      <button onClick={() => setTab("products")} className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg font-medium">Add Products</button>
                     </div>
                   </Card>
                 )}
+                {recentTx.length > 0 && (
+                  <div>
+                    <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide mb-2">Recent Transactions</h2>
+                    <div className="space-y-2">
+                      {recentTx.map(tx => (
+                        <Card key={tx.id} className="p-3 flex items-center justify-between">
+                          <div>
+                            <p className="text-xs font-mono text-gray-400">{tx.receipt_number}</p>
+                            <p className="text-xs text-gray-500 mt-0.5 capitalize">{tx.payment_method}{tx.customer_name ? ` · ${tx.customer_name}` : ""} · {new Date(tx.created_at).toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit", hour12: true })}</p>
+                          </div>
+                          <p className="font-black text-green-700">₱{Number(tx.total_amount).toFixed(2)}</p>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {branches.length > 0 && (
                   <div>
-                    <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide mb-3">Mga Branch</h2>
+                    <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide mb-2">Branches</h2>
                     <div className="space-y-2">
                       {branches.map(b => (
                         <Card key={b.id} className="p-4 flex items-center justify-between">
                           <div>
                             <p className="font-semibold text-gray-800 text-sm">{b.name}</p>
-                            <p className="text-xs text-gray-400">{b.address || "Walang address"}</p>
+                            <p className="text-xs text-gray-400">{b.address || "No address"}</p>
                           </div>
                           <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg font-medium">Active</span>
                         </Card>
@@ -1350,7 +1397,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
 
 // ── Cashier POS Dashboard ──
 function CashierPOS({ profile, business, branch, onLogout, showToast }) {
-  const [posTab, setPosTab] = useState("pos"); // pos | history
+  const [posTab, setPosTab] = useState("pos"); // pos | history | utang
   const [cart, setCart] = useState([]);
   const [scanning, setScanning] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -1359,11 +1406,17 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   const [checkoutMode, setCheckoutMode] = useState(false);
   const [amountTendered, setAmountTendered] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [processing, setProcessing] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const [receiptItems, setReceiptItems] = useState([]);
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [utangList, setUtangList] = useState([]);
+  const [loadingUtang, setLoadingUtang] = useState(false);
+  const [voidModal, setVoidModal] = useState(null);
+  const [voidReason, setVoidReason] = useState("");
 
   const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
   const change = Math.max(0, Number(amountTendered) - total);
@@ -1400,15 +1453,24 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
     showToast(`${data.name} added to cart!`, "success");
   };
 
-  // Add to cart
+  // Add to cart — with stock validation
   const addToCart = (product) => {
     setCart(prev => {
       const existing = prev.find(i => i.product_id === product.id);
       if (existing) {
+        // Stock validation — prevent overselling
+        if (existing.quantity >= product.stock_quantity) {
+          showToast(`Only ${product.stock_quantity} units of ${product.name} in stock.`, "warning");
+          return prev;
+        }
         return prev.map(i => i.product_id === product.id
           ? { ...i, quantity: i.quantity + 1, subtotal: (i.quantity + 1) * i.unit_price }
           : i
         );
+      }
+      if (product.stock_quantity <= 0) {
+        showToast(`${product.name} is out of stock.`, "error");
+        return prev;
       }
       return [...prev, {
         product_id: product.id,
@@ -1423,15 +1485,63 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
     setSearchResults([]);
   };
 
-  // Update quantity
+  // Update quantity — with stock validation
   const updateQty = (productId, delta) => {
     setCart(prev => prev
-      .map(i => i.product_id === productId
-        ? { ...i, quantity: i.quantity + delta, subtotal: (i.quantity + delta) * i.unit_price }
-        : i
-      )
+      .map(i => {
+        if (i.product_id !== productId) return i;
+        if (delta > 0 && i.quantity >= i.stock) {
+          showToast(`Only ${i.stock} units available.`, "warning");
+          return i;
+        }
+        const newQty = i.quantity + delta;
+        return { ...i, quantity: newQty, subtotal: newQty * i.unit_price };
+      })
       .filter(i => i.quantity > 0)
     );
+  };
+
+  // Void transaction
+  const voidTransaction = async () => {
+    if (!voidReason.trim()) return showToast("Please enter a reason for voiding.", "error");
+    try {
+      await supabase.from("transactions").update({
+        status: "voided",
+        voided_at: new Date().toISOString(),
+        voided_by: profile.id,
+        void_reason: voidReason.trim(),
+      }).eq("id", voidModal.id);
+      showToast("Transaction voided successfully.", "success");
+      setVoidModal(null);
+      setVoidReason("");
+      loadHistory();
+    } catch (err) {
+      showToast("Failed to void transaction.", "error");
+    }
+  };
+
+  // Load utang records
+  const loadUtang = async () => {
+    setLoadingUtang(true);
+    const { data } = await supabase
+      .from("utang_records")
+      .select("*")
+      .eq("business_id", business.id)
+      .in("status", ["unpaid", "partial"])
+      .order("created_at", { ascending: false });
+    setUtangList(data || []);
+    setLoadingUtang(false);
+  };
+
+  // Mark utang as paid
+  const markUtangPaid = async (utangId, amount) => {
+    await supabase.from("utang_records").update({
+      amount_paid: amount,
+      status: "paid",
+      updated_at: new Date().toISOString(),
+    }).eq("id", utangId);
+    showToast("Utang marked as paid!", "success");
+    loadUtang();
   };
 
   // Process checkout
@@ -1439,6 +1549,9 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
     if (cart.length === 0) return showToast("Cart is empty.", "error");
     if (paymentMethod === "cash" && (!amountTendered || Number(amountTendered) < total)) {
       return showToast("Amount tendered is less than the total.", "error");
+    }
+    if (paymentMethod === "utang" && !customerName.trim()) {
+      return showToast("Please enter the customer's name for utang.", "error");
     }
     setProcessing(true);
     try {
@@ -1453,6 +1566,8 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           payment_method: paymentMethod,
           amount_tendered: paymentMethod === "cash" ? Number(amountTendered) : total,
           change_amount: paymentMethod === "cash" ? change : 0,
+          customer_name: customerName.trim() || null,
+          customer_phone: customerPhone.trim() || null,
           status: "completed",
         })
         .select()
@@ -1470,7 +1585,21 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       const { error: itemsError } = await supabase.from("transaction_items").insert(items);
       if (itemsError) throw itemsError;
 
-      // Deduct stock from products — non-blocking, errors ignored
+      // If utang — create utang record
+      if (paymentMethod === "utang") {
+        await supabase.from("utang_records").insert({
+          business_id: business.id,
+          branch_id: branch?.id || null,
+          transaction_id: txn.id,
+          customer_name: customerName.trim(),
+          customer_phone: customerPhone.trim() || null,
+          amount: total,
+          amount_paid: 0,
+          status: "unpaid",
+        });
+      }
+
+      // Deduct stock — non-blocking
       for (const item of cart) {
         try {
           const { data: prod } = await supabase
@@ -1485,16 +1614,18 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               .eq("id", item.product_id);
           }
         } catch (stockErr) {
-          // Stock deduction failure should not block receipt
           console.warn("Stock deduction skipped:", stockErr);
         }
       }
+      }
 
-      // Show receipt — always show this even if stock deduction had issues
+      // Show receipt
       setReceiptItems(cart.map(i => ({ ...i })));
       setReceipt(txn);
       setCart([]);
       setAmountTendered("");
+      setCustomerName("");
+      setCustomerPhone("");
       setCheckoutMode(false);
 
     } catch (err) {
@@ -1523,6 +1654,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
 
   useEffect(() => {
     if (posTab === "history") loadHistory();
+    if (posTab === "utang") loadUtang();
   }, [posTab]);
 
   const PAYMENT_METHODS = [
@@ -1548,8 +1680,12 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       </div>
 
       {/* Tab bar */}
-      <div className="bg-green-800 flex px-4 gap-1 flex-shrink-0">
-        {[{ key: "pos", label: "Point of Sale" }, { key: "history", label: "Today's Sales" }].map(t => (
+      <div className="bg-green-800 flex px-2 gap-1 flex-shrink-0">
+        {[
+          { key: "pos", label: "POS" },
+          { key: "history", label: "Sales" },
+          { key: "utang", label: "Utang" }
+        ].map(t => (
           <button key={t.key} onClick={() => setPosTab(t.key)}
             className={`flex-1 py-2.5 text-xs font-semibold rounded-t-lg transition-colors ${posTab === t.key ? "bg-gray-50 text-green-700" : "text-green-300"}`}>
             {t.label}
@@ -1582,10 +1718,12 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             <div className="mx-4 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-10 flex-shrink-0">
               {searchResults.map(p => (
                 <button key={p.id} onClick={() => addToCart(p)}
-                  className="w-full px-4 py-3 text-left flex items-center justify-between hover:bg-gray-50 border-b border-gray-50 last:border-0 active:bg-green-50">
+                  className={`w-full px-4 py-3 text-left flex items-center justify-between border-b border-gray-50 last:border-0 active:bg-green-50 ${p.stock_quantity <= 0 ? "opacity-50" : "hover:bg-gray-50"}`}>
                   <div>
                     <p className="text-sm font-semibold text-gray-800">{p.name}</p>
-                    <p className="text-xs text-gray-400">Stock: {p.stock_quantity}</p>
+                    <p className={`text-xs mt-0.5 ${p.stock_quantity <= 0 ? "text-red-400 font-semibold" : p.stock_quantity <= p.low_stock_threshold ? "text-yellow-500" : "text-gray-400"}`}>
+                      {p.stock_quantity <= 0 ? "Out of stock" : `Stock: ${p.stock_quantity}`}
+                    </p>
                   </div>
                   <span className="text-sm font-black text-green-700">₱{Number(p.price).toFixed(2)}</span>
                 </button>
@@ -1678,6 +1816,34 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                   ))}
                 </div>
 
+                {/* Customer name — required for utang, optional for others */}
+                {(paymentMethod === "utang" || paymentMethod === "gcash" || paymentMethod === "maya") && (
+                  <div className="mb-4">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+                      Customer Name {paymentMethod === "utang" ? "(Required)" : "(Optional)"}
+                    </p>
+                    <input
+                      type="text"
+                      value={customerName}
+                      onChange={e => setCustomerName(e.target.value)}
+                      placeholder={paymentMethod === "utang" ? "Enter customer name..." : "Optional..."}
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-2"
+                    />
+                    <input
+                      type="tel"
+                      value={customerPhone}
+                      onChange={e => setCustomerPhone(e.target.value)}
+                      placeholder="Phone number (optional)..."
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    {paymentMethod === "utang" && (
+                      <div className="mt-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
+                        <p className="text-xs text-orange-700 font-medium">⚠️ This transaction will be recorded as utang. The customer owes ₱{total.toFixed(2)}.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Cash tendered */}
                 {paymentMethod === "cash" && (
                   <div className="mb-4">
@@ -1712,9 +1878,13 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
 
                 <button
                   onClick={processCheckout}
-                  disabled={processing || (paymentMethod === "cash" && (!amountTendered || Number(amountTendered) < total))}
+                  disabled={
+                    processing ||
+                    (paymentMethod === "cash" && (!amountTendered || Number(amountTendered) < total)) ||
+                    (paymentMethod === "utang" && !customerName.trim())
+                  }
                   className="w-full bg-green-600 text-white font-black py-4 rounded-2xl text-lg disabled:opacity-50 active:scale-95 transition-transform">
-                  {processing ? "Processing..." : `Confirm Payment · ₱${total.toFixed(2)}`}
+                  {processing ? "Processing..." : paymentMethod === "utang" ? `Record Utang · ₱${total.toFixed(2)}` : `Confirm Payment · ₱${total.toFixed(2)}`}
                 </button>
               </div>
             </div>
@@ -1731,7 +1901,6 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             </div>
           ) : history.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-3xl mb-2">🧾</p>
               <p className="font-semibold text-gray-500 text-sm">No transactions today</p>
             </div>
           ) : (
@@ -1739,30 +1908,93 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               <div className="flex justify-between items-center mb-1">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Today's Transactions</p>
                 <p className="text-xs font-bold text-green-700">
-                  ₱{history.reduce((s, t) => s + Number(t.total_amount), 0).toFixed(2)} total
+                  ₱{history.filter(t => t.status === "completed").reduce((s, t) => s + Number(t.total_amount), 0).toFixed(2)} total
                 </p>
               </div>
               {history.map(txn => (
-                <div key={txn.id} className="bg-white rounded-xl p-4 border border-gray-100 shadow-sm">
+                <div key={txn.id} className={`bg-white rounded-xl p-4 border shadow-sm ${txn.status === "voided" ? "border-red-200 opacity-60" : "border-gray-100"}`}>
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <p className="text-xs font-mono text-gray-400">{txn.receipt_number}</p>
                       <p className="text-xs text-gray-400 mt-0.5">
                         {new Date(txn.created_at).toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit", hour12: true })}
+                        {txn.customer_name ? ` · ${txn.customer_name}` : ""}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-black text-green-700">₱{Number(txn.total_amount).toFixed(2)}</p>
-                      <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-medium capitalize">{txn.payment_method}</span>
+                      <p className={`font-black ${txn.status === "voided" ? "text-red-400 line-through" : "text-green-700"}`}>₱{Number(txn.total_amount).toFixed(2)}</p>
+                      <div className="flex gap-1 mt-0.5 justify-end">
+                        <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-medium capitalize">{txn.payment_method}</span>
+                        {txn.status === "voided" && <span className="text-xs bg-red-50 text-red-500 px-2 py-0.5 rounded-full font-medium">Voided</span>}
+                      </div>
                     </div>
                   </div>
                   {txn.transaction_items && txn.transaction_items.length > 0 && (
-                    <div className="text-xs text-gray-400 space-y-0.5">
+                    <div className="text-xs text-gray-400 space-y-0.5 mb-2">
                       {txn.transaction_items.map((item, i) => (
                         <p key={i}>{item.products?.name || "Product"} × {item.quantity}</p>
                       ))}
                     </div>
                   )}
+                  {txn.status === "completed" && (
+                    <button onClick={() => setVoidModal(txn)}
+                      className="text-xs text-red-500 font-semibold bg-red-50 px-3 py-1.5 rounded-lg mt-1">
+                      Void Transaction
+                    </button>
+                  )}
+                  {txn.status === "voided" && txn.void_reason && (
+                    <p className="text-xs text-red-400 mt-1">Reason: {txn.void_reason}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Utang Tab */}
+      {posTab === "utang" && (
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+          {loadingUtang ? (
+            <div className="flex justify-center py-8">
+              <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : utangList.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-2xl mb-2">✅</p>
+              <p className="font-semibold text-gray-500 text-sm">No outstanding utang</p>
+              <p className="text-xs text-gray-400 mt-1">All customers are paid up!</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex justify-between items-center mb-1">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Outstanding Utang</p>
+                <p className="text-xs font-bold text-red-600">
+                  ₱{utangList.reduce((s, u) => s + Number(u.amount - u.amount_paid), 0).toFixed(2)} total
+                </p>
+              </div>
+              {utangList.map(u => (
+                <div key={u.id} className="bg-white rounded-xl p-4 border border-orange-100 shadow-sm">
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="font-semibold text-gray-800 text-sm">{u.customer_name}</p>
+                      {u.customer_phone && <p className="text-xs text-gray-400">{u.customer_phone}</p>}
+                      <p className="text-xs text-gray-400 mt-0.5">{new Date(u.created_at).toLocaleDateString("en-PH")}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-black text-red-600">₱{Number(u.amount - u.amount_paid).toFixed(2)}</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${u.status === "partial" ? "bg-yellow-50 text-yellow-600" : "bg-red-50 text-red-500"}`}>
+                        {u.status === "partial" ? "Partial" : "Unpaid"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-400 mb-2">
+                    Original: ₱{Number(u.amount).toFixed(2)} · Paid: ₱{Number(u.amount_paid).toFixed(2)}
+                  </div>
+                  <button onClick={() => markUtangPaid(u.id, u.amount)}
+                    className="text-xs text-green-700 font-semibold bg-green-50 px-3 py-1.5 rounded-lg">
+                    Mark as Fully Paid ✓
+                  </button>
                 </div>
               ))}
             </div>
@@ -1785,6 +2017,33 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           onNewTransaction={() => { setReceipt(null); setPosTab("pos"); }}
         />
       )}
+
+      {/* Void Transaction Modal */}
+      {voidModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-3xl p-5">
+            <h3 className="font-black text-gray-800 text-base mb-1">Void Transaction</h3>
+            <p className="text-xs text-gray-500 mb-1">{voidModal.receipt_number} · ₱{Number(voidModal.total_amount).toFixed(2)}</p>
+            <p className="text-xs text-red-500 mb-3">⚠️ This cannot be undone. The sale will be marked as voided.</p>
+            <textarea
+              value={voidReason}
+              onChange={e => setVoidReason(e.target.value)}
+              placeholder="Reason for voiding (required)..."
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-red-400 mb-3"
+            />
+            <div className="flex gap-3">
+              <button onClick={() => { setVoidModal(null); setVoidReason(""); }}
+                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm">
+                Cancel
+              </button>
+              <button onClick={voidTransaction}
+                className="flex-1 bg-red-500 text-white font-bold py-3 rounded-xl text-sm">
+                Void Transaction
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1800,170 +2059,4 @@ function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
       <div className="w-full max-w-sm text-center">
         <div className="w-20 h-20 bg-green-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="#16a34a" strokeWidth="1.5" strokeLinejoin="round"/>
-            <polyline points="9 22 9 12 15 12 15 22" stroke="#16a34a" strokeWidth="1.5" strokeLinejoin="round"/>
-          </svg>
-        </div>
-        <h1 className="text-2xl font-black text-gray-800">{business.name}</h1>
-        <p className="text-gray-500 text-sm mt-1">{branch?.name || "No branch"}</p>
-        <span className={`inline-block mt-2 text-xs px-3 py-1 rounded-full font-semibold ${ROLE_COLORS[profile.role]}`}>
-          {ROLE_LABELS[profile.role]}
-        </span>
-        <div className="mt-8 bg-white rounded-2xl border border-gray-100 p-5 text-left space-y-3 shadow-sm">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Information</p>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Name</span>
-            <span className="font-semibold text-gray-800">{profile.full_name}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Branch</span>
-            <span className="font-semibold text-gray-800">{branch?.name || "—"}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Role</span>
-            <span className="font-semibold text-gray-800">{ROLE_LABELS[profile.role]}</span>
-          </div>
-        </div>
-        <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
-          <p className="text-sm font-semibold text-yellow-800">Inventory Management</p>
-          <p className="text-xs text-yellow-600 mt-1">Coming in Phase 4. Stay tuned!</p>
-        </div>
-        <button onClick={onLogout} className="mt-6 w-full bg-gray-100 text-gray-600 font-semibold py-3 rounded-2xl text-sm">Sign Out</button>
-      </div>
-    </div>
-  );
-}
-
-// ─── ROOT APP ──────────────────────────────────────────────────────────────────
-export default function App() {
-  const [screen, setScreen] = useState("landing");
-  const [otpEmail, setOtpEmail] = useState("");
-  const [otpType, setOtpType] = useState("login");
-  const [session, setSession] = useState(null);
-  const [profile, setProfile] = useState(null);
-  const [business, setBusiness] = useState(null);
-  const [branch, setBranch] = useState(null);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [appLoading, setAppLoading] = useState(true);
-  const [toast, setToast] = useState(null);
-
-  const showToast = (message, type = "success") => setToast({ message, type });
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) loadUserData(session.user.id);
-      else setAppLoading(false);
-    });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) loadUserData(session.user.id);
-      else {
-        setProfile(null); setBusiness(null); setBranch(null);
-        setIsSuperAdmin(false); setScreen("landing"); setAppLoading(false);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const loadUserData = async (userId) => {
-    setAppLoading(true);
-    try {
-      let prof = null;
-      for (let i = 0; i < 3; i++) {
-        const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
-        if (data) { prof = data; break; }
-        await new Promise(r => setTimeout(r, 1000));
-      }
-      if (!prof) { showToast("Hindi mahanap ang profile. Subukan muli.", "error"); setAppLoading(false); return; }
-      setProfile(prof);
-
-      const { data: biz } = await supabase.from("businesses").select("*").eq("id", prof.business_id).single();
-      setBusiness(biz);
-
-      if (prof.branch_id) {
-        const { data: br } = await supabase.from("branches").select("*").eq("id", prof.branch_id).single();
-        setBranch(br);
-      }
-
-      // Check if super admin
-      const { data: sa } = await supabase.from("super_admins").select("id").eq("user_id", userId).maybeSingle();
-      setIsSuperAdmin(!!sa);
-
-    } catch (err) {
-      showToast("May error sa pag-load. Subukan muli.", "error");
-    } finally {
-      setAppLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setScreen("landing");
-  };
-
-  const goToOTP = (email, type) => {
-    setOtpEmail(email); setOtpType(type); setScreen("otp");
-  };
-
-  if (appLoading) return <Spinner />;
-
-  // ── Logged in ──
-  if (session && profile && business) {
-    // Super admin always gets full access
-    if (!isSuperAdmin) {
-      if (business.status === "pending") return (
-        <>
-          {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-          <PendingScreen business={business} onLogout={handleLogout} />
-        </>
-      );
-      if (business.status === "rejected") return (
-        <>
-          {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-          <RejectedScreen business={business} onLogout={handleLogout} />
-        </>
-      );
-      if (business.status === "suspended") return (
-        <>
-          {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-          <RejectedScreen business={{ ...business, rejection_reason: "Ang iyong account ay naka-suspend. Makipag-ugnayan sa aming team." }} onLogout={handleLogout} />
-        </>
-      );
-      if (isTrialExpired(business)) return (
-        <>
-          {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-          <TrialExpiredScreen business={business} onLogout={handleLogout} />
-        </>
-      );
-    }
-
-    return (
-      <>
-        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-        {profile.role === "owner"
-          ? <OwnerDashboard profile={profile} business={business} isSuperAdmin={isSuperAdmin} onLogout={handleLogout} showToast={showToast} />
-          : <StaffDashboard profile={profile} business={business} branch={branch} onLogout={handleLogout} showToast={showToast} />
-        }
-      </>
-    );
-  }
-
-  // ── Not logged in ──
-  return (
-    <>
-      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-      {screen === "landing" && <LandingScreen onShowSignup={() => setScreen("signup")} onShowLogin={() => setScreen("login")} />}
-      {screen === "signup" && <SignupScreen onBack={() => setScreen("landing")} onSuccess={() => setScreen("login")} showToast={showToast} />}
-      {screen === "login" && <LoginScreen onBack={() => setScreen("landing")} onSuccess={() => {}} onForgotPassword={() => setScreen("forgot")} showToast={showToast} />}
-      {screen === "forgot" && <ForgotPasswordScreen onBack={() => setScreen("login")} onVerifyOTP={goToOTP} showToast={showToast} />}
-      {screen === "otp" && (
-        <OTPScreen email={otpEmail} type={otpType}
-          onBack={() => setScreen(otpType === "forgot" ? "forgot" : "login")}
-          onSuccess={(next) => setScreen(next || "login")}
-          showToast={showToast}
-        />
-      )}
-    </>
-  );
-}
+            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" stroke="#16a34a" strokeWidth=
