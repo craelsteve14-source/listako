@@ -1581,16 +1581,82 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
           ) : (
             <div className="max-h-64 overflow-y-auto divide-y divide-gray-50">
               {notifications.map((n) => (
-                <div key={n.id} className="px-4 py-3 bg-red-50">
-                  <p className="text-xs font-bold text-red-700">{n.title}</p>
+                <div key={n.id} className={`px-4 py-3 ${n.type === "void_request" ? "bg-yellow-50" : "bg-red-50"}`}>
+                  <p className={`text-xs font-bold ${n.type === "void_request" ? "text-yellow-700" : "text-red-700"}`}>
+                    {n.title}
+                  </p>
                   <p className="text-xs text-gray-600 mt-0.5">{n.message}</p>
                   <p className="text-xs text-gray-400 mt-1">
                     {new Date(n.created_at).toLocaleTimeString("en-PH", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true,
+                      hour: "numeric", minute: "2-digit", hour12: true,
                     })}
                   </p>
+                  {/* Void request approval buttons */}
+                  {n.type === "void_request" && n.transaction_id && !n.action_taken && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={async () => {
+                          // Approve void
+                          await supabase.from("transactions").update({
+                            status: "voided",
+                            voided_at: new Date().toISOString(),
+                            voided_by: profile.id,
+                            void_reason: "Approved by owner",
+                          }).eq("id", n.transaction_id);
+                          await supabase.from("notifications").update({
+                            action_taken: "approved",
+                            is_read: true,
+                          }).eq("id", n.id);
+                          // Notify cashier
+                          await supabase.from("notifications").insert({
+                            business_id: business.id,
+                            type: "void_approved",
+                            title: "✅ Void Approved",
+                            message: `Your void request has been approved by the owner.`,
+                            is_read: false,
+                          });
+                          showToast("Void approved! Transaction has been voided.", "success");
+                          fetchAll();
+                        }}
+                        className="flex-1 bg-green-600 text-white font-bold py-2 rounded-xl text-xs"
+                      >
+                        ✓ Approve Void
+                      </button>
+                      <button
+                        onClick={async () => {
+                          // Decline void — restore to completed
+                          await supabase.from("transactions").update({
+                            status: "completed",
+                            void_requested_at: null,
+                            void_requested_by: null,
+                            void_request_reason: null,
+                          }).eq("id", n.transaction_id);
+                          await supabase.from("notifications").update({
+                            action_taken: "declined",
+                            is_read: true,
+                          }).eq("id", n.id);
+                          // Notify cashier
+                          await supabase.from("notifications").insert({
+                            business_id: business.id,
+                            type: "void_declined",
+                            title: "❌ Void Declined",
+                            message: `Your void request was declined by the owner.`,
+                            is_read: false,
+                          });
+                          showToast("Void request declined.", "success");
+                          fetchAll();
+                        }}
+                        className="flex-1 bg-red-500 text-white font-bold py-2 rounded-xl text-xs"
+                      >
+                        ✕ Decline
+                      </button>
+                    </div>
+                  )}
+                  {n.action_taken && (
+                    <p className={`text-xs font-bold mt-1 ${n.action_taken === "approved" ? "text-green-600" : "text-red-500"}`}>
+                      {n.action_taken === "approved" ? "✓ You approved this void" : "✕ You declined this void"}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
@@ -2341,36 +2407,39 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
 
   // Void transaction
   const voidTransaction = async () => {
-    if (!voidReason.trim()) return showToast("Please enter a reason for voiding.", "error");
+    if (!voidReason.trim()) return showToast("Please enter a reason for the void request.", "error");
     if (!isToday(voidModal.created_at)) {
-      return showToast("Only today's transactions can be voided. Contact your owner for older voids.", "error");
+      return showToast("Only today's transactions can be voided. Contact your owner.", "error");
     }
     try {
+      // Step 1 — Mark transaction as pending_void
       await supabase
         .from("transactions")
         .update({
-          status: "voided",
-          voided_at: new Date().toISOString(),
-          voided_by: profile.id,
-          void_reason: voidReason.trim(),
+          status: "pending_void",
+          void_requested_at: new Date().toISOString(),
+          void_requested_by: profile.id,
+          void_request_reason: voidReason.trim(),
         })
         .eq("id", voidModal.id);
 
-      // Notify owner via notifications table
+      // Step 2 — Send notification to owner with transaction_id for approval
       await supabase.from("notifications").insert({
         business_id: business.id,
-        type: "void",
-        title: "Transaction Voided",
-        message: `${profile.full_name} voided ${voidModal.receipt_number} (₱${Number(voidModal.total_amount).toFixed(2)}). Reason: ${voidReason.trim()}`,
+        type: "void_request",
+        title: "⚠️ Void Approval Needed",
+        message: `${profile.full_name} wants to void ${voidModal.receipt_number} (₱${Number(voidModal.total_amount).toFixed(2)}). Reason: ${voidReason.trim()}`,
+        transaction_id: voidModal.id,
         is_read: false,
-      }).select().maybeSingle();
+        action_taken: null,
+      });
 
-      showToast("Transaction voided. Owner has been notified.", "success");
+      showToast("Void request sent to owner for approval.", "success");
       setVoidModal(null);
       setVoidReason("");
       loadHistory();
     } catch (err) {
-      showToast("Failed to void transaction.", "error");
+      showToast("Failed to send void request.", "error");
     }
   };
 
@@ -3032,13 +3101,19 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                         onClick={() => setVoidModal(txn)}
                         className="text-xs text-red-500 font-semibold bg-red-50 px-3 py-1.5 rounded-lg mt-1"
                       >
-                        Void Transaction
+                        Request Void
                       </button>
                     ) : (
                       <p className="text-xs text-gray-400 mt-1 bg-gray-50 px-3 py-1.5 rounded-lg">
                         🔒 Cannot void — older than today
                       </p>
                     )
+                  )}
+                  {txn.status === "pending_void" && (
+                    <div className="mt-1 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-1.5">
+                      <p className="text-xs text-yellow-700 font-semibold">⏳ Waiting for owner approval</p>
+                      <p className="text-xs text-yellow-600 mt-0.5">Reason: {txn.void_request_reason}</p>
+                    </div>
                   )}
                   {txn.status === "voided" && txn.void_reason && (
                     <p className="text-xs text-red-400 mt-1">Reason: {txn.void_reason}</p>
@@ -3225,38 +3300,41 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
         />
       )}
 
-      {/* Void Transaction Modal */}
+      {/* Void Request Modal */}
       {voidModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
           <div className="bg-white w-full rounded-t-3xl p-5">
-            <h3 className="font-black text-gray-800 text-base mb-1">Void Transaction</h3>
+            <h3 className="font-black text-gray-800 text-base mb-1">Request Void Approval</h3>
             <p className="text-xs text-gray-500 mb-1">
               {voidModal.receipt_number} · ₱{Number(voidModal.total_amount).toFixed(2)}
             </p>
-            <p className="text-xs text-red-500 mb-3">
-              ⚠️ This cannot be undone. The sale will be marked as voided.
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2 mb-3">
+              <p className="text-xs text-yellow-700 font-medium">
+                ⚠️ This will send a void request to your owner. The transaction will only be voided after owner approval.
+              </p>
+            </div>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+              Reason for Void Request
             </p>
             <textarea
               value={voidReason}
               onChange={(e) => setVoidReason(e.target.value)}
-              placeholder="Reason for voiding (required)..."
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-red-400 mb-3"
+              placeholder="Explain why this transaction needs to be voided..."
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-yellow-400 mb-3"
             />
             <div className="flex gap-3">
               <button
-                onClick={() => {
-                  setVoidModal(null);
-                  setVoidReason("");
-                }}
+                onClick={() => { setVoidModal(null); setVoidReason(""); }}
                 className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
               >
                 Cancel
               </button>
               <button
                 onClick={voidTransaction}
-                className="flex-1 bg-red-500 text-white font-bold py-3 rounded-xl text-sm"
+                disabled={!voidReason.trim()}
+                className="flex-1 bg-yellow-500 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50"
               >
-                Void Transaction
+                Send Request to Owner
               </button>
             </div>
           </div>
