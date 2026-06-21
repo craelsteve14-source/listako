@@ -1596,6 +1596,13 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                     <div className="flex gap-2 mt-2">
                       <button
                         onClick={async () => {
+                          // Get the transaction to find cashier_id
+                          const { data: txn } = await supabase
+                            .from("transactions")
+                            .select("cashier_id, receipt_number, total_amount")
+                            .eq("id", n.transaction_id)
+                            .single();
+
                           // Approve void
                           await supabase.from("transactions").update({
                             status: "voided",
@@ -1603,16 +1610,19 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                             voided_by: profile.id,
                             void_reason: "Approved by owner",
                           }).eq("id", n.transaction_id);
+
                           await supabase.from("notifications").update({
                             action_taken: "approved",
                             is_read: true,
                           }).eq("id", n.id);
-                          // Notify cashier
+
+                          // Notify CASHIER — void approved
                           await supabase.from("notifications").insert({
                             business_id: business.id,
+                            recipient_id: txn?.cashier_id || null,
                             type: "void_approved",
-                            title: "✅ Void Approved",
-                            message: `Your void request has been approved by the owner.`,
+                            title: "✅ Void Request Approved",
+                            message: `Your void request for ${txn?.receipt_number} (₱${Number(txn?.total_amount).toFixed(2)}) has been approved by the owner.`,
                             is_read: false,
                           });
                           showToast("Void approved! Transaction has been voided.", "success");
@@ -1624,6 +1634,13 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                       </button>
                       <button
                         onClick={async () => {
+                          // Get the transaction to find cashier_id
+                          const { data: txn } = await supabase
+                            .from("transactions")
+                            .select("cashier_id, receipt_number, total_amount")
+                            .eq("id", n.transaction_id)
+                            .single();
+
                           // Decline void — restore to completed
                           await supabase.from("transactions").update({
                             status: "completed",
@@ -1631,16 +1648,19 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                             void_requested_by: null,
                             void_request_reason: null,
                           }).eq("id", n.transaction_id);
+
                           await supabase.from("notifications").update({
                             action_taken: "declined",
                             is_read: true,
                           }).eq("id", n.id);
-                          // Notify cashier
+
+                          // Notify CASHIER — void declined
                           await supabase.from("notifications").insert({
                             business_id: business.id,
+                            recipient_id: txn?.cashier_id || null,
                             type: "void_declined",
-                            title: "❌ Void Declined",
-                            message: `Your void request was declined by the owner.`,
+                            title: "❌ Void Request Declined",
+                            message: `Your void request for ${txn?.receipt_number} (₱${Number(txn?.total_amount).toFixed(2)}) was declined by the owner. The transaction remains active.`,
                             is_read: false,
                           });
                           showToast("Void request declined.", "success");
@@ -2251,6 +2271,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   const [utangPayAmount, setUtangPayAmount] = useState("");
   const [reconcileModal, setReconcileModal] = useState(false);
   const [cashCounted, setCashCounted] = useState("");
+  const [cashierNotifs, setCashierNotifs] = useState([]);
 
   const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
   const change = Math.max(0, Number(amountTendered) - total);
@@ -2627,14 +2648,23 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
     setLoadingHistory(true);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const { data } = await supabase
-      .from("transactions")
-      .select("*, transaction_items(*, products(name))")
-      .eq("cashier_id", profile.id)
-      .gte("created_at", today.toISOString())
-      .order("created_at", { ascending: false })
-      .limit(20);
-    setHistory(data || []);
+    const [txData, cashierNotifs] = await Promise.all([
+      supabase
+        .from("transactions")
+        .select("*, transaction_items(*, products(name))")
+        .eq("cashier_id", profile.id)
+        .gte("created_at", today.toISOString())
+        .order("created_at", { ascending: false })
+        .limit(20),
+      supabase
+        .from("notifications")
+        .select("*")
+        .eq("recipient_id", profile.id)
+        .eq("is_read", false)
+        .order("created_at", { ascending: false }),
+    ]);
+    setHistory(txData.data || []);
+    setCashierNotifs(cashierNotifs.data || []);
     setLoadingHistory(false);
   };
 
@@ -3014,6 +3044,34 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       {/* History Tab */}
       {posTab === "history" && (
         <div className="flex-1 overflow-y-auto px-4 py-3">
+          {/* Cashier notifications — void decisions from owner */}
+          {cashierNotifs.length > 0 && (
+            <div className="mb-3 space-y-2">
+              {cashierNotifs.map((n) => (
+                <div key={n.id} className={`rounded-2xl p-3 border ${
+                  n.type === "void_approved"
+                    ? "bg-green-50 border-green-200"
+                    : "bg-red-50 border-red-200"
+                }`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className={`text-xs font-bold ${
+                        n.type === "void_approved" ? "text-green-700" : "text-red-700"
+                      }`}>{n.title}</p>
+                      <p className="text-xs text-gray-600 mt-0.5">{n.message}</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        await supabase.from("notifications").update({ is_read: true }).eq("id", n.id);
+                        loadHistory();
+                      }}
+                      className="text-gray-400 text-sm ml-2 flex-shrink-0"
+                    >✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
           {loadingHistory ? (
             <div className="flex justify-center py-8">
               <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
