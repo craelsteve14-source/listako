@@ -2165,20 +2165,43 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                               {p.stock_quantity <= p.low_stock_threshold ? "⚠️ " : ""}Stock:{" "}
                               {p.stock_quantity}
                             </span>
+                            {p.no_discount && (
+                              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-600">
+                                No Discount
+                              </span>
+                            )}
                           </div>
                         </div>
-                        <div className="flex gap-2 ml-2">
+                        <div className="flex flex-col gap-1.5 ml-2">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setEditProduct(p)}
+                              className="text-xs bg-blue-50 text-blue-600 px-2 py-1.5 rounded-lg font-medium"
+                            >
+                              I-edit
+                            </button>
+                            <button
+                              onClick={() => deleteProduct(p.id)}
+                              className="text-xs bg-red-50 text-red-500 px-2 py-1.5 rounded-lg font-medium"
+                            >
+                              Burahin
+                            </button>
+                          </div>
                           <button
-                            onClick={() => setEditProduct(p)}
-                            className="text-xs bg-blue-50 text-blue-600 px-2 py-1.5 rounded-lg font-medium"
+                            onClick={async () => {
+                              await supabase.from("products").update({
+                                no_discount: !p.no_discount
+                              }).eq("id", p.id);
+                              showToast(p.no_discount ? "Discount enabled for this product." : "Discount disabled for this product.", "success");
+                              fetchAll();
+                            }}
+                            className={`text-xs px-2 py-1.5 rounded-lg font-medium ${
+                              p.no_discount
+                                ? "bg-orange-100 text-orange-600"
+                                : "bg-gray-50 text-gray-400"
+                            }`}
                           >
-                            I-edit
-                          </button>
-                          <button
-                            onClick={() => deleteProduct(p.id)}
-                            className="text-xs bg-red-50 text-red-500 px-2 py-1.5 rounded-lg font-medium"
-                          >
-                            Burahin
+                            {p.no_discount ? "🚫 No Discount" : "Allow Discount"}
                           </button>
                         </div>
                       </div>
@@ -3005,49 +3028,67 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
     }
     // Discount validations — all 9 rules
     if (discountAmount > 0) {
-      // Rule 1 — Discounts enabled
-      if (business.discount_enabled === false) {
+      // Senior/PWD bypass — legally required discounts skip most rules
+      const isSeniorPWD = customerType === "senior" || customerType === "pwd";
+
+      // Check for no_discount products in cart
+      const { data: cartProducts } = await supabase
+        .from("products")
+        .select("id, name, no_discount")
+        .in("id", cart.map(i => i.product_id));
+      const excludedProduct = cartProducts?.find(p => p.no_discount);
+      if (excludedProduct) {
+        return showToast(`"${excludedProduct.name}" is excluded from discounts by the owner.`, "error");
+      }
+
+      // Rule 1 — Discounts enabled (Senior/PWD always allowed)
+      if (!isSeniorPWD && business.discount_enabled === false) {
         return showToast("Discounts are currently disabled by the owner.", "error");
       }
-      // Rule 2 — Allowed types
-      if (business.discount_types_allowed === "percent" && discountType === "fixed") {
+      // Rule 2 — Allowed types (Senior/PWD always percent)
+      if (!isSeniorPWD && business.discount_types_allowed === "percent" && discountType === "fixed") {
         return showToast("Only percentage discounts are allowed.", "error");
       }
-      if (business.discount_types_allowed === "fixed" && discountType === "percent") {
+      if (!isSeniorPWD && business.discount_types_allowed === "fixed" && discountType === "percent") {
         return showToast("Only fixed amount discounts are allowed.", "error");
       }
-      // Rule 3 & 4 — Max limits
-      if (discountType === "percent" && Number(discountValue) > (business.max_discount_percent || 20)) {
+      // Rule 3 & 4 — Max limits (Senior/PWD bypass)
+      if (!isSeniorPWD && discountType === "percent" && Number(discountValue) > (business.max_discount_percent || 20)) {
         return showToast(`Maximum discount allowed is ${business.max_discount_percent || 20}%.`, "error");
       }
-      if (discountType === "fixed" && Number(discountValue) > (business.max_discount_fixed || 500)) {
+      if (!isSeniorPWD && discountType === "fixed" && Number(discountValue) > (business.max_discount_fixed || 500)) {
         return showToast(`Maximum discount allowed is ₱${business.max_discount_fixed || 500}.`, "error");
       }
-      // Rule 5 — Bundle rules — min quantity of same item
-      const minQty = business.discount_min_quantity || 3;
-      const hasBundle = cart.some(item => item.quantity >= minQty);
-      if (!hasBundle) {
-        return showToast(`Discount requires at least ${minQty} pieces of the same item.`, "error");
+      // Rule 5 & 6 — Bundle rules (Senior/PWD bypass)
+      if (!isSeniorPWD) {
+        const minQty = business.discount_min_quantity || 3;
+        const hasBundle = cart.some(item => item.quantity >= minQty);
+        if (!hasBundle) {
+          return showToast(`Discount requires at least ${minQty} pieces of the same item.`, "error");
+        }
+        const minAmount = business.discount_min_amount || 200;
+        if (subtotal < minAmount) {
+          return showToast(`Minimum purchase of ₱${minAmount} required for discount.`, "error");
+        }
       }
-      // Rule 6 — Minimum cart total
-      const minAmount = business.discount_min_amount || 200;
-      if (subtotal < minAmount) {
-        return showToast(`Minimum purchase of ₱${minAmount} required for discount.`, "error");
-      }
-      // Rule 7 — Reason required
+      // Rule 7 — Reason required (always)
       if (!discountReason.trim()) {
         return showToast("Please enter a reason for the discount.", "error");
       }
-      // Rule 8 — Time restriction
-      const now = new Date();
-      const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-      const startTime = business.discount_start_time || "00:00";
-      const endTime = business.discount_end_time || "23:59";
-      if (currentTime < startTime || currentTime > endTime) {
-        return showToast(`Discounts only allowed between ${startTime} and ${endTime}.`, "error");
+      // Rule 8 — Time restriction (Senior/PWD bypass)
+      if (!isSeniorPWD) {
+        const now = new Date();
+        const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+        const startTime = business.discount_start_time || "00:00";
+        const endTime = business.discount_end_time || "23:59";
+        if (currentTime < startTime || currentTime > endTime) {
+          return showToast(`Discounts only allowed between ${startTime} and ${endTime}.`, "error");
+        }
       }
       // Rule 9 — Manager approval for high discounts
-      if (discountType === "percent" && Number(discountValue) > (business.manager_approval_threshold || 15)) {
+      // EXCEPTION: Senior/PWD discounts are legally required — never need approval
+      const isSeniorPWD = customerType === "senior" || customerType === "pwd";
+      if (!isSeniorPWD && discountType === "percent" && Number(discountValue) > (business.manager_approval_threshold || 15)) {
         // Check if owner already approved in database
         const { data: cashierProfile } = await supabase
           .from("profiles")
