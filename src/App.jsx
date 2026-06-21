@@ -1226,51 +1226,32 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
   const [utangTotal, setUtangTotal] = useState(0);
   const [recentTx, setRecentTx] = useState([]);
   const [pendingProducts, setPendingProducts] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const [b, p, s, tx, utang, pending] = await Promise.all([
+    const [b, p, s, tx, utang, pending, notifs] = await Promise.all([
       supabase.from("branches").select("*").eq("business_id", business.id).order("created_at"),
       supabase.from("products").select("*").eq("business_id", business.id).eq("status", "active").order("name"),
-      supabase
-        .from("profiles")
-        .select("*")
-        .eq("business_id", business.id)
-        .neq("role", "owner")
-        .order("full_name"),
-      supabase
-        .from("transactions")
-        .select("*")
-        .eq("business_id", business.id)
-        .eq("status", "completed")
-        .gte("created_at", today.toISOString())
-        .order("created_at", { ascending: false }),
-      supabase
-        .from("utang_records")
-        .select("*")
-        .eq("business_id", business.id)
-        .in("status", ["unpaid", "partial"]),
-      supabase
-        .from("products")
-        .select("*")
-        .eq("business_id", business.id)
-        .eq("status", "pending")
-        .order("created_at", { ascending: false }),
+      supabase.from("profiles").select("*").eq("business_id", business.id).neq("role", "owner").order("full_name"),
+      supabase.from("transactions").select("*").eq("business_id", business.id).eq("status", "completed").gte("created_at", today.toISOString()).order("created_at", { ascending: false }),
+      supabase.from("utang_records").select("*").eq("business_id", business.id).in("status", ["unpaid", "partial"]),
+      supabase.from("products").select("*").eq("business_id", business.id).eq("status", "pending").order("created_at", { ascending: false }),
+      supabase.from("notifications").select("*").eq("business_id", business.id).eq("is_read", false).order("created_at", { ascending: false }).limit(20),
     ]);
     setBranches(b.data || []);
     setProducts(p.data || []);
     setStaff(s.data || []);
     setRecentTx((tx.data || []).slice(0, 5));
     setPendingProducts(pending.data || []);
+    setNotifications(notifs.data || []);
     const revenue = (tx.data || []).reduce((sum, t) => sum + Number(t.total_amount), 0);
     setTodayRevenue(revenue);
     setTodayTxCount((tx.data || []).length);
-    const utangAmt = (utang.data || []).reduce(
-      (sum, u) => sum + Number(u.balance || u.amount),
-      0
-    );
+    const utangAmt = (utang.data || []).reduce((sum, u) => sum + Number(u.balance || u.amount), 0);
     setUtangTotal(utangAmt);
     setLoading(false);
   }, [business.id]);
@@ -1544,17 +1525,78 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             </p>
             <h1 className="text-white font-black text-xl leading-tight">{business.name}</h1>
           </div>
-          <button
-            onClick={onLogout}
-            className="bg-green-800 bg-opacity-50 text-green-100 text-xs px-3 py-2 rounded-xl font-medium"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Notification Bell */}
+            <button
+              onClick={() => setShowNotifications(!showNotifications)}
+              className="relative bg-green-800 bg-opacity-50 text-green-100 px-3 py-2 rounded-xl"
+            >
+              🔔
+              {notifications.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-black w-5 h-5 rounded-full flex items-center justify-center">
+                  {notifications.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={onLogout}
+              className="bg-green-800 bg-opacity-50 text-green-100 text-xs px-3 py-2 rounded-xl font-medium"
+            >
+              Logout
+            </button>
+          </div>
         </div>
         <p className="text-green-300 text-xs">
           Maligayang pagdating, {profile.full_name.split(" ")[0]}! 👋
         </p>
       </div>
+
+      {/* Notifications Panel */}
+      {showNotifications && (
+        <div className="bg-white border-b border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between px-4 py-3">
+            <p className="text-sm font-bold text-gray-800">
+              🔔 Notifications {notifications.length > 0 && `(${notifications.length})`}
+            </p>
+            {notifications.length > 0 && (
+              <button
+                onClick={async () => {
+                  await supabase
+                    .from("notifications")
+                    .update({ is_read: true })
+                    .eq("business_id", business.id)
+                    .eq("is_read", false);
+                  fetchAll();
+                }}
+                className="text-xs text-green-700 font-semibold"
+              >
+                Mark all read
+              </button>
+            )}
+          </div>
+          {notifications.length === 0 ? (
+            <div className="px-4 pb-4 text-center">
+              <p className="text-sm text-gray-400">No new notifications</p>
+            </div>
+          ) : (
+            <div className="max-h-64 overflow-y-auto divide-y divide-gray-50">
+              {notifications.map((n) => (
+                <div key={n.id} className="px-4 py-3 bg-red-50">
+                  <p className="text-xs font-bold text-red-700">{n.title}</p>
+                  <p className="text-xs text-gray-600 mt-0.5">{n.message}</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {new Date(n.created_at).toLocaleTimeString("en-PH", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto pb-24">
         {loading ? (
@@ -2139,6 +2181,10 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   const [voidModal, setVoidModal] = useState(null);
   const [voidReason, setVoidReason] = useState("");
   const [gcashRef, setGcashRef] = useState("");
+  const [utangPayModal, setUtangPayModal] = useState(null);
+  const [utangPayAmount, setUtangPayAmount] = useState("");
+  const [reconcileModal, setReconcileModal] = useState(false);
+  const [cashCounted, setCashCounted] = useState("");
 
   const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
   const change = Math.max(0, Number(amountTendered) - total);
@@ -2296,7 +2342,6 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   // Void transaction
   const voidTransaction = async () => {
     if (!voidReason.trim()) return showToast("Please enter a reason for voiding.", "error");
-    // Same-day only check
     if (!isToday(voidModal.created_at)) {
       return showToast("Only today's transactions can be voided. Contact your owner for older voids.", "error");
     }
@@ -2310,7 +2355,17 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           void_reason: voidReason.trim(),
         })
         .eq("id", voidModal.id);
-      showToast("Transaction voided successfully.", "success");
+
+      // Notify owner via notifications table
+      await supabase.from("notifications").insert({
+        business_id: business.id,
+        type: "void",
+        title: "Transaction Voided",
+        message: `${profile.full_name} voided ${voidModal.receipt_number} (₱${Number(voidModal.total_amount).toFixed(2)}). Reason: ${voidReason.trim()}`,
+        is_read: false,
+      }).select().maybeSingle();
+
+      showToast("Transaction voided. Owner has been notified.", "success");
       setVoidModal(null);
       setVoidReason("");
       loadHistory();
@@ -2332,18 +2387,74 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
     setLoadingUtang(false);
   };
 
-  // Mark utang as paid
-  const markUtangPaid = async (utangId, amount) => {
+  // Mark utang as paid — requires amount confirmation
+  const markUtangPaid = async () => {
+    const amount = Number(utangPayAmount);
+    const balance = Number(utangPayModal.amount) - Number(utangPayModal.amount_paid);
+    if (!utangPayAmount || isNaN(amount) || amount <= 0) {
+      return showToast("Please enter the amount received.", "error");
+    }
+    if (amount > balance) {
+      return showToast(`Amount cannot exceed balance of ₱${balance.toFixed(2)}.`, "error");
+    }
+    const isFullyPaid = amount >= balance;
     await supabase
       .from("utang_records")
       .update({
-        amount_paid: amount,
-        status: "paid",
+        amount_paid: Number(utangPayModal.amount_paid) + amount,
+        status: isFullyPaid ? "paid" : "partial",
         updated_at: new Date().toISOString(),
       })
-      .eq("id", utangId);
-    showToast("Utang marked as paid!", "success");
+      .eq("id", utangPayModal.id);
+    showToast(
+      isFullyPaid
+        ? `${utangPayModal.customer_name} fully paid! ✓`
+        : `₱${amount.toFixed(2)} recorded. Remaining: ₱${(balance - amount).toFixed(2)}`,
+      "success"
+    );
+    setUtangPayModal(null);
+    setUtangPayAmount("");
     loadUtang();
+  };
+
+  // Cash reconciliation submit
+  const submitReconciliation = async () => {
+    const counted = Number(cashCounted);
+    if (!cashCounted || isNaN(counted)) {
+      return showToast("Please enter the cash amount counted.", "error");
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const { data: txns } = await supabase
+      .from("transactions")
+      .select("total_amount, payment_method")
+      .eq("business_id", business.id)
+      .eq("status", "completed")
+      .eq("payment_method", "cash")
+      .gte("created_at", today.toISOString());
+    const expectedCash = (txns || []).reduce((s, t) => s + Number(t.total_amount), 0);
+    const difference = counted - expectedCash;
+    const status = difference === 0 ? "exact" : difference > 0 ? "over" : "short";
+    await supabase.from("daily_reports").insert({
+      business_id: business.id,
+      branch_id: branch?.id || null,
+      cashier_id: profile.id,
+      report_date: new Date().toISOString().split("T")[0],
+      expected_cash: expectedCash,
+      counted_cash: counted,
+      difference: difference,
+      status: status,
+    });
+    showToast(
+      status === "exact"
+        ? "Cash reconciled perfectly! ✓"
+        : status === "over"
+        ? `Cash is over by ₱${Math.abs(difference).toFixed(2)}`
+        : `Cash is short by ₱${Math.abs(difference).toFixed(2)} ⚠️`,
+      status === "short" ? "error" : "success"
+    );
+    setReconcileModal(false);
+    setCashCounted("");
   };
 
   // Process checkout — THIS IS WHERE THE BUG WAS (missing closing brace)
@@ -2848,14 +2959,22 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
                   Today's Transactions
                 </p>
-                <p className="text-xs font-bold text-green-700">
-                  ₱
-                  {history
-                    .filter((t) => t.status === "completed")
-                    .reduce((s, t) => s + Number(t.total_amount), 0)
-                    .toFixed(2)}{" "}
-                  total
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-xs font-bold text-green-700">
+                    ₱
+                    {history
+                      .filter((t) => t.status === "completed")
+                      .reduce((s, t) => s + Number(t.total_amount), 0)
+                      .toFixed(2)}{" "}
+                    total
+                  </p>
+                  <button
+                    onClick={() => setReconcileModal(true)}
+                    className="text-xs bg-blue-50 text-blue-600 font-semibold px-3 py-1.5 rounded-lg border border-blue-100"
+                  >
+                    💰 Count Cash
+                  </button>
+                </div>
               </div>
               {history.map((txn) => (
                 <div
@@ -2990,10 +3109,13 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     {Number(u.amount_paid).toFixed(2)}
                   </div>
                   <button
-                    onClick={() => markUtangPaid(u.id, u.amount)}
+                    onClick={() => {
+                      setUtangPayModal(u);
+                      setUtangPayAmount("");
+                    }}
                     className="text-xs text-green-700 font-semibold bg-green-50 px-3 py-1.5 rounded-lg"
                   >
-                    Mark as Fully Paid ✓
+                    💵 Record Payment
                   </button>
                 </div>
               ))}
@@ -3135,6 +3257,122 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 className="flex-1 bg-red-500 text-white font-bold py-3 rounded-xl text-sm"
               >
                 Void Transaction
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Utang Payment Confirmation Modal */}
+      {utangPayModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-3xl p-5">
+            <h3 className="font-black text-gray-800 text-base mb-1">Record Payment</h3>
+            <p className="text-xs text-gray-500 mb-1">
+              Customer: <span className="font-bold text-gray-800">{utangPayModal.customer_name}</span>
+            </p>
+            <p className="text-xs text-gray-500 mb-3">
+              Outstanding balance:{" "}
+              <span className="font-black text-red-600">
+                ₱{(Number(utangPayModal.amount) - Number(utangPayModal.amount_paid)).toFixed(2)}
+              </span>
+            </p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+              Amount Received from Customer
+            </p>
+            <input
+              type="number"
+              value={utangPayAmount}
+              onChange={(e) => setUtangPayAmount(e.target.value)}
+              placeholder="Enter exact amount received..."
+              className="w-full border-2 border-green-300 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-green-500 mb-2"
+            />
+            <div className="flex gap-2 mb-3 flex-wrap">
+              {[
+                Number(utangPayModal.amount) - Number(utangPayModal.amount_paid),
+                50, 100, 200, 500,
+              ].slice(0, 4).map((amt) => (
+                <button
+                  key={amt}
+                  onClick={() => setUtangPayAmount(String(amt))}
+                  className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium"
+                >
+                  ₱{amt}
+                </button>
+              ))}
+            </div>
+            {utangPayAmount && Number(utangPayAmount) > 0 && (
+              <div className={`rounded-xl px-4 py-2 mb-3 ${
+                Number(utangPayAmount) >= (Number(utangPayModal.amount) - Number(utangPayModal.amount_paid))
+                  ? "bg-green-50 border border-green-200"
+                  : "bg-yellow-50 border border-yellow-200"
+              }`}>
+                <p className={`text-xs font-semibold ${
+                  Number(utangPayAmount) >= (Number(utangPayModal.amount) - Number(utangPayModal.amount_paid))
+                    ? "text-green-700"
+                    : "text-yellow-700"
+                }`}>
+                  {Number(utangPayAmount) >= (Number(utangPayModal.amount) - Number(utangPayModal.amount_paid))
+                    ? "✓ This will fully settle the utang"
+                    : `Partial payment — ₱${((Number(utangPayModal.amount) - Number(utangPayModal.amount_paid)) - Number(utangPayAmount)).toFixed(2)} will remain`}
+                </p>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setUtangPayModal(null); setUtangPayAmount(""); }}
+                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={markUtangPaid}
+                disabled={!utangPayAmount || Number(utangPayAmount) <= 0}
+                className="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50"
+              >
+                Confirm Payment ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Cash Reconciliation Modal */}
+      {reconcileModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-3xl p-5">
+            <h3 className="font-black text-gray-800 text-base mb-1">💰 Cash Count</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              Count all cash in the drawer and enter the total below.
+            </p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+              Total Cash in Drawer
+            </p>
+            <input
+              type="number"
+              value={cashCounted}
+              onChange={(e) => setCashCounted(e.target.value)}
+              placeholder="Enter total cash counted..."
+              className="w-full border-2 border-blue-300 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+            />
+            <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4">
+              <p className="text-xs text-blue-700 font-medium">
+                ℹ️ This will compare your cash count against today's cash transactions. Any difference will be reported to your owner immediately.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setReconcileModal(false); setCashCounted(""); }}
+                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitReconciliation}
+                disabled={!cashCounted || Number(cashCounted) < 0}
+                className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50"
+              >
+                Submit Count
               </button>
             </div>
           </div>
