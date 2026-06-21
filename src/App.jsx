@@ -1240,7 +1240,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
       supabase.from("transactions").select("*").eq("business_id", business.id).eq("status", "completed").gte("created_at", today.toISOString()).order("created_at", { ascending: false }),
       supabase.from("utang_records").select("*").eq("business_id", business.id).in("status", ["unpaid", "partial"]),
       supabase.from("products").select("*").eq("business_id", business.id).eq("status", "pending").order("created_at", { ascending: false }),
-      supabase.from("notifications").select("*").eq("business_id", business.id).eq("is_read", false).order("created_at", { ascending: false }).limit(20),
+      supabase.from("notifications").select("*").eq("business_id", business.id).eq("is_read", false).is("recipient_id", null).order("created_at", { ascending: false }).limit(20),
     ]);
     setBranches(b.data || []);
     setProducts(p.data || []);
@@ -1565,7 +1565,8 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                     .from("notifications")
                     .update({ is_read: true })
                     .eq("business_id", business.id)
-                    .eq("is_read", false);
+                    .eq("is_read", false)
+                    .is("recipient_id", null); // Only owner notifications
                   fetchAll();
                 }}
                 className="text-xs text-green-700 font-semibold"
