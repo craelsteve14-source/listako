@@ -1925,16 +1925,16 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                             action_taken: "approved",
                             is_read: true,
                           }).eq("id", n.id);
-                          // Notify cashier
+                          // Send to CASHIER using sender_id
                           await supabase.from("notifications").insert({
                             business_id: business.id,
-                            recipient_id: null,
+                            recipient_id: n.sender_id,
                             type: "discount_approved",
                             title: "✅ High Discount Approved",
-                            message: "Your high discount request has been approved by the owner. You may now process the transaction.",
+                            message: "Your high discount request has been approved by the owner. You may now process the transaction with the discount.",
                             is_read: false,
                           });
-                          showToast("Discount request approved! Cashier has been notified.", "success");
+                          showToast("Discount approved! Cashier has been notified.", "success");
                           fetchAll();
                         }}
                         className="flex-1 bg-green-600 text-white font-bold py-2 rounded-xl text-xs"
@@ -1947,10 +1947,10 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                             action_taken: "declined",
                             is_read: true,
                           }).eq("id", n.id);
-                          // Notify cashier
+                          // Send to CASHIER using sender_id
                           await supabase.from("notifications").insert({
                             business_id: business.id,
-                            recipient_id: null,
+                            recipient_id: n.sender_id,
                             type: "discount_declined",
                             title: "❌ High Discount Declined",
                             message: "Your high discount request was declined by the owner. Please apply a lower discount.",
@@ -3024,6 +3024,19 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       }
       // Rule 9 — Manager approval for high discounts — send request instead of error
       if (discountType === "percent" && Number(discountValue) > (business.manager_approval_threshold || 15)) {
+        // Check for duplicate pending request
+        const { data: existing } = await supabase
+          .from("notifications")
+          .select("id")
+          .eq("business_id", business.id)
+          .eq("type", "discount_approval_request")
+          .is("action_taken", null)
+          .maybeSingle();
+
+        if (existing) {
+          return showToast("A discount approval request is already pending. Please wait for owner response.", "warning");
+        }
+
         // Send approval request to owner
         await supabase.from("notifications").insert({
           business_id: business.id,
@@ -3032,6 +3045,8 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           message: `${profile.full_name} is requesting a ${discountValue}% discount (above your ${business.manager_approval_threshold || 15}% threshold). Cart total: ₱${subtotal.toFixed(2)}. Reason: ${discountReason.trim()}`,
           is_read: false,
           recipient_id: null,
+          sender_id: profile.id,
+          transaction_id: null,
         });
         return showToast(`Discount above ${business.manager_approval_threshold || 15}% requires owner approval. Request sent to owner! ✓`, "warning");
       }
@@ -3679,14 +3694,16 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             <div className="mb-3 space-y-2">
               {cashierNotifs.map((n) => (
                 <div key={n.id} className={`rounded-2xl p-3 border ${
-                  n.type === "void_approved"
+                  n.type === "void_approved" || n.type === "discount_approved"
                     ? "bg-green-50 border-green-200"
                     : "bg-red-50 border-red-200"
                 }`}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <p className={`text-xs font-bold ${
-                        n.type === "void_approved" ? "text-green-700" : "text-red-700"
+                        n.type === "void_approved" || n.type === "discount_approved"
+                          ? "text-green-700"
+                          : "text-red-700"
                       }`}>{n.title}</p>
                       <p className="text-xs text-gray-600 mt-0.5">{n.message}</p>
                     </div>
