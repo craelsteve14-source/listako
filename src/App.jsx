@@ -1434,7 +1434,14 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
 }
 
 function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }) {
-  const [tab, setTab] = useState("dashboard");
+  const [tab, setTab] = useState(() => {
+    return localStorage.getItem("owner_tab") || "dashboard";
+  });
+
+  const setTabPersisted = (newTab) => {
+    localStorage.setItem("owner_tab", newTab);
+    setTab(newTab);
+  };
   const [branches, setBranches] = useState([]);
   const [products, setProducts] = useState([]);
   const [staff, setStaff] = useState([]);
@@ -2024,13 +2031,13 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                     </p>
                     <div className="flex gap-2 mt-3">
                       <button
-                        onClick={() => setTab("branches")}
+                        onClick={() => setTabPersisted("branches")}
                         className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg font-medium"
                       >
                         Add Branch
                       </button>
                       <button
-                        onClick={() => setTab("products")}
+                        onClick={() => setTabPersisted("products")}
                         className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg font-medium"
                       >
                         Add Products
@@ -2291,7 +2298,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
         {TABS.map((item) => (
           <button
             key={item.key}
-            onClick={() => setTab(item.key)}
+            onClick={() => setTabPersisted(item.key)}
             className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors ${
               tab === item.key ? "bg-green-50 text-green-700" : "text-gray-400"
             }`}
@@ -2547,17 +2554,123 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
 // CASHIER POS
 // ═══════════════════════════════════════════════════════════════
 function CashierPOS({ profile, business, branch, onLogout, showToast }) {
-  const [posTab, setPosTab] = useState("pos");
-  const [cart, setCart] = useState([]);
+  const [posTab, setPosTab] = useState(() => {
+    return localStorage.getItem("cashier_tab") || "pos";
+  });
+
+  const setPosTabPersisted = (newTab) => {
+    localStorage.setItem("cashier_tab", newTab);
+    setPosTab(newTab);
+  };
+
+  const [cart, setCart] = useState(() => {
+    try {
+      const saved = localStorage.getItem("cashier_cart");
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  const setCartPersisted = (updater) => {
+    setCart(prev => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      try { localStorage.setItem("cashier_cart", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+  const [checkoutMode, setCheckoutMode] = useState(() => {
+    return localStorage.getItem("cashier_checkout") === "true";
+  });
+
+  const setCheckoutModePersisted = (val) => {
+    localStorage.setItem("cashier_checkout", String(val));
+    setCheckoutMode(val);
+  };
+
+  const [paymentMethod, setPaymentMethod] = useState(() => {
+    return localStorage.getItem("cashier_payment") || "cash";
+  });
+
+  const setPaymentMethodPersisted = (val) => {
+    localStorage.setItem("cashier_payment", val);
+    setPaymentMethod(val);
+  };
+
+  const [amountTendered, setAmountTendered] = useState(() => {
+    return localStorage.getItem("cashier_amount") || "";
+  });
+
+  const setAmountTenderedPersisted = (val) => {
+    localStorage.setItem("cashier_amount", val);
+    setAmountTendered(val);
+  };
+
+  const [customerName, setCustomerName] = useState(() => {
+    return localStorage.getItem("cashier_customer_name") || "";
+  });
+
+  const setCustomerNamePersisted = (val) => {
+    localStorage.setItem("cashier_customer_name", val);
+    setCustomerName(val);
+  };
+
+  const [customerPhone, setCustomerPhone] = useState(() => {
+    return localStorage.getItem("cashier_customer_phone") || "";
+  });
+
+  const setCustomerPhonePersisted = (val) => {
+    localStorage.setItem("cashier_customer_phone", val);
+    setCustomerPhone(val);
+  };
+
+  const [gcashRef, setGcashRef] = useState(() => {
+    return localStorage.getItem("cashier_gcash_ref") || "";
+  });
+
+  const setGcashRefPersisted = (val) => {
+    localStorage.setItem("cashier_gcash_ref", val);
+    setGcashRef(val);
+  };
+
+  const [discountType, setDiscountType] = useState(() => {
+    return localStorage.getItem("cashier_discount_type") || "percent";
+  });
+
+  const setDiscountTypePersisted = (val) => {
+    localStorage.setItem("cashier_discount_type", val);
+    setDiscountType(val);
+  };
+
+  const [discountValue, setDiscountValue] = useState(() => {
+    return localStorage.getItem("cashier_discount_value") || "";
+  });
+
+  const setDiscountValuePersisted = (val) => {
+    localStorage.setItem("cashier_discount_value", val);
+    setDiscountValue(val);
+  };
+
+  const [discountReason, setDiscountReason] = useState(() => {
+    return localStorage.getItem("cashier_discount_reason") || "";
+  });
+
+  const setDiscountReasonPersisted = (val) => {
+    localStorage.setItem("cashier_discount_reason", val);
+    setDiscountReason(val);
+  };
+
+  const [customerType, setCustomerType] = useState(() => {
+    return localStorage.getItem("cashier_customer_type") || "regular";
+  });
+
+  const setCustomerTypePersisted = (val) => {
+    localStorage.setItem("cashier_customer_type", val);
+    setCustomerType(val);
+  };
   const [scanning, setScanning] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
-  const [checkoutMode, setCheckoutMode] = useState(false);
-  const [amountTendered, setAmountTendered] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("cash");
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
   const [processing, setProcessing] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const [receiptItems, setReceiptItems] = useState([]);
@@ -2567,17 +2680,12 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   const [loadingUtang, setLoadingUtang] = useState(false);
   const [voidModal, setVoidModal] = useState(null);
   const [voidReason, setVoidReason] = useState("");
-  const [gcashRef, setGcashRef] = useState("");
   const [utangPayModal, setUtangPayModal] = useState(null);
   const [utangPayAmount, setUtangPayAmount] = useState("");
   const [reconcileModal, setReconcileModal] = useState(false);
   const [cashCounted, setCashCounted] = useState("");
   const [cashierNotifs, setCashierNotifs] = useState([]);
-  const [discountType, setDiscountType] = useState("percent");
-  const [discountValue, setDiscountValue] = useState("");
-  const [discountReason, setDiscountReason] = useState("");
   const [showDiscountModal, setShowDiscountModal] = useState(false);
-  const [customerType, setCustomerType] = useState("regular");
 
   const subtotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
   const discountAmount = discountValue
@@ -2688,7 +2796,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
 
   // Add to cart with stock validation
   const addToCart = (product) => {
-    setCart((prev) => {
+    setCartPersisted((prev) => {
       const existing = prev.find((i) => i.product_id === product.id);
       if (existing) {
         if (existing.quantity >= product.stock_quantity) {
@@ -2723,7 +2831,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
 
   // Update quantity with stock validation
   const updateQty = (productId, delta) => {
-    setCart((prev) =>
+    setCartPersisted((prev) =>
       prev
         .map((i) => {
           if (i.product_id !== productId) return i;
@@ -3024,19 +3132,26 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
         }
       }
 
-      // Show receipt
+      // Show receipt and clear all persisted state
       setReceiptItems(cart.map((i) => ({ ...i })));
       setReceipt(txn);
-      setCart([]);
-      setAmountTendered("");
-      setCustomerName("");
-      setCustomerPhone("");
-      setGcashRef("");
-      setDiscountValue("");
-      setDiscountReason("");
-      setDiscountType("percent");
-      setCustomerType("regular");
-      setCheckoutMode(false);
+      setCartPersisted([]);
+      setAmountTenderedPersisted("");
+      setCustomerNamePersisted("");
+      setCustomerPhonePersisted("");
+      setGcashRefPersisted("");
+      setDiscountValuePersisted("");
+      setDiscountReasonPersisted("");
+      setDiscountTypePersisted("percent");
+      setCustomerTypePersisted("regular");
+      setCheckoutModePersisted(false);
+      // Clear all cashier localStorage keys
+      [
+        "cashier_cart", "cashier_checkout", "cashier_payment",
+        "cashier_amount", "cashier_customer_name", "cashier_customer_phone",
+        "cashier_gcash_ref", "cashier_discount_type", "cashier_discount_value",
+        "cashier_discount_reason", "cashier_customer_type"
+      ].forEach(k => localStorage.removeItem(k));
     } catch (err) {
       showToast("Transaction failed: " + (err?.message || "Unknown error"), "error");
       console.error("Checkout error:", err);
@@ -3113,7 +3228,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
         ].map((t) => (
           <button
             key={t.key}
-            onClick={() => setPosTab(t.key)}
+            onClick={() => setPosTabPersisted(t.key)}
             className={`flex-1 py-2.5 text-xs font-semibold rounded-t-lg transition-colors ${
               posTab === t.key ? "bg-gray-50 text-green-700" : "text-green-300"
             }`}
@@ -3258,7 +3373,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 <p className="text-xl font-black text-gray-800">₱{total.toFixed(2)}</p>
               </div>
               <button
-                onClick={() => setCheckoutMode(true)}
+                onClick={() => setCheckoutModePersisted(true)}
                 className="w-full bg-green-600 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-transform"
               >
                 Proceed to Checkout →
@@ -3278,7 +3393,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               }`}>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-black text-gray-800 text-lg">Checkout</h3>
-                  <button onClick={() => setCheckoutMode(false)} className="text-gray-400 text-xl">
+                  <button onClick={() => setCheckoutModePersisted(false)} className="text-gray-400 text-xl">
                     ✕
                   </button>
                 </div>
@@ -3327,7 +3442,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     </p>
                     {discountAmount > 0 && (
                       <button
-                        onClick={() => { setDiscountValue(""); setDiscountReason(""); setCustomerType("regular"); }}
+                        onClick={() => { setDiscountValuePersisted(""); setDiscountReasonPersisted(""); setCustomerTypePersisted("regular"); }}
                         className="text-xs text-red-500 font-semibold"
                       >
                         Remove
@@ -3346,22 +3461,22 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     ].map(t => (
                       <button key={t.key}
                         onClick={() => {
-                          setCustomerType(t.key);
+                          setCustomerTypePersisted(t.key);
                           if (t.key === "suki") {
-                            setDiscountType("percent");
-                            setDiscountValue(String(business.suki_discount_percent || 5));
-                            setDiscountReason("Suki/Loyalty discount");
+                            setDiscountTypePersisted("percent");
+                            setDiscountValuePersisted(String(business.suki_discount_percent || 5));
+                            setDiscountReasonPersisted("Suki/Loyalty discount");
                           } else if (t.key === "senior") {
-                            setDiscountType("percent");
-                            setDiscountValue(String(business.senior_pwd_discount_percent || 20));
-                            setDiscountReason("Senior Citizen discount (RA 9994)");
+                            setDiscountTypePersisted("percent");
+                            setDiscountValuePersisted(String(business.senior_pwd_discount_percent || 20));
+                            setDiscountReasonPersisted("Senior Citizen discount (RA 9994)");
                           } else if (t.key === "pwd") {
-                            setDiscountType("percent");
-                            setDiscountValue(String(business.senior_pwd_discount_percent || 20));
-                            setDiscountReason("PWD discount (RA 7277)");
+                            setDiscountTypePersisted("percent");
+                            setDiscountValuePersisted(String(business.senior_pwd_discount_percent || 20));
+                            setDiscountReasonPersisted("PWD discount (RA 7277)");
                           } else {
-                            setDiscountValue("");
-                            setDiscountReason("");
+                            setDiscountValuePersisted("");
+                            setDiscountReasonPersisted("");
                           }
                         }}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold border ${
@@ -3379,20 +3494,20 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     <>
                       <div className="flex gap-2 mb-2">
                         {(business.discount_types_allowed === "both" || business.discount_types_allowed === "percent" || !business.discount_types_allowed) && (
-                          <button onClick={() => { setDiscountType("percent"); setDiscountValue(""); }}
+                          <button onClick={() => { setDiscountTypePersisted("percent"); setDiscountValuePersisted(""); }}
                             className={`flex-1 py-2 rounded-xl text-sm font-semibold border ${
                               discountType === "percent" ? "bg-green-600 text-white border-green-600" : "bg-white text-gray-600 border-gray-200"
                             }`}>% Percent</button>
                         )}
                         {(business.discount_types_allowed === "both" || business.discount_types_allowed === "fixed" || !business.discount_types_allowed) && (
-                          <button onClick={() => { setDiscountType("fixed"); setDiscountValue(""); }}
+                          <button onClick={() => { setDiscountTypePersisted("fixed"); setDiscountValuePersisted(""); }}
                             className={`flex-1 py-2 rounded-xl text-sm font-semibold border ${
                               discountType === "fixed" ? "bg-green-600 text-white border-green-600" : "bg-white text-gray-600 border-gray-200"
                             }`}>₱ Fixed</button>
                         )}
                       </div>
                       <input type="number" value={discountValue}
-                        onChange={e => setDiscountValue(e.target.value)}
+                        onChange={e => setDiscountValuePersisted(e.target.value)}
                         placeholder={discountType === "percent"
                           ? `Max ${business.max_discount_percent || 20}%`
                           : `Max ₱${business.max_discount_fixed || 500}`}
@@ -3402,7 +3517,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
 
                   {discountValue && Number(discountValue) > 0 && (
                     <input type="text" value={discountReason}
-                      onChange={e => setDiscountReason(e.target.value)}
+                      onChange={e => setDiscountReasonPersisted(e.target.value)}
                       placeholder="Reason for discount (required)..."
                       className="w-full border border-orange-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-orange-50 mb-2" />
                   )}
@@ -3425,7 +3540,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                   {PAYMENT_METHODS.map((m) => (
                     <button
                       key={m.key}
-                      onClick={() => setPaymentMethod(m.key)}
+                      onClick={() => setPaymentMethodPersisted(m.key)}
                       className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${
                         paymentMethod === m.key
                           ? "bg-green-600 text-white border-green-600"
@@ -3446,7 +3561,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     <input
                       type="text"
                       value={gcashRef}
-                      onChange={(e) => setGcashRef(e.target.value)}
+                      onChange={(e) => setGcashRefPersisted(e.target.value)}
                       placeholder="e.g. 1234567890"
                       className="w-full border-2 border-red-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 bg-white font-mono font-bold"
                     />
@@ -3454,7 +3569,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     <input
                       type="text"
                       value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
+                      onChange={(e) => setCustomerNamePersisted(e.target.value)}
                       placeholder="Customer name (optional)..."
                       className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white mt-2"
                     />
@@ -3470,14 +3585,14 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     <input
                       type="text"
                       value={customerName}
-                      onChange={(e) => setCustomerName(e.target.value)}
+                      onChange={(e) => setCustomerNamePersisted(e.target.value)}
                       placeholder="Enter customer name..."
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-2"
                     />
                     <input
                       type="tel"
                       value={customerPhone}
-                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      onChange={(e) => setCustomerPhonePersisted(e.target.value)}
                       placeholder="Phone number (optional)..."
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
@@ -3498,7 +3613,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     <input
                       type="number"
                       value={amountTendered}
-                      onChange={(e) => setAmountTendered(e.target.value)}
+                      onChange={(e) => setAmountTenderedPersisted(e.target.value)}
                       placeholder="Enter amount..."
                       className="w-full border border-gray-200 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-green-500"
                     />
@@ -3524,7 +3639,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     ].map((amt) => (
                       <button
                         key={amt}
-                        onClick={() => setAmountTendered(String(amt))}
+                        onClick={() => setAmountTenderedPersisted(String(amt))}
                         className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium"
                       >
                         ₱{amt}
@@ -3868,7 +3983,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           onClose={() => setReceipt(null)}
           onNewTransaction={() => {
             setReceipt(null);
-            setPosTab("pos");
+            setPosTabPersisted("pos");
           }}
         />
       )}
