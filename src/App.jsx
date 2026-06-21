@@ -3258,7 +3258,25 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   // Poll for notifications every 10 seconds regardless of tab
   useEffect(() => {
     loadCashierNotifs();
-    const interval = setInterval(loadCashierNotifs, 10000);
+    const interval = setInterval(async () => {
+      const { data } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("recipient_id", profile.id)
+        .eq("is_read", false)
+        .order("created_at", { ascending: false });
+      const notifs = data || [];
+      setCashierNotifs(notifs);
+      // Auto-close checkout and clear discount if declined
+      const declined = notifs.find(n => n.type === "discount_declined");
+      if (declined) {
+        setDiscountValuePersisted("");
+        setDiscountReasonPersisted("");
+        setDiscountTypePersisted("percent");
+        setCustomerTypePersisted("regular");
+        setCheckoutModePersisted(false);
+      }
+    }, 10000);
     return () => clearInterval(interval);
   }, [loadCashierNotifs]);
 
@@ -3784,11 +3802,14 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     (paymentMethod === "cash" &&
                       (!amountTendered || Number(amountTendered) < total)) ||
                     (paymentMethod === "utang" && !customerName.trim()) ||
-                    ((paymentMethod === "gcash" || paymentMethod === "maya") && !gcashRef.trim())
+                    ((paymentMethod === "gcash" || paymentMethod === "maya") && !gcashRef.trim()) ||
+                    cashierNotifs.some(n => n.type === "discount_declined")
                   }
                   className="w-full bg-green-600 text-white font-black py-4 rounded-2xl text-lg disabled:opacity-50 active:scale-95 transition-transform mb-4"
                 >
-                  {processing
+                  {cashierNotifs.some(n => n.type === "discount_declined")
+                    ? "❌ Discount Declined — Clear it first"
+                    : processing
                     ? "Processing..."
                     : paymentMethod === "utang"
                     ? `Record Utang · ₱${total.toFixed(2)}`
