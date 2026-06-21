@@ -3335,10 +3335,31 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                           ? "text-green-700" : "text-red-700"
                       }`}>{n.title}</p>
                       <p className="text-xs text-gray-600 mt-0.5">{n.message}</p>
+                      {/* Auto-clear discount if declined */}
+                      {n.type === "discount_declined" && (
+                        <button
+                          onClick={() => {
+                            setDiscountValuePersisted("");
+                            setDiscountReasonPersisted("");
+                            setDiscountTypePersisted("percent");
+                            setCustomerTypePersisted("regular");
+                          }}
+                          className="mt-2 text-xs bg-red-100 text-red-700 font-semibold px-3 py-1.5 rounded-lg"
+                        >
+                          Clear Discount & Try Again
+                        </button>
+                      )}
                     </div>
                     <button
                       onClick={async () => {
                         await supabase.from("notifications").update({ is_read: true }).eq("id", n.id);
+                        // Auto-clear discount if this was a decline
+                        if (n.type === "discount_declined") {
+                          setDiscountValuePersisted("");
+                          setDiscountReasonPersisted("");
+                          setDiscountTypePersisted("percent");
+                          setCustomerTypePersisted("regular");
+                        }
                         loadCashierNotifs();
                       }}
                       className="text-gray-400 text-sm ml-2 flex-shrink-0"
