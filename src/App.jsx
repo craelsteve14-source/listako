@@ -3200,6 +3200,24 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
     setLoadingHistory(false);
   };
 
+  // Load cashier notifications — runs on all tabs every 10 seconds
+  const loadCashierNotifs = useCallback(async () => {
+    const { data } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("recipient_id", profile.id)
+      .eq("is_read", false)
+      .order("created_at", { ascending: false });
+    setCashierNotifs(data || []);
+  }, [profile.id]);
+
+  // Poll for notifications every 10 seconds regardless of tab
+  useEffect(() => {
+    loadCashierNotifs();
+    const interval = setInterval(loadCashierNotifs, 10000);
+    return () => clearInterval(interval);
+  }, [loadCashierNotifs]);
+
   useEffect(() => {
     if (posTab === "history") loadHistory();
     if (posTab === "utang") loadUtang();
@@ -3256,6 +3274,37 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       {/* POS Tab */}
       {posTab === "pos" && (
         <div className="flex-1 flex flex-col overflow-hidden">
+
+          {/* Cashier notifications — shown on POS tab too */}
+          {cashierNotifs.length > 0 && (
+            <div className="px-4 pt-3 space-y-2 flex-shrink-0">
+              {cashierNotifs.map((n) => (
+                <div key={n.id} className={`rounded-2xl p-3 border ${
+                  n.type === "void_approved" || n.type === "discount_approved"
+                    ? "bg-green-50 border-green-200"
+                    : "bg-red-50 border-red-200"
+                }`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className={`text-xs font-bold ${
+                        n.type === "void_approved" || n.type === "discount_approved"
+                          ? "text-green-700" : "text-red-700"
+                      }`}>{n.title}</p>
+                      <p className="text-xs text-gray-600 mt-0.5">{n.message}</p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        await supabase.from("notifications").update({ is_read: true }).eq("id", n.id);
+                        loadCashierNotifs();
+                      }}
+                      className="text-gray-400 text-sm ml-2 flex-shrink-0"
+                    >✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Search bar */}
           <div className="px-4 py-3 bg-white border-b border-gray-100 flex gap-2 flex-shrink-0">
             <div className="flex-1 relative">
