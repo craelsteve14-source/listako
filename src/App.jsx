@@ -1921,25 +1921,33 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                     <div className="flex gap-2 mt-2">
                       <button
                         onClick={async () => {
+                          // Extract discount value from message
+                          const discountMatch = n.message.match(/requesting a (\d+)%/);
+                          const approvedPercent = discountMatch ? Number(discountMatch[1]) : 20;
+
+                          // Save approval to cashier's profile in DATABASE
+                          if (n.sender_id) {
+                            await supabase.from("profiles").update({
+                              approved_discount_percent: approvedPercent,
+                              approved_discount_at: new Date().toISOString(),
+                            }).eq("id", n.sender_id);
+                          }
+
                           await supabase.from("notifications").update({
                             action_taken: "approved",
                             is_read: true,
                           }).eq("id", n.id);
-                          // Send to CASHIER using sender_id
+
+                          // Send to CASHIER
                           await supabase.from("notifications").insert({
                             business_id: business.id,
                             recipient_id: n.sender_id,
                             type: "discount_approved",
                             title: "✅ High Discount Approved",
-                            message: "Your high discount request has been approved by the owner. You may now process the transaction with the discount.",
+                            message: `Your ${approvedPercent}% discount request has been approved by the owner. Tap "Confirm Payment" now to complete the transaction.`,
                             is_read: false,
                           });
-                          // Save approved discount to localStorage so cashier can bypass check
-                          const discountMatch = n.message.match(/requesting a (\d+)%/);
-                          if (discountMatch) {
-                            localStorage.setItem("cashier_approved_discount", discountMatch[1]);
-                          }
-                          showToast("Discount approved! Cashier has been notified.", "success");
+                          showToast("Discount approved! Cashier can now process the payment.", "success");
                           fetchAll();
                         }}
                         className="flex-1 bg-green-600 text-white font-bold py-2 rounded-xl text-xs"
@@ -1948,10 +1956,19 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                       </button>
                       <button
                         onClick={async () => {
+                          // Clear any existing approval for this cashier
+                          if (n.sender_id) {
+                            await supabase.from("profiles").update({
+                              approved_discount_percent: 0,
+                              approved_discount_at: null,
+                            }).eq("id", n.sender_id);
+                          }
+
                           await supabase.from("notifications").update({
                             action_taken: "declined",
                             is_read: true,
                           }).eq("id", n.id);
+
                           // Send to CASHIER using sender_id
                           await supabase.from("notifications").insert({
                             business_id: business.id,
@@ -3029,13 +3046,26 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       if (currentTime < startTime || currentTime > endTime) {
         return showToast(`Discounts only allowed between ${startTime} and ${endTime}.`, "error");
       }
-      // Rule 9 — Manager approval for high discounts — send request instead of error
+      // Rule 9 — Manager approval for high discounts
       if (discountType === "percent" && Number(discountValue) > (business.manager_approval_threshold || 15)) {
-        // Check if this discount was already approved by owner
-        const approvedDiscount = localStorage.getItem("cashier_approved_discount");
-        if (approvedDiscount && Number(approvedDiscount) >= Number(discountValue)) {
-          // Approved — allow to proceed, clear the approval
-          localStorage.removeItem("cashier_approved_discount");
+        // Check if owner already approved in database
+        const { data: cashierProfile } = await supabase
+          .from("profiles")
+          .select("approved_discount_percent, approved_discount_at")
+          .eq("id", profile.id)
+          .single();
+
+        const isApproved = cashierProfile?.approved_discount_percent >= Number(discountValue) &&
+          cashierProfile?.approved_discount_at &&
+          (new Date() - new Date(cashierProfile.approved_discount_at)) < 30 * 60 * 1000; // 30 min window
+
+        if (isApproved) {
+          // Clear the approval after use
+          await supabase.from("profiles").update({
+            approved_discount_percent: 0,
+            approved_discount_at: null,
+          }).eq("id", profile.id);
+          // Continue to process checkout
         } else {
           // Check for existing pending request
           const { data: existing } = await supabase
@@ -3047,10 +3077,10 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             .maybeSingle();
 
           if (existing) {
-            return showToast("A discount approval request is already pending. Please wait for owner response.", "warning");
+            return showToast("Already waiting for owner approval. Please wait.", "warning");
           }
 
-          // Send approval request to owner
+          // Send new approval request
           await supabase.from("notifications").insert({
             business_id: business.id,
             type: "discount_approval_request",
@@ -3061,7 +3091,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             sender_id: profile.id,
             transaction_id: null,
           });
-          return showToast(`Discount above ${business.manager_approval_threshold || 15}% requires owner approval. Request sent to owner! ✓`, "warning");
+          return showToast(`Discount above ${business.manager_approval_threshold || 15}% requires owner approval. Request sent! ✓`, "warning");
         }
       }
     }
