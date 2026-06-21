@@ -1211,6 +1211,81 @@ function PendingProductCard({ product, onActivate, showToast }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════
+// DISCOUNT SETTINGS CARD — Owner sets max discount limits
+// ═══════════════════════════════════════════════════════════════
+function DiscountSettingsCard({ business, showToast, onSaved }) {
+  const [maxPercent, setMaxPercent] = useState(String(business.max_discount_percent || 20));
+  const [maxFixed, setMaxFixed] = useState(String(business.max_discount_fixed || 500));
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (isNaN(Number(maxPercent)) || Number(maxPercent) < 0 || Number(maxPercent) > 100) {
+      return showToast("Percent discount must be between 0 and 100.", "error");
+    }
+    if (isNaN(Number(maxFixed)) || Number(maxFixed) < 0) {
+      return showToast("Fixed discount must be a positive number.", "error");
+    }
+    setSaving(true);
+    await supabase.from("businesses").update({
+      max_discount_percent: Number(maxPercent),
+      max_discount_fixed: Number(maxFixed),
+    }).eq("id", business.id);
+    setSaving(false);
+    showToast("Discount limits saved!", "success");
+    onSaved();
+  };
+
+  return (
+    <Card className="p-4">
+      <p className="text-sm font-bold text-gray-700 mb-1">🏷️ Discount Settings</p>
+      <p className="text-xs text-gray-400 mb-3">Set the maximum discount your cashiers can apply.</p>
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+            Max % Discount
+          </label>
+          <div className="relative">
+            <input
+              type="number"
+              value={maxPercent}
+              onChange={(e) => setMaxPercent(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 pr-8"
+            />
+            <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+            Max ₱ Discount
+          </label>
+          <div className="relative">
+            <input
+              type="number"
+              value={maxFixed}
+              onChange={(e) => setMaxFixed(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 pl-6"
+            />
+            <span className="absolute left-3 top-2 text-gray-400 text-sm">₱</span>
+          </div>
+        </div>
+      </div>
+      <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2 mb-3">
+        <p className="text-xs text-yellow-700 font-medium">
+          ⚠️ Cashiers cannot give discounts above these limits. Owner is notified for every discount applied.
+        </p>
+      </div>
+      <button
+        onClick={save}
+        disabled={saving}
+        className="w-full bg-green-600 text-white font-bold py-2.5 rounded-xl text-sm disabled:opacity-60"
+      >
+        {saving ? "Saving..." : "Save Discount Limits"}
+      </button>
+    </Card>
+  );
+}
+
 function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }) {
   const [tab, setTab] = useState("dashboard");
   const [branches, setBranches] = useState([]);
@@ -1808,6 +1883,8 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                     </div>
                   </div>
                 )}
+                {/* Discount Settings Card */}
+                <DiscountSettingsCard business={business} showToast={showToast} onSaved={fetchAll} />
               </div>
             )}
 
@@ -2202,6 +2279,24 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Subtotal</span>
               <span className="font-medium text-gray-800">
+                ₱{Number(transaction?.original_amount || transaction?.total_amount).toFixed(2)}
+              </span>
+            </div>
+            {Number(transaction?.discount_amount) > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-green-600 font-medium">
+                  🏷️ Discount ({transaction?.discount_type === "percent"
+                    ? `${transaction?.discount_value}%`
+                    : `₱${transaction?.discount_value} off`})
+                </span>
+                <span className="font-bold text-green-600">
+                  -₱{Number(transaction?.discount_amount).toFixed(2)}
+                </span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Total</span>
+              <span className="font-medium text-gray-800">
                 ₱{Number(transaction?.total_amount).toFixed(2)}
               </span>
             </div>
@@ -2273,8 +2368,18 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   const [reconcileModal, setReconcileModal] = useState(false);
   const [cashCounted, setCashCounted] = useState("");
   const [cashierNotifs, setCashierNotifs] = useState([]);
+  const [discountType, setDiscountType] = useState("percent");
+  const [discountValue, setDiscountValue] = useState("");
+  const [discountReason, setDiscountReason] = useState("");
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
 
-  const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
+  const subtotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
+  const discountAmount = discountValue
+    ? discountType === "percent"
+      ? Math.min((subtotal * Number(discountValue)) / 100, subtotal)
+      : Math.min(Number(discountValue), subtotal)
+    : 0;
+  const total = Math.max(0, subtotal - discountAmount);
   const change = Math.max(0, Number(amountTendered) - total);
   const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -2560,6 +2665,16 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
     if ((paymentMethod === "gcash" || paymentMethod === "maya") && !gcashRef.trim()) {
       return showToast(`Please enter the ${paymentMethod === "gcash" ? "GCash" : "Maya"} reference number.`, "error");
     }
+    // Discount validations
+    if (discountAmount > 0 && !discountReason.trim()) {
+      return showToast("Please enter a reason for the discount.", "error");
+    }
+    if (discountAmount > 0 && discountType === "percent" && Number(discountValue) > (business.max_discount_percent || 20)) {
+      return showToast(`Maximum discount allowed is ${business.max_discount_percent || 20}%.`, "error");
+    }
+    if (discountAmount > 0 && discountType === "fixed" && Number(discountValue) > (business.max_discount_fixed || 500)) {
+      return showToast(`Maximum discount allowed is ₱${business.max_discount_fixed || 500}.`, "error");
+    }
     setProcessing(true);
     try {
       // Create transaction
@@ -2569,6 +2684,11 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           business_id: business.id,
           branch_id: branch?.id || null,
           cashier_id: profile.id,
+          original_amount: subtotal,
+          discount_type: discountAmount > 0 ? discountType : null,
+          discount_value: discountAmount > 0 ? Number(discountValue) : 0,
+          discount_amount: discountAmount,
+          discount_reason: discountAmount > 0 ? discountReason.trim() : null,
           total_amount: total,
           payment_method: paymentMethod,
           amount_tendered: paymentMethod === "cash" ? Number(amountTendered) : total,
@@ -2608,6 +2728,18 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
         });
       }
 
+      // If discount applied — notify owner
+      if (discountAmount > 0) {
+        await supabase.from("notifications").insert({
+          business_id: business.id,
+          type: "discount",
+          title: "🏷️ Discount Applied",
+          message: `${profile.full_name} gave a ${discountType === "percent" ? `${discountValue}%` : `₱${Number(discountValue).toFixed(2)}`} discount on ${txn.receipt_number}. Amount: ₱${discountAmount.toFixed(2)} off. Reason: ${discountReason.trim()}`,
+          is_read: false,
+          recipient_id: null,
+        });
+      }
+
       // Deduct stock — non-blocking
       for (const item of cart) {
         try {
@@ -2635,6 +2767,9 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       setCustomerName("");
       setCustomerPhone("");
       setGcashRef("");
+      setDiscountValue("");
+      setDiscountReason("");
+      setDiscountType("percent");
       setCheckoutMode(false);
     } catch (err) {
       showToast("Transaction failed: " + (err?.message || "Unknown error"), "error");
@@ -2897,10 +3032,89 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       </span>
                     </div>
                   ))}
-                  <div className="border-t border-gray-200 mt-2 pt-2 flex justify-between">
-                    <span className="font-black text-gray-800">Total</span>
-                    <span className="font-black text-green-700 text-lg">₱{total.toFixed(2)}</span>
+                  <div className="border-t border-gray-200 mt-2 pt-2">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-gray-500">Subtotal</span>
+                      <span className="font-medium text-gray-800">₱{subtotal.toFixed(2)}</span>
+                    </div>
+                    {discountAmount > 0 && (
+                      <div className="flex justify-between text-sm mb-1">
+                        <span className="text-green-600 font-medium">
+                          🏷️ Discount ({discountType === "percent" ? `${discountValue}%` : `₱${discountValue} off`})
+                        </span>
+                        <span className="font-bold text-green-600">-₱{discountAmount.toFixed(2)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between mt-1">
+                      <span className="font-black text-gray-800">Total</span>
+                      <span className="font-black text-green-700 text-lg">₱{total.toFixed(2)}</span>
+                    </div>
                   </div>
+                </div>
+
+                {/* Discount Section */}
+                <div className="mb-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                      🏷️ Apply Discount
+                    </p>
+                    {discountAmount > 0 && (
+                      <button
+                        onClick={() => { setDiscountValue(""); setDiscountReason(""); }}
+                        className="text-xs text-red-500 font-semibold"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      onClick={() => { setDiscountType("percent"); setDiscountValue(""); }}
+                      className={`flex-1 py-2 rounded-xl text-sm font-semibold border ${
+                        discountType === "percent"
+                          ? "bg-green-600 text-white border-green-600"
+                          : "bg-white text-gray-600 border-gray-200"
+                      }`}
+                    >
+                      % Percent
+                    </button>
+                    <button
+                      onClick={() => { setDiscountType("fixed"); setDiscountValue(""); }}
+                      className={`flex-1 py-2 rounded-xl text-sm font-semibold border ${
+                        discountType === "fixed"
+                          ? "bg-green-600 text-white border-green-600"
+                          : "bg-white text-gray-600 border-gray-200"
+                      }`}
+                    >
+                      ₱ Fixed
+                    </button>
+                  </div>
+                  <input
+                    type="number"
+                    value={discountValue}
+                    onChange={(e) => setDiscountValue(e.target.value)}
+                    placeholder={discountType === "percent"
+                      ? `Max ${business.max_discount_percent || 20}%`
+                      : `Max ₱${business.max_discount_fixed || 500}`
+                    }
+                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-2"
+                  />
+                  {discountValue && Number(discountValue) > 0 && (
+                    <input
+                      type="text"
+                      value={discountReason}
+                      onChange={(e) => setDiscountReason(e.target.value)}
+                      placeholder="Reason for discount (required)..."
+                      className="w-full border border-orange-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-orange-50"
+                    />
+                  )}
+                  {discountAmount > 0 && (
+                    <div className="mt-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2">
+                      <p className="text-xs text-green-700 font-semibold">
+                        ✓ Discount of ₱{discountAmount.toFixed(2)} applied — New total: ₱{total.toFixed(2)}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Payment method */}
