@@ -1212,75 +1212,213 @@ function PendingProductCard({ product, onActivate, showToast }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
-// DISCOUNT SETTINGS CARD — Owner sets max discount limits
+// DISCOUNT SETTINGS CARD — Complete 9-setting control panel
 // ═══════════════════════════════════════════════════════════════
 function DiscountSettingsCard({ business, showToast, onSaved }) {
-  const [maxPercent, setMaxPercent] = useState(String(business.max_discount_percent || 20));
-  const [maxFixed, setMaxFixed] = useState(String(business.max_discount_fixed || 500));
+  const [settings, setSettings] = useState({
+    discount_enabled: business.discount_enabled !== false,
+    discount_types_allowed: business.discount_types_allowed || "both",
+    max_discount_percent: String(business.max_discount_percent || 20),
+    max_discount_fixed: String(business.max_discount_fixed || 500),
+    discount_min_quantity: String(business.discount_min_quantity || 3),
+    discount_min_amount: String(business.discount_min_amount || 200),
+    max_discounts_per_cashier_per_day: String(business.max_discounts_per_cashier_per_day || 10),
+    manager_approval_threshold: String(business.manager_approval_threshold || 15),
+    suki_discount_percent: String(business.suki_discount_percent || 5),
+    senior_pwd_discount_percent: String(business.senior_pwd_discount_percent || 20),
+    discount_start_time: business.discount_start_time || "00:00",
+    discount_end_time: business.discount_end_time || "23:59",
+  });
   const [saving, setSaving] = useState(false);
+  const set = (k, v) => setSettings(s => ({ ...s, [k]: v }));
 
   const save = async () => {
-    if (isNaN(Number(maxPercent)) || Number(maxPercent) < 0 || Number(maxPercent) > 100) {
-      return showToast("Percent discount must be between 0 and 100.", "error");
-    }
-    if (isNaN(Number(maxFixed)) || Number(maxFixed) < 0) {
-      return showToast("Fixed discount must be a positive number.", "error");
-    }
     setSaving(true);
     await supabase.from("businesses").update({
-      max_discount_percent: Number(maxPercent),
-      max_discount_fixed: Number(maxFixed),
+      discount_enabled: settings.discount_enabled,
+      discount_types_allowed: settings.discount_types_allowed,
+      max_discount_percent: Number(settings.max_discount_percent),
+      max_discount_fixed: Number(settings.max_discount_fixed),
+      discount_min_quantity: Number(settings.discount_min_quantity),
+      discount_min_amount: Number(settings.discount_min_amount),
+      max_discounts_per_cashier_per_day: Number(settings.max_discounts_per_cashier_per_day),
+      manager_approval_threshold: Number(settings.manager_approval_threshold),
+      suki_discount_percent: Number(settings.suki_discount_percent),
+      senior_pwd_discount_percent: Number(settings.senior_pwd_discount_percent),
+      discount_start_time: settings.discount_start_time,
+      discount_end_time: settings.discount_end_time,
     }).eq("id", business.id);
     setSaving(false);
-    showToast("Discount limits saved!", "success");
+    showToast("Discount settings saved!", "success");
     onSaved();
   };
 
   return (
     <Card className="p-4">
-      <p className="text-sm font-bold text-gray-700 mb-1">🏷️ Discount Settings</p>
-      <p className="text-xs text-gray-400 mb-3">Set the maximum discount your cashiers can apply.</p>
-      <div className="grid grid-cols-2 gap-3 mb-3">
+      <p className="text-sm font-bold text-gray-700 mb-1">🏷️ Discount Control Panel</p>
+      <p className="text-xs text-gray-400 mb-4">Full control over how discounts work in your store.</p>
+
+      {/* Setting 1 — Enable/Disable */}
+      <div className="flex items-center justify-between mb-4 bg-gray-50 rounded-xl p-3">
         <div>
-          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-            Max % Discount
-          </label>
-          <div className="relative">
-            <input
-              type="number"
-              value={maxPercent}
-              onChange={(e) => setMaxPercent(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 pr-8"
-            />
-            <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
-          </div>
+          <p className="text-sm font-bold text-gray-700">Discounts Enabled</p>
+          <p className="text-xs text-gray-400">Turn off to block all discounts immediately</p>
         </div>
-        <div>
-          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
-            Max ₱ Discount
-          </label>
-          <div className="relative">
-            <input
-              type="number"
-              value={maxFixed}
-              onChange={(e) => setMaxFixed(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 pl-6"
-            />
-            <span className="absolute left-3 top-2 text-gray-400 text-sm">₱</span>
+        <button
+          onClick={() => set("discount_enabled", !settings.discount_enabled)}
+          className={`w-12 h-6 rounded-full transition-colors relative ${
+            settings.discount_enabled ? "bg-green-500" : "bg-gray-300"
+          }`}
+        >
+          <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${
+            settings.discount_enabled ? "left-6" : "left-0.5"
+          }`} />
+        </button>
+      </div>
+
+      {settings.discount_enabled && (
+        <div className="space-y-4">
+
+          {/* Setting 2 — Allowed Types */}
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Allowed Discount Types</p>
+            <div className="flex gap-2">
+              {[
+                { key: "both", label: "Both % and ₱" },
+                { key: "percent", label: "% Only" },
+                { key: "fixed", label: "₱ Only" },
+              ].map(t => (
+                <button key={t.key} onClick={() => set("discount_types_allowed", t.key)}
+                  className={`flex-1 py-2 rounded-xl text-xs font-semibold border ${
+                    settings.discount_types_allowed === t.key
+                      ? "bg-green-600 text-white border-green-600"
+                      : "bg-white text-gray-600 border-gray-200"
+                  }`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* Settings 3 & 4 — Max % and Max ₱ */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Max % Discount</p>
+              <div className="relative">
+                <input type="number" value={settings.max_discount_percent}
+                  onChange={e => set("max_discount_percent", e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 pr-8" />
+                <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Max ₱ Discount</p>
+              <div className="relative">
+                <input type="number" value={settings.max_discount_fixed}
+                  onChange={e => set("max_discount_fixed", e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 pl-6" />
+                <span className="absolute left-3 top-2 text-gray-400 text-sm">₱</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Settings 5 & 6 — Bundle Rules */}
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
+            <p className="text-xs font-bold text-blue-700 mb-2">📦 Bundle Discount Rules</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Min Quantity</p>
+                <input type="number" value={settings.discount_min_quantity}
+                  onChange={e => set("discount_min_quantity", e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                <p className="text-xs text-gray-400 mt-1">Same item pieces</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Min Total</p>
+                <div className="relative">
+                  <input type="number" value={settings.discount_min_amount}
+                    onChange={e => set("discount_min_amount", e.target.value)}
+                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white pl-6" />
+                  <span className="absolute left-3 top-2 text-gray-400 text-sm">₱</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">Cart total minimum</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Setting 7 — Max per cashier per day */}
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Max Discounts Per Cashier Per Day</p>
+            <input type="number" value={settings.max_discounts_per_cashier_per_day}
+              onChange={e => set("max_discounts_per_cashier_per_day", e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+            <p className="text-xs text-gray-400 mt-1">After this limit, cashier cannot give more discounts today</p>
+          </div>
+
+          {/* Setting 8 — Manager approval threshold */}
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Require Manager Approval Above</p>
+            <div className="relative">
+              <input type="number" value={settings.manager_approval_threshold}
+                onChange={e => set("manager_approval_threshold", e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 pr-8" />
+              <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Discounts above this % need owner approval first</p>
+          </div>
+
+          {/* Setting 9a — Suki discount */}
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Suki / Loyalty Discount</p>
+            <div className="relative">
+              <input type="number" value={settings.suki_discount_percent}
+                onChange={e => set("suki_discount_percent", e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 pr-8" />
+              <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Auto-applied for registered suki customers</p>
+          </div>
+
+          {/* Setting 9b — Senior/PWD discount */}
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Senior Citizen / PWD Discount</p>
+            <div className="relative">
+              <input type="number" value={settings.senior_pwd_discount_percent}
+                onChange={e => set("senior_pwd_discount_percent", e.target.value)}
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 pr-8" />
+              <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
+            </div>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2 mt-1">
+              <p className="text-xs text-yellow-700 font-medium">⚖️ Required by Philippine Law — RA 9994 (Senior Citizens) and RA 7277 (PWD Act)</p>
+            </div>
+          </div>
+
+          {/* Setting 10 — Time restrictions */}
+          <div>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Discount Allowed Hours</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs text-gray-400 mb-1">Start Time</p>
+                <input type="time" value={settings.discount_start_time}
+                  onChange={e => set("discount_start_time", e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-400 mb-1">End Time</p>
+                <input type="time" value={settings.discount_end_time}
+                  onChange={e => set("discount_end_time", e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Cashier cannot give discounts outside these hours</p>
+          </div>
+
         </div>
-      </div>
-      <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2 mb-3">
-        <p className="text-xs text-yellow-700 font-medium">
-          ⚠️ Cashiers cannot give discounts above these limits. Owner is notified for every discount applied.
-        </p>
-      </div>
-      <button
-        onClick={save}
-        disabled={saving}
-        className="w-full bg-green-600 text-white font-bold py-2.5 rounded-xl text-sm disabled:opacity-60"
-      >
-        {saving ? "Saving..." : "Save Discount Limits"}
+      )}
+
+      <button onClick={save} disabled={saving}
+        className="w-full bg-green-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-60 mt-4">
+        {saving ? "Saving..." : "Save All Discount Settings"}
       </button>
     </Card>
   );
@@ -2372,6 +2510,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   const [discountValue, setDiscountValue] = useState("");
   const [discountReason, setDiscountReason] = useState("");
   const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [customerType, setCustomerType] = useState("regular");
 
   const subtotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
   const discountAmount = discountValue
@@ -2665,15 +2804,53 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
     if ((paymentMethod === "gcash" || paymentMethod === "maya") && !gcashRef.trim()) {
       return showToast(`Please enter the ${paymentMethod === "gcash" ? "GCash" : "Maya"} reference number.`, "error");
     }
-    // Discount validations
-    if (discountAmount > 0 && !discountReason.trim()) {
-      return showToast("Please enter a reason for the discount.", "error");
-    }
-    if (discountAmount > 0 && discountType === "percent" && Number(discountValue) > (business.max_discount_percent || 20)) {
-      return showToast(`Maximum discount allowed is ${business.max_discount_percent || 20}%.`, "error");
-    }
-    if (discountAmount > 0 && discountType === "fixed" && Number(discountValue) > (business.max_discount_fixed || 500)) {
-      return showToast(`Maximum discount allowed is ₱${business.max_discount_fixed || 500}.`, "error");
+    // Discount validations — all 9 rules
+    if (discountAmount > 0) {
+      // Rule 1 — Discounts enabled
+      if (business.discount_enabled === false) {
+        return showToast("Discounts are currently disabled by the owner.", "error");
+      }
+      // Rule 2 — Allowed types
+      if (business.discount_types_allowed === "percent" && discountType === "fixed") {
+        return showToast("Only percentage discounts are allowed.", "error");
+      }
+      if (business.discount_types_allowed === "fixed" && discountType === "percent") {
+        return showToast("Only fixed amount discounts are allowed.", "error");
+      }
+      // Rule 3 & 4 — Max limits
+      if (discountType === "percent" && Number(discountValue) > (business.max_discount_percent || 20)) {
+        return showToast(`Maximum discount allowed is ${business.max_discount_percent || 20}%.`, "error");
+      }
+      if (discountType === "fixed" && Number(discountValue) > (business.max_discount_fixed || 500)) {
+        return showToast(`Maximum discount allowed is ₱${business.max_discount_fixed || 500}.`, "error");
+      }
+      // Rule 5 — Bundle rules — min quantity of same item
+      const minQty = business.discount_min_quantity || 3;
+      const hasBundle = cart.some(item => item.quantity >= minQty);
+      if (!hasBundle) {
+        return showToast(`Discount requires at least ${minQty} pieces of the same item.`, "error");
+      }
+      // Rule 6 — Minimum cart total
+      const minAmount = business.discount_min_amount || 200;
+      if (subtotal < minAmount) {
+        return showToast(`Minimum purchase of ₱${minAmount} required for discount.`, "error");
+      }
+      // Rule 7 — Reason required
+      if (!discountReason.trim()) {
+        return showToast("Please enter a reason for the discount.", "error");
+      }
+      // Rule 8 — Time restriction
+      const now = new Date();
+      const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      const startTime = business.discount_start_time || "00:00";
+      const endTime = business.discount_end_time || "23:59";
+      if (currentTime < startTime || currentTime > endTime) {
+        return showToast(`Discounts only allowed between ${startTime} and ${endTime}.`, "error");
+      }
+      // Rule 9 — Manager approval for high discounts
+      if (discountType === "percent" && Number(discountValue) > (business.manager_approval_threshold || 15)) {
+        return showToast(`Discounts above ${business.manager_approval_threshold || 15}% require owner approval. Please contact your owner.`, "error");
+      }
     }
     setProcessing(true);
     try {
@@ -2728,7 +2905,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
         });
       }
 
-      // If discount applied — notify owner
+      // If discount applied — notify owner and save to discount log
       if (discountAmount > 0) {
         await supabase.from("notifications").insert({
           business_id: business.id,
@@ -2737,6 +2914,18 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           message: `${profile.full_name} gave a ${discountType === "percent" ? `${discountValue}%` : `₱${Number(discountValue).toFixed(2)}`} discount on ${txn.receipt_number}. Amount: ₱${discountAmount.toFixed(2)} off. Reason: ${discountReason.trim()}`,
           is_read: false,
           recipient_id: null,
+        });
+        // Save to discount history log
+        await supabase.from("discount_logs").insert({
+          business_id: business.id,
+          branch_id: branch?.id || null,
+          transaction_id: txn.id,
+          cashier_id: profile.id,
+          discount_type: discountType,
+          discount_value: Number(discountValue),
+          discount_amount: discountAmount,
+          discount_reason: discountReason.trim(),
+          customer_type: customerType || "regular",
         });
       }
 
@@ -2770,6 +2959,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       setDiscountValue("");
       setDiscountReason("");
       setDiscountType("percent");
+      setCustomerType("regular");
       setCheckoutMode(false);
     } catch (err) {
       showToast("Transaction failed: " + (err?.message || "Unknown error"), "error");
@@ -3053,6 +3243,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 </div>
 
                 {/* Discount Section */}
+                {business.discount_enabled !== false && (
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
@@ -3060,62 +3251,95 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     </p>
                     {discountAmount > 0 && (
                       <button
-                        onClick={() => { setDiscountValue(""); setDiscountReason(""); }}
+                        onClick={() => { setDiscountValue(""); setDiscountReason(""); setCustomerType("regular"); }}
                         className="text-xs text-red-500 font-semibold"
                       >
                         Remove
                       </button>
                     )}
                   </div>
-                  <div className="flex gap-2 mb-2">
-                    <button
-                      onClick={() => { setDiscountType("percent"); setDiscountValue(""); }}
-                      className={`flex-1 py-2 rounded-xl text-sm font-semibold border ${
-                        discountType === "percent"
-                          ? "bg-green-600 text-white border-green-600"
-                          : "bg-white text-gray-600 border-gray-200"
-                      }`}
-                    >
-                      % Percent
-                    </button>
-                    <button
-                      onClick={() => { setDiscountType("fixed"); setDiscountValue(""); }}
-                      className={`flex-1 py-2 rounded-xl text-sm font-semibold border ${
-                        discountType === "fixed"
-                          ? "bg-green-600 text-white border-green-600"
-                          : "bg-white text-gray-600 border-gray-200"
-                      }`}
-                    >
-                      ₱ Fixed
-                    </button>
+
+                  {/* Customer Type — auto-applies discount */}
+                  <p className="text-xs text-gray-400 mb-1">Customer Type</p>
+                  <div className="flex gap-2 mb-3 flex-wrap">
+                    {[
+                      { key: "regular", label: "Regular" },
+                      { key: "suki", label: `Suki (${business.suki_discount_percent || 5}%)` },
+                      { key: "senior", label: `Senior (${business.senior_pwd_discount_percent || 20}%)` },
+                      { key: "pwd", label: `PWD (${business.senior_pwd_discount_percent || 20}%)` },
+                    ].map(t => (
+                      <button key={t.key}
+                        onClick={() => {
+                          setCustomerType(t.key);
+                          if (t.key === "suki") {
+                            setDiscountType("percent");
+                            setDiscountValue(String(business.suki_discount_percent || 5));
+                            setDiscountReason("Suki/Loyalty discount");
+                          } else if (t.key === "senior") {
+                            setDiscountType("percent");
+                            setDiscountValue(String(business.senior_pwd_discount_percent || 20));
+                            setDiscountReason("Senior Citizen discount (RA 9994)");
+                          } else if (t.key === "pwd") {
+                            setDiscountType("percent");
+                            setDiscountValue(String(business.senior_pwd_discount_percent || 20));
+                            setDiscountReason("PWD discount (RA 7277)");
+                          } else {
+                            setDiscountValue("");
+                            setDiscountReason("");
+                          }
+                        }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold border ${
+                          customerType === t.key
+                            ? "bg-green-600 text-white border-green-600"
+                            : "bg-white text-gray-600 border-gray-200"
+                        }`}>
+                        {t.label}
+                      </button>
+                    ))}
                   </div>
-                  <input
-                    type="number"
-                    value={discountValue}
-                    onChange={(e) => setDiscountValue(e.target.value)}
-                    placeholder={discountType === "percent"
-                      ? `Max ${business.max_discount_percent || 20}%`
-                      : `Max ₱${business.max_discount_fixed || 500}`
-                    }
-                    className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-2"
-                  />
-                  {discountValue && Number(discountValue) > 0 && (
-                    <input
-                      type="text"
-                      value={discountReason}
-                      onChange={(e) => setDiscountReason(e.target.value)}
-                      placeholder="Reason for discount (required)..."
-                      className="w-full border border-orange-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-orange-50"
-                    />
+
+                  {/* Manual discount input */}
+                  {customerType === "regular" && (
+                    <>
+                      <div className="flex gap-2 mb-2">
+                        {(business.discount_types_allowed === "both" || business.discount_types_allowed === "percent" || !business.discount_types_allowed) && (
+                          <button onClick={() => { setDiscountType("percent"); setDiscountValue(""); }}
+                            className={`flex-1 py-2 rounded-xl text-sm font-semibold border ${
+                              discountType === "percent" ? "bg-green-600 text-white border-green-600" : "bg-white text-gray-600 border-gray-200"
+                            }`}>% Percent</button>
+                        )}
+                        {(business.discount_types_allowed === "both" || business.discount_types_allowed === "fixed" || !business.discount_types_allowed) && (
+                          <button onClick={() => { setDiscountType("fixed"); setDiscountValue(""); }}
+                            className={`flex-1 py-2 rounded-xl text-sm font-semibold border ${
+                              discountType === "fixed" ? "bg-green-600 text-white border-green-600" : "bg-white text-gray-600 border-gray-200"
+                            }`}>₱ Fixed</button>
+                        )}
+                      </div>
+                      <input type="number" value={discountValue}
+                        onChange={e => setDiscountValue(e.target.value)}
+                        placeholder={discountType === "percent"
+                          ? `Max ${business.max_discount_percent || 20}%`
+                          : `Max ₱${business.max_discount_fixed || 500}`}
+                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-2" />
+                    </>
                   )}
+
+                  {discountValue && Number(discountValue) > 0 && (
+                    <input type="text" value={discountReason}
+                      onChange={e => setDiscountReason(e.target.value)}
+                      placeholder="Reason for discount (required)..."
+                      className="w-full border border-orange-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400 bg-orange-50 mb-2" />
+                  )}
+
                   {discountAmount > 0 && (
-                    <div className="mt-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2">
+                    <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2">
                       <p className="text-xs text-green-700 font-semibold">
                         ✓ Discount of ₱{discountAmount.toFixed(2)} applied — New total: ₱{total.toFixed(2)}
                       </p>
                     </div>
                   )}
                 </div>
+                )}
 
                 {/* Payment method */}
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
