@@ -7,7 +7,16 @@ import { useZxing } from "react-zxing";
 // ═══════════════════════════════════════════════════════════════
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
+  import.meta.env.VITE_SUPABASE_ANON_KEY,
+  {
+    auth: {
+      persistSession: true,
+      storageKey: "listako-session",
+      storage: window.localStorage,
+      autoRefreshToken: true,
+      detectSessionInUrl: false,
+    }
+  }
 );
 
 // ═══════════════════════════════════════════════════════════════
@@ -1795,8 +1804,16 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
           ) : (
             <div className="max-h-64 overflow-y-auto divide-y divide-gray-50">
               {notifications.map((n) => (
-                <div key={n.id} className={`px-4 py-3 ${n.type === "void_request" ? "bg-yellow-50" : "bg-red-50"}`}>
-                  <p className={`text-xs font-bold ${n.type === "void_request" ? "text-yellow-700" : "text-red-700"}`}>
+                <div key={n.id} className={`px-4 py-3 ${
+                  n.type === "void_request" ? "bg-yellow-50" :
+                  n.type === "discount_approval_request" ? "bg-blue-50" :
+                  "bg-red-50"
+                }`}>
+                  <p className={`text-xs font-bold ${
+                    n.type === "void_request" ? "text-yellow-700" :
+                    n.type === "discount_approval_request" ? "text-blue-700" :
+                    "text-red-700"
+                  }`}>
                     {n.title}
                   </p>
                   <p className="text-xs text-gray-600 mt-0.5">{n.message}</p>
@@ -1890,6 +1907,56 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                     <p className={`text-xs font-bold mt-1 ${n.action_taken === "approved" ? "text-green-600" : "text-red-500"}`}>
                       {n.action_taken === "approved" ? "✓ You approved this void" : "✕ You declined this void"}
                     </p>
+                  )}
+
+                  {/* Discount approval request buttons */}
+                  {n.type === "discount_approval_request" && !n.action_taken && (
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={async () => {
+                          await supabase.from("notifications").update({
+                            action_taken: "approved",
+                            is_read: true,
+                          }).eq("id", n.id);
+                          // Notify cashier
+                          await supabase.from("notifications").insert({
+                            business_id: business.id,
+                            recipient_id: null,
+                            type: "discount_approved",
+                            title: "✅ High Discount Approved",
+                            message: "Your high discount request has been approved by the owner. You may now process the transaction.",
+                            is_read: false,
+                          });
+                          showToast("Discount request approved! Cashier has been notified.", "success");
+                          fetchAll();
+                        }}
+                        className="flex-1 bg-green-600 text-white font-bold py-2 rounded-xl text-xs"
+                      >
+                        ✓ Approve Discount
+                      </button>
+                      <button
+                        onClick={async () => {
+                          await supabase.from("notifications").update({
+                            action_taken: "declined",
+                            is_read: true,
+                          }).eq("id", n.id);
+                          // Notify cashier
+                          await supabase.from("notifications").insert({
+                            business_id: business.id,
+                            recipient_id: null,
+                            type: "discount_declined",
+                            title: "❌ High Discount Declined",
+                            message: "Your high discount request was declined by the owner. Please apply a lower discount.",
+                            is_read: false,
+                          });
+                          showToast("Discount request declined.", "success");
+                          fetchAll();
+                        }}
+                        className="flex-1 bg-red-500 text-white font-bold py-2 rounded-xl text-xs"
+                      >
+                        ✕ Decline
+                      </button>
+                    </div>
                   )}
                 </div>
               ))}
@@ -2847,9 +2914,18 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       if (currentTime < startTime || currentTime > endTime) {
         return showToast(`Discounts only allowed between ${startTime} and ${endTime}.`, "error");
       }
-      // Rule 9 — Manager approval for high discounts
+      // Rule 9 — Manager approval for high discounts — send request instead of error
       if (discountType === "percent" && Number(discountValue) > (business.manager_approval_threshold || 15)) {
-        return showToast(`Discounts above ${business.manager_approval_threshold || 15}% require owner approval. Please contact your owner.`, "error");
+        // Send approval request to owner
+        await supabase.from("notifications").insert({
+          business_id: business.id,
+          type: "discount_approval_request",
+          title: "🏷️ High Discount Approval Needed",
+          message: `${profile.full_name} is requesting a ${discountValue}% discount (above your ${business.manager_approval_threshold || 15}% threshold). Cart total: ₱${subtotal.toFixed(2)}. Reason: ${discountReason.trim()}`,
+          is_read: false,
+          recipient_id: null,
+        });
+        return showToast(`Discount above ${business.manager_approval_threshold || 15}% requires owner approval. Request sent to owner! ✓`, "warning");
       }
     }
     setProcessing(true);
