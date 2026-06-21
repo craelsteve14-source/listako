@@ -2509,4 +2509,601 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       type="text"
                       value={customerName}
                       onChange={(e) => setCustomerName(e.target.value)}
-      
+                      placeholder={
+                        paymentMethod === "utang" ? "Enter customer name..." : "Optional..."
+                      }
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-2"
+                    />
+                    <input
+                      type="tel"
+                      value={customerPhone}
+                      onChange={(e) => setCustomerPhone(e.target.value)}
+                      placeholder="Phone number (optional)..."
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    {paymentMethod === "utang" && (
+                      <div className="mt-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
+                        <p className="text-xs text-orange-700 font-medium">
+                          ⚠️ This transaction will be recorded as utang. The customer owes ₱
+                          {total.toFixed(2)}.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Cash tendered */}
+                {paymentMethod === "cash" && (
+                  <div className="mb-4">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+                      Cash Tendered
+                    </p>
+                    <input
+                      type="number"
+                      value={amountTendered}
+                      onChange={(e) => setAmountTendered(e.target.value)}
+                      placeholder="Enter amount..."
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-green-500"
+                    />
+                    {amountTendered && Number(amountTendered) >= total && (
+                      <div className="mt-2 bg-green-50 rounded-xl px-4 py-3 flex justify-between">
+                        <span className="font-semibold text-green-700">Change</span>
+                        <span className="font-black text-green-700 text-lg">
+                          ₱{change.toFixed(2)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Quick cash buttons */}
+                {paymentMethod === "cash" && (
+                  <div className="flex gap-2 mb-4 flex-wrap">
+                    {[
+                      Math.ceil(total / 50) * 50,
+                      Math.ceil(total / 100) * 100,
+                      Math.ceil(total / 500) * 500,
+                      1000,
+                    ].map((amt) => (
+                      <button
+                        key={amt}
+                        onClick={() => setAmountTendered(String(amt))}
+                        className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium"
+                      >
+                        ₱{amt}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  onClick={processCheckout}
+                  disabled={
+                    processing ||
+                    (paymentMethod === "cash" &&
+                      (!amountTendered || Number(amountTendered) < total)) ||
+                    (paymentMethod === "utang" && !customerName.trim())
+                  }
+                  className="w-full bg-green-600 text-white font-black py-4 rounded-2xl text-lg disabled:opacity-50 active:scale-95 transition-transform"
+                >
+                  {processing
+                    ? "Processing..."
+                    : paymentMethod === "utang"
+                    ? `Record Utang · ₱${total.toFixed(2)}`
+                    : `Confirm Payment · ₱${total.toFixed(2)}`}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* History Tab */}
+      {posTab === "history" && (
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+          {loadingHistory ? (
+            <div className="flex justify-center py-8">
+              <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : history.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="font-semibold text-gray-500 text-sm">No transactions today</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex justify-between items-center mb-1">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                  Today's Transactions
+                </p>
+                <p className="text-xs font-bold text-green-700">
+                  ₱
+                  {history
+                    .filter((t) => t.status === "completed")
+                    .reduce((s, t) => s + Number(t.total_amount), 0)
+                    .toFixed(2)}{" "}
+                  total
+                </p>
+              </div>
+              {history.map((txn) => (
+                <div
+                  key={txn.id}
+                  className={`bg-white rounded-xl p-4 border shadow-sm ${
+                    txn.status === "voided" ? "border-red-200 opacity-60" : "border-gray-100"
+                  }`}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="text-xs font-mono text-gray-400">{txn.receipt_number}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {new Date(txn.created_at).toLocaleTimeString("en-PH", {
+                          hour: "numeric",
+                          minute: "2-digit",
+                          hour12: true,
+                        })}
+                        {txn.customer_name ? ` · ${txn.customer_name}` : ""}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p
+                        className={`font-black ${
+                          txn.status === "voided"
+                            ? "text-red-400 line-through"
+                            : "text-green-700"
+                        }`}
+                      >
+                        ₱{Number(txn.total_amount).toFixed(2)}
+                      </p>
+                      <div className="flex gap-1 mt-0.5 justify-end">
+                        <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-medium capitalize">
+                          {txn.payment_method}
+                        </span>
+                        {txn.status === "voided" && (
+                          <span className="text-xs bg-red-50 text-red-500 px-2 py-0.5 rounded-full font-medium">
+                            Voided
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {txn.transaction_items && txn.transaction_items.length > 0 && (
+                    <div className="text-xs text-gray-400 space-y-0.5 mb-2">
+                      {txn.transaction_items.map((item, i) => (
+                        <p key={i}>
+                          {item.products?.name || "Product"} × {item.quantity}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  {txn.status === "completed" && (
+                    <button
+                      onClick={() => setVoidModal(txn)}
+                      className="text-xs text-red-500 font-semibold bg-red-50 px-3 py-1.5 rounded-lg mt-1"
+                    >
+                      Void Transaction
+                    </button>
+                  )}
+                  {txn.status === "voided" && txn.void_reason && (
+                    <p className="text-xs text-red-400 mt-1">Reason: {txn.void_reason}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Utang Tab */}
+      {posTab === "utang" && (
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+          {loadingUtang ? (
+            <div className="flex justify-center py-8">
+              <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : utangList.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-2xl mb-2">✅</p>
+              <p className="font-semibold text-gray-500 text-sm">No outstanding utang</p>
+              <p className="text-xs text-gray-400 mt-1">All customers are paid up!</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex justify-between items-center mb-1">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                  Outstanding Utang
+                </p>
+                <p className="text-xs font-bold text-red-600">
+                  ₱{utangList.reduce((s, u) => s + Number(u.amount - u.amount_paid), 0).toFixed(2)}{" "}
+                  total
+                </p>
+              </div>
+              {utangList.map((u) => (
+                <div
+                  key={u.id}
+                  className="bg-white rounded-xl p-4 border border-orange-100 shadow-sm"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <p className="font-semibold text-gray-800 text-sm">{u.customer_name}</p>
+                      {u.customer_phone && (
+                        <p className="text-xs text-gray-400">{u.customer_phone}</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {new Date(u.created_at).toLocaleDateString("en-PH")}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-black text-red-600">
+                        ₱{Number(u.amount - u.amount_paid).toFixed(2)}
+                      </p>
+                      <span
+                        className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          u.status === "partial"
+                            ? "bg-yellow-50 text-yellow-600"
+                            : "bg-red-50 text-red-500"
+                        }`}
+                      >
+                        {u.status === "partial" ? "Partial" : "Unpaid"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-400 mb-2">
+                    Original: ₱{Number(u.amount).toFixed(2)} · Paid: ₱
+                    {Number(u.amount_paid).toFixed(2)}
+                  </div>
+                  <button
+                    onClick={() => markUtangPaid(u.id, u.amount)}
+                    className="text-xs text-green-700 font-semibold bg-green-50 px-3 py-1.5 rounded-lg"
+                  >
+                    Mark as Fully Paid ✓
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Barcode scanner overlay */}
+      {scanning && <BarcodeScanner onDetected={handleBarcode} onClose={() => setScanning(false)} />}
+
+      {/* Receipt overlay */}
+      {receipt && (
+        <ReceiptView
+          transaction={receipt}
+          items={receiptItems}
+          business={business}
+          branch={branch}
+          cashier={profile}
+          onClose={() => setReceipt(null)}
+          onNewTransaction={() => {
+            setReceipt(null);
+            setPosTab("pos");
+          }}
+        />
+      )}
+
+      {/* Void Transaction Modal */}
+      {voidModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-3xl p-5">
+            <h3 className="font-black text-gray-800 text-base mb-1">Void Transaction</h3>
+            <p className="text-xs text-gray-500 mb-1">
+              {voidModal.receipt_number} · ₱{Number(voidModal.total_amount).toFixed(2)}
+            </p>
+            <p className="text-xs text-red-500 mb-3">
+              ⚠️ This cannot be undone. The sale will be marked as voided.
+            </p>
+            <textarea
+              value={voidReason}
+              onChange={(e) => setVoidReason(e.target.value)}
+              placeholder="Reason for voiding (required)..."
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-red-400 mb-3"
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setVoidModal(null);
+                  setVoidReason("");
+                }}
+                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={voidTransaction}
+                className="flex-1 bg-red-500 text-white font-bold py-3 rounded-xl text-sm"
+              >
+                Void Transaction
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// STAFF DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
+  if (profile.role === "cashier") {
+    return (
+      <CashierPOS
+        profile={profile}
+        business={business}
+        branch={branch}
+        onLogout={onLogout}
+        showToast={showToast}
+      />
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
+      <div className="w-full max-w-sm text-center">
+        <div className="w-20 h-20 bg-green-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"
+              stroke="#16a34a"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
+            <polyline
+              points="9 22 9 12 15 12 15 22"
+              stroke="#16a34a"
+              strokeWidth="1.5"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+        <h1 className="text-2xl font-black text-gray-800">{business.name}</h1>
+        <p className="text-gray-500 text-sm mt-1">{branch?.name || "No branch"}</p>
+        <span
+          className={`inline-block mt-2 text-xs px-3 py-1 rounded-full font-semibold ${
+            ROLE_COLORS[profile.role]
+          }`}
+        >
+          {ROLE_LABELS[profile.role]}
+        </span>
+        <div className="mt-8 bg-white rounded-2xl border border-gray-100 p-5 text-left space-y-3 shadow-sm">
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Information</p>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">Name</span>
+            <span className="font-semibold text-gray-800">{profile.full_name}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">Branch</span>
+            <span className="font-semibold text-gray-800">{branch?.name || "—"}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-gray-500">Role</span>
+            <span className="font-semibold text-gray-800">{ROLE_LABELS[profile.role]}</span>
+          </div>
+        </div>
+        <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
+          <p className="text-sm font-semibold text-yellow-800">Inventory Management</p>
+          <p className="text-xs text-yellow-600 mt-1">Coming in Phase 4. Stay tuned!</p>
+        </div>
+        <button
+          onClick={onLogout}
+          className="mt-6 w-full bg-gray-100 text-gray-600 font-semibold py-3 rounded-2xl text-sm"
+        >
+          Sign Out
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ROOT APP
+// ═══════════════════════════════════════════════════════════════
+export default function App() {
+  const [screen, setScreen] = useState("landing");
+  const [otpEmail, setOtpEmail] = useState("");
+  const [otpType, setOtpType] = useState("login");
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [business, setBusiness] = useState(null);
+  const [branch, setBranch] = useState(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [appLoading, setAppLoading] = useState(true);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = "success") => setToast({ message, type });
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) loadUserData(session.user.id);
+      else setAppLoading(false);
+    });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) loadUserData(session.user.id);
+      else {
+        setProfile(null);
+        setBusiness(null);
+        setBranch(null);
+        setIsSuperAdmin(false);
+        setScreen("landing");
+        setAppLoading(false);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const loadUserData = async (userId) => {
+    setAppLoading(true);
+    try {
+      let prof = null;
+      for (let i = 0; i < 3; i++) {
+        const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
+        if (data) {
+          prof = data;
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+      if (!prof) {
+        showToast("Hindi mahanap ang profile. Subukan muli.", "error");
+        setAppLoading(false);
+        return;
+      }
+      setProfile(prof);
+
+      const { data: biz } = await supabase
+        .from("businesses")
+        .select("*")
+        .eq("id", prof.business_id)
+        .single();
+      setBusiness(biz);
+
+      if (prof.branch_id) {
+        const { data: br } = await supabase
+          .from("branches")
+          .select("*")
+          .eq("id", prof.branch_id)
+          .single();
+        setBranch(br);
+      }
+
+      // Check super admin — use maybeSingle() to avoid errors
+      const { data: sa } = await supabase
+        .from("super_admins")
+        .select("id")
+        .eq("user_id", userId)
+        .maybeSingle();
+      setIsSuperAdmin(!!sa);
+    } catch (err) {
+      showToast("May error sa pag-load. Subukan muli.", "error");
+    } finally {
+      setAppLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setScreen("landing");
+  };
+
+  const goToOTP = (email, type) => {
+    setOtpEmail(email);
+    setOtpType(type);
+    setScreen("otp");
+  };
+
+  if (appLoading) return <Spinner />;
+
+  // Logged in
+  if (session && profile && business) {
+    if (!isSuperAdmin) {
+      if (business.status === "pending")
+        return (
+          <>
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+            <PendingScreen business={business} onLogout={handleLogout} />
+          </>
+        );
+      if (business.status === "rejected")
+        return (
+          <>
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+            <RejectedScreen business={business} onLogout={handleLogout} />
+          </>
+        );
+      if (business.status === "suspended")
+        return (
+          <>
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+            <RejectedScreen
+              business={{
+                ...business,
+                rejection_reason:
+                  "Ang iyong account ay naka-suspend. Makipag-ugnayan sa aming team.",
+              }}
+              onLogout={handleLogout}
+            />
+          </>
+        );
+      if (isTrialExpired(business))
+        return (
+          <>
+            {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+            <TrialExpiredScreen business={business} onLogout={handleLogout} />
+          </>
+        );
+    }
+
+    return (
+      <>
+        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+        {profile.role === "owner" ? (
+          <OwnerDashboard
+            profile={profile}
+            business={business}
+            isSuperAdmin={isSuperAdmin}
+            onLogout={handleLogout}
+            showToast={showToast}
+          />
+        ) : (
+          <StaffDashboard
+            profile={profile}
+            business={business}
+            branch={branch}
+            onLogout={handleLogout}
+            showToast={showToast}
+          />
+        )}
+      </>
+    );
+  }
+
+  // Not logged in
+  return (
+    <>
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      {screen === "landing" && (
+        <LandingScreen
+          onShowSignup={() => setScreen("signup")}
+          onShowLogin={() => setScreen("login")}
+        />
+      )}
+      {screen === "signup" && (
+        <SignupScreen
+          onBack={() => setScreen("landing")}
+          onSuccess={() => setScreen("login")}
+          showToast={showToast}
+        />
+      )}
+      {screen === "login" && (
+        <LoginScreen
+          onBack={() => setScreen("landing")}
+          onSuccess={() => {}}
+          onForgotPassword={() => setScreen("forgot")}
+          showToast={showToast}
+        />
+      )}
+      {screen === "forgot" && (
+        <ForgotPasswordScreen
+          onBack={() => setScreen("login")}
+          onVerifyOTP={goToOTP}
+          showToast={showToast}
+        />
+      )}
+      {screen === "otp" && (
+        <OTPScreen
+          email={otpEmail}
+          type={otpType}
+          onBack={() => setScreen(otpType === "forgot" ? "forgot" : "login")}
+          onSuccess={(next) => setScreen(next || "login")}
+          showToast={showToast}
+        />
+      )}
+    </>
+  );
+}
