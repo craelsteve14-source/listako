@@ -1934,6 +1934,11 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                             message: "Your high discount request has been approved by the owner. You may now process the transaction with the discount.",
                             is_read: false,
                           });
+                          // Save approved discount to localStorage so cashier can bypass check
+                          const discountMatch = n.message.match(/requesting a (\d+)%/);
+                          if (discountMatch) {
+                            localStorage.setItem("cashier_approved_discount", discountMatch[1]);
+                          }
                           showToast("Discount approved! Cashier has been notified.", "success");
                           fetchAll();
                         }}
@@ -1956,6 +1961,8 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                             message: "Your high discount request was declined by the owner. Please apply a lower discount.",
                             is_read: false,
                           });
+                          // Clear any approved discount from localStorage
+                          localStorage.removeItem("cashier_approved_discount");
                           showToast("Discount request declined.", "success");
                           fetchAll();
                         }}
@@ -3024,31 +3031,38 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       }
       // Rule 9 — Manager approval for high discounts — send request instead of error
       if (discountType === "percent" && Number(discountValue) > (business.manager_approval_threshold || 15)) {
-        // Check for duplicate pending request
-        const { data: existing } = await supabase
-          .from("notifications")
-          .select("id")
-          .eq("business_id", business.id)
-          .eq("type", "discount_approval_request")
-          .is("action_taken", null)
-          .maybeSingle();
+        // Check if this discount was already approved by owner
+        const approvedDiscount = localStorage.getItem("cashier_approved_discount");
+        if (approvedDiscount && Number(approvedDiscount) >= Number(discountValue)) {
+          // Approved — allow to proceed, clear the approval
+          localStorage.removeItem("cashier_approved_discount");
+        } else {
+          // Check for existing pending request
+          const { data: existing } = await supabase
+            .from("notifications")
+            .select("id")
+            .eq("business_id", business.id)
+            .eq("type", "discount_approval_request")
+            .is("action_taken", null)
+            .maybeSingle();
 
-        if (existing) {
-          return showToast("A discount approval request is already pending. Please wait for owner response.", "warning");
+          if (existing) {
+            return showToast("A discount approval request is already pending. Please wait for owner response.", "warning");
+          }
+
+          // Send approval request to owner
+          await supabase.from("notifications").insert({
+            business_id: business.id,
+            type: "discount_approval_request",
+            title: "🏷️ High Discount Approval Needed",
+            message: `${profile.full_name} is requesting a ${discountValue}% discount (above your ${business.manager_approval_threshold || 15}% threshold). Cart total: ₱${subtotal.toFixed(2)}. Reason: ${discountReason.trim()}`,
+            is_read: false,
+            recipient_id: null,
+            sender_id: profile.id,
+            transaction_id: null,
+          });
+          return showToast(`Discount above ${business.manager_approval_threshold || 15}% requires owner approval. Request sent to owner! ✓`, "warning");
         }
-
-        // Send approval request to owner
-        await supabase.from("notifications").insert({
-          business_id: business.id,
-          type: "discount_approval_request",
-          title: "🏷️ High Discount Approval Needed",
-          message: `${profile.full_name} is requesting a ${discountValue}% discount (above your ${business.manager_approval_threshold || 15}% threshold). Cart total: ₱${subtotal.toFixed(2)}. Reason: ${discountReason.trim()}`,
-          is_read: false,
-          recipient_id: null,
-          sender_id: profile.id,
-          transaction_id: null,
-        });
-        return showToast(`Discount above ${business.manager_approval_threshold || 15}% requires owner approval. Request sent to owner! ✓`, "warning");
       }
     }
     setProcessing(true);
@@ -3165,7 +3179,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
         "cashier_cart", "cashier_checkout", "cashier_payment",
         "cashier_amount", "cashier_customer_name", "cashier_customer_phone",
         "cashier_gcash_ref", "cashier_discount_type", "cashier_discount_value",
-        "cashier_discount_reason", "cashier_customer_type"
+        "cashier_discount_reason", "cashier_customer_type", "cashier_approved_discount"
       ].forEach(k => localStorage.removeItem(k));
     } catch (err) {
       showToast("Transaction failed: " + (err?.message || "Unknown error"), "error");
