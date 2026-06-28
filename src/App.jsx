@@ -824,9 +824,9 @@ function SignupScreen({ onBack, onSuccess, showToast }) {
           phone: form.business_phone.trim(),
         })
         .select()
-        .single();
+        .maybeSingle();
       if (bizError) throw bizError;
-
+      if (!biz) throw new Error("Hindi na-save ang business. Subukan muli.");
       const { error: profileError } = await supabase.from("profiles").insert({
         id: userId,
         business_id: biz.id,
@@ -1839,7 +1839,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                             .from("transactions")
                             .select("cashier_id, receipt_number, total_amount")
                             .eq("id", n.transaction_id)
-                            .single();
+                            .maybeSingle();
 
                           // Approve void
                           await supabase.from("transactions").update({
@@ -1877,7 +1877,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                             .from("transactions")
                             .select("cashier_id, receipt_number, total_amount")
                             .eq("id", n.transaction_id)
-                            .single();
+                            .maybeSingle();
 
                           // Decline void — restore to completed
                           await supabase.from("transactions").update({
@@ -3087,14 +3087,13 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       }
       // Rule 9 — Manager approval for high discounts
       // EXCEPTION: Senior/PWD discounts are legally required — never need approval
-      const isSeniorPWD = customerType === "senior" || customerType === "pwd";
       if (!isSeniorPWD && discountType === "percent" && Number(discountValue) > (business.manager_approval_threshold || 15)) {
         // Check if owner already approved in database
         const { data: cashierProfile } = await supabase
           .from("profiles")
           .select("approved_discount_percent, approved_discount_at")
           .eq("id", profile.id)
-          .single();
+          .maybeSingle();
 
         const isApproved = cashierProfile?.approved_discount_percent >= Number(discountValue) &&
           cashierProfile?.approved_discount_at &&
@@ -3160,8 +3159,9 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           status: "completed",
         })
         .select()
-        .single();
+        .maybeSingle();
       if (txnError) throw txnError;
+      if (!txn) throw new Error("Hindi na-save ang transaction. Subukan muli.");
 
       // Create transaction items
       const items = cart.map((item) => ({
@@ -3220,7 +3220,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             .from("products")
             .select("stock_quantity")
             .eq("id", item.product_id)
-            .single();
+            .maybeSingle();
           if (prod) {
             await supabase
               .from("products")
@@ -4460,7 +4460,7 @@ export default function App() {
     try {
       let prof = null;
       for (let i = 0; i < 3; i++) {
-        const { data } = await supabase.from("profiles").select("*").eq("id", userId).single();
+        const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
         if (data) {
           prof = data;
           break;
@@ -4478,7 +4478,7 @@ export default function App() {
         .from("businesses")
         .select("*")
         .eq("id", prof.business_id)
-        .single();
+        .maybeSingle();
       setBusiness(biz);
 
       if (prof.branch_id) {
@@ -4486,7 +4486,7 @@ export default function App() {
           .from("branches")
           .select("*")
           .eq("id", prof.branch_id)
-          .single();
+          .maybeSingle();
         setBranch(br);
       }
 
