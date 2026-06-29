@@ -2159,12 +2159,13 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
   const [pendingProducts, setPendingProducts] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [pendingTransfers, setPendingTransfers] = useState([]);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const [b, p, s, tx, utang, pending, notifs] = await Promise.all([
+    const [b, p, s, tx, utang, pending, notifs, xfers] = await Promise.all([
       supabase.from("branches").select("*").eq("business_id", business.id).order("created_at"),
       supabase.from("products").select("*").eq("business_id", business.id).eq("status", "active").order("name"),
       supabase.from("profiles").select("*").eq("business_id", business.id).neq("role", "owner").order("full_name"),
@@ -2172,6 +2173,8 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
       supabase.from("utang_records").select("*").eq("business_id", business.id).in("status", ["unpaid", "partial"]),
       supabase.from("products").select("*").eq("business_id", business.id).eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("notifications").select("*").eq("business_id", business.id).eq("is_read", false).is("recipient_id", null).order("created_at", { ascending: false }).limit(20),
+      supabase.from("product_transfers").select("*, products(name, stock_quantity), from_branch:branches!product_transfers_from_branch_id_fkey(name), to_branch:branches!product_transfers_to_branch_id_fkey(name), requester:profiles!product_transfers_requested_by_fkey(full_name)")
+        .eq("business_id", business.id).eq("status", "pending").order("created_at", { ascending: false }),
     ]);
     setBranches(b.data || []);
     setProducts(p.data || []);
@@ -2179,6 +2182,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     setRecentTx((tx.data || []).slice(0, 5));
     setPendingProducts(pending.data || []);
     setNotifications(notifs.data || []);
+    setPendingTransfers(xfers.data || []);
     const revenue = (tx.data || []).reduce((sum, t) => sum + Number(t.total_amount), 0);
     setTodayRevenue(revenue);
     setTodayTxCount((tx.data || []).length);
@@ -2454,7 +2458,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     { key: "products", icon: "📦", label: "Produkto" },
     { key: "branches", icon: "🏪", label: "Branch" },
     { key: "staff", icon: "👥", label: "Staff" },
-    { key: "pending", icon: pendingProducts.length > 0 ? "🔴" : "⏳", label: "Pending" },
+    { key: "pending", icon: (pendingProducts.length + pendingTransfers.length) > 0 ? "🔴" : "⏳", label: "Pending" },
     ...(isSuperAdmin ? [{ key: "admin", icon: "👑", label: "Admin" }] : []),
   ];
 
@@ -3060,6 +3064,62 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                     ))}
                   </>
                 )}
+
+                {/* Transfer Requests */}
+                <div className="mt-6">
+                  <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide mb-3">
+                    {pendingTransfers.length} Transfer Request{pendingTransfers.length !== 1 ? "s" : ""}
+                  </h2>
+                  {pendingTransfers.length === 0 ? (
+                    <Card className="p-6 text-center">
+                      <p className="text-2xl mb-1">📦</p>
+                      <p className="text-xs text-gray-400">No pending transfer requests</p>
+                    </Card>
+                  ) : (
+                    <div className="space-y-3">
+                      {pendingTransfers.map((t) => (
+                        <Card key={t.id} className="p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-sm font-bold text-gray-800">{t.products?.name}</p>
+                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">Pending</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mb-1">
+                            {t.quantity} units · {t.from_branch?.name} → {t.to_branch?.name}
+                          </p>
+                          <p className="text-xs text-gray-400 mb-1">
+                            Requested by {t.requester?.full_name} · {new Date(t.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}
+                          </p>
+                          {t.notes && <p className="text-xs text-gray-400 italic mb-2">{t.notes}</p>}
+                          <p className="text-xs text-gray-400 mb-3">Available stock: {t.products?.stock_quantity || 0}</p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                const { error } = await supabase.from("product_transfers").update({ status: "completed", approved_by: profile.id, completed_at: new Date().toISOString() }).eq("id", t.id);
+                                if (error) return showToast("Failed to approve.", "error");
+                                await supabase.from("products").update({ stock_quantity: Math.max(0, (t.products?.stock_quantity || 0) - t.quantity) }).eq("id", t.product_id);
+                                showToast("Transfer approved and completed!", "success");
+                                fetchAll();
+                              }}
+                              className="flex-1 bg-forest-600 text-white font-bold py-2.5 rounded-xl text-xs"
+                            >
+                              Approve & Transfer
+                            </button>
+                            <button
+                              onClick={async () => {
+                                await supabase.from("product_transfers").update({ status: "rejected", approved_by: profile.id }).eq("id", t.id);
+                                showToast("Transfer rejected.", "warning");
+                                fetchAll();
+                              }}
+                              className="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl text-xs"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </>
@@ -5958,12 +6018,415 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
 }
 
 // ═══════════════════════════════════════════════════════════════
+// BRANCH MANAGER DASHBOARD (Phase 7)
+// ═══════════════════════════════════════════════════════════════
+function BranchManagerDashboard({ profile, business, branch, onLogout, showToast }) {
+  const [bmTab, setBmTab] = useState("overview");
+  const [loading, setLoading] = useState(true);
+  const [branchRevenue, setBranchRevenue] = useState(0);
+  const [branchTxCount, setBranchTxCount] = useState(0);
+  const [branchProducts, setBranchProducts] = useState([]);
+  const [branchStaff, setBranchStaff] = useState([]);
+  const [staffPerformance, setStaffPerformance] = useState([]);
+  const [recentTx, setRecentTx] = useState([]);
+  const [transfers, setTransfers] = useState([]);
+  const [allBranches, setAllBranches] = useState([]);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferProduct, setTransferProduct] = useState(null);
+  const [transferQty, setTransferQty] = useState("");
+  const [transferToBranch, setTransferToBranch] = useState("");
+  const [transferNotes, setTransferNotes] = useState("");
+  const [transferSearch, setTransferSearch] = useState("");
+  const [transferSearchResults, setTransferSearchResults] = useState([]);
+  const [transferSaving, setTransferSaving] = useState(false);
+  const [timeFilter, setTimeFilter] = useState("today");
+
+  const getDateRange = useCallback((filter) => {
+    const now = new Date();
+    const start = new Date(now);
+    if (filter === "today") {
+      start.setHours(0, 0, 0, 0);
+    } else if (filter === "week") {
+      start.setDate(now.getDate() - 6);
+      start.setHours(0, 0, 0, 0);
+    } else {
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+    }
+    return start;
+  }, []);
+
+  const fetchAll = useCallback(async () => {
+    if (!branch?.id) return;
+    setLoading(true);
+    const start = getDateRange(timeFilter);
+
+    const [txRes, prodRes, staffRes, transferRes, branchRes] = await Promise.all([
+      supabase.from("transactions").select("*, profiles!inner(full_name)")
+        .eq("business_id", business.id).eq("branch_id", branch.id)
+        .eq("status", "completed").gte("created_at", start.toISOString())
+        .order("created_at", { ascending: false }),
+      supabase.from("products").select("*")
+        .eq("business_id", business.id).eq("status", "active").order("name"),
+      supabase.from("profiles").select("*")
+        .eq("business_id", business.id).eq("branch_id", branch.id)
+        .neq("role", "owner").order("full_name"),
+      supabase.from("product_transfers").select("*, products(name), from_branch:branches!product_transfers_from_branch_id_fkey(name), to_branch:branches!product_transfers_to_branch_id_fkey(name), requester:profiles!product_transfers_requested_by_fkey(full_name)")
+        .eq("business_id", business.id)
+        .or(`from_branch_id.eq.${branch.id},to_branch_id.eq.${branch.id}`)
+        .order("created_at", { ascending: false }).limit(20),
+      supabase.from("branches").select("*").eq("business_id", business.id).neq("id", branch.id),
+    ]);
+
+    const txns = txRes.data || [];
+    setRecentTx(txns.slice(0, 10));
+    setBranchRevenue(txns.reduce((s, t) => s + Number(t.total_amount), 0));
+    setBranchTxCount(txns.length);
+    setBranchProducts(prodRes.data || []);
+    setBranchStaff(staffRes.data || []);
+    setTransfers(transferRes.data || []);
+    setAllBranches(branchRes.data || []);
+
+    const perfMap = {};
+    txns.forEach((tx) => {
+      if (!perfMap[tx.cashier_id]) perfMap[tx.cashier_id] = { name: tx.profiles?.full_name || "Unknown", txCount: 0, revenue: 0 };
+      perfMap[tx.cashier_id].txCount += 1;
+      perfMap[tx.cashier_id].revenue += Number(tx.total_amount);
+    });
+    setStaffPerformance(Object.entries(perfMap).map(([id, v]) => ({ id, ...v, avg: v.txCount > 0 ? v.revenue / v.txCount : 0 })).sort((a, b) => b.revenue - a.revenue));
+
+    setLoading(false);
+  }, [business.id, branch?.id, timeFilter, getDateRange]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  useEffect(() => {
+    if (!transferSearch.trim()) { setTransferSearchResults([]); return; }
+    const timer = setTimeout(async () => {
+      const { data } = await supabase.from("products").select("id, name, stock_quantity")
+        .eq("business_id", business.id).eq("status", "active")
+        .ilike("name", `%${transferSearch}%`).limit(10);
+      setTransferSearchResults(data || []);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [transferSearch, business.id]);
+
+  const submitTransfer = async () => {
+    if (!transferProduct || !transferQty || !transferToBranch) return;
+    if (Number(transferQty) <= 0) return showToast("Quantity must be greater than 0.", "error");
+    if (Number(transferQty) > transferProduct.stock_quantity) return showToast("Not enough stock to transfer.", "error");
+    setTransferSaving(true);
+    const { error } = await supabase.from("product_transfers").insert({
+      business_id: business.id,
+      product_id: transferProduct.id,
+      from_branch_id: branch.id,
+      to_branch_id: transferToBranch,
+      quantity: Number(transferQty),
+      requested_by: profile.id,
+      notes: transferNotes.trim() || null,
+    });
+    setTransferSaving(false);
+    if (error) return showToast("Transfer request failed.", "error");
+    await supabase.from("notifications").insert({
+      business_id: business.id,
+      type: "transfer_request",
+      title: "📦 Product Transfer Request",
+      message: `${profile.full_name} requests to transfer ${transferQty}x ${transferProduct.name} from ${branch.name} to another branch.`,
+      is_read: false,
+    });
+    showToast("Transfer request sent to owner!", "success");
+    setShowTransferModal(false);
+    setTransferProduct(null);
+    setTransferQty("");
+    setTransferToBranch("");
+    setTransferNotes("");
+    setTransferSearch("");
+    fetchAll();
+  };
+
+  const BM_TABS = [
+    { key: "overview", icon: "📊", label: "Overview" },
+    { key: "staff", icon: "👥", label: "Staff" },
+    { key: "transfers", icon: "🔄", label: "Transfers" },
+  ];
+
+  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Spinner /></div>;
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col max-w-lg mx-auto">
+      <div className="bg-forest-800 px-4 pt-5 pb-4">
+        <div className="flex items-center justify-between mb-1">
+          <div>
+            <p className="text-gold-400 text-xs font-medium uppercase tracking-widest">Branch Manager</p>
+            <h1 className="text-ivory-50 font-black text-xl leading-tight">{branch?.name || business.name}</h1>
+          </div>
+          <button onClick={onLogout} className="bg-forest-700 text-gold-400 text-xs px-3 py-2 rounded-xl font-medium border border-forest-600">
+            Logout
+          </button>
+        </div>
+        <p className="text-forest-300 text-xs">{profile.full_name} · {business.name}</p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto pb-20">
+        <div className="p-4 flex gap-2 mb-1">
+          {[{ key: "today", label: "Today" }, { key: "week", label: "This Week" }, { key: "month", label: "This Month" }].map((f) => (
+            <button key={f.key} onClick={() => setTimeFilter(f.key)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium ${timeFilter === f.key ? "bg-gold-400 text-forest-900" : "bg-gray-100 text-gray-500"}`}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {bmTab === "overview" && (
+          <div className="p-4 pt-0 space-y-4">
+            <div className="bg-forest-700 rounded-2xl p-4">
+              <p className="text-gold-300 text-xs font-semibold uppercase tracking-widest mb-1">Branch Revenue</p>
+              <p className="text-3xl font-black text-white tracking-tight">₱{branchRevenue.toFixed(2)}</p>
+              <p className="text-forest-300 text-xs mt-1">{branchTxCount} transaction{branchTxCount !== 1 ? "s" : ""}</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <StatCard icon="📦" label="Products" value={branchProducts.length} color="bg-blue-50 text-blue-700" />
+              <StatCard icon="👥" label="Staff" value={branchStaff.length} color="bg-purple-50 text-purple-700" />
+              <StatCard icon="🔄" label="Transfers" value={transfers.filter(t => t.status === "pending").length} color="bg-yellow-50 text-yellow-700" />
+            </div>
+
+            {recentTx.length > 0 && (
+              <div>
+                <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide mb-2">Recent Transactions</h2>
+                <div className="space-y-2">
+                  {recentTx.slice(0, 5).map((tx) => (
+                    <Card key={tx.id} className="p-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-mono text-gray-400">{tx.receipt_number}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 capitalize">
+                          {tx.profiles?.full_name} · {tx.payment_method} · {new Date(tx.created_at).toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit", hour12: true })}
+                        </p>
+                      </div>
+                      <p className="font-black text-forest-700">₱{Number(tx.total_amount).toFixed(2)}</p>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide mb-2">Low Stock Alerts</h2>
+              {branchProducts.filter(p => p.stock_quantity <= p.low_stock_threshold).length === 0 ? (
+                <Card className="p-3"><p className="text-xs text-gray-400 text-center">No low stock items.</p></Card>
+              ) : (
+                <div className="space-y-2">
+                  {branchProducts.filter(p => p.stock_quantity <= p.low_stock_threshold).map((p) => (
+                    <Card key={p.id} className="p-3 flex items-center justify-between border-l-4 border-red-400">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">{p.name}</p>
+                        <p className="text-xs text-gray-400">{p.category}</p>
+                      </div>
+                      <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-lg">{p.stock_quantity} left</span>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {bmTab === "staff" && (
+          <div className="p-4 pt-0 space-y-4">
+            <Card className="p-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Staff Performance</p>
+              {staffPerformance.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-4">No staff data for this period.</p>
+              ) : (
+                <div className="space-y-3">
+                  {staffPerformance.map((s, i) => (
+                    <div key={s.id} className="bg-gray-50 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-gold-200 text-gold-800" : "bg-gray-200 text-gray-600"}`}>
+                            {i + 1}
+                          </span>
+                          <p className="text-sm font-bold text-gray-800">{s.name}</p>
+                        </div>
+                        <p className="text-sm font-black text-forest-700">₱{s.revenue.toFixed(2)}</p>
+                      </div>
+                      <div className="flex gap-4 ml-8">
+                        <p className="text-xs text-gray-400">{s.txCount} transactions</p>
+                        <p className="text-xs text-gray-400">Avg ₱{s.avg.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            <Card className="p-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Branch Staff</p>
+              {branchStaff.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-4">No staff assigned to this branch.</p>
+              ) : (
+                <div className="space-y-2">
+                  {branchStaff.map((s) => (
+                    <div key={s.id} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">{s.full_name}</p>
+                        <p className="text-xs text-gray-400">{s.email}</p>
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full font-semibold ${ROLE_COLORS[s.role]}`}>
+                        {ROLE_LABELS[s.role]}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
+
+        {bmTab === "transfers" && (
+          <div className="p-4 pt-0 space-y-4">
+            <button onClick={() => setShowTransferModal(true)}
+              className="w-full bg-forest-600 text-white font-bold py-3 rounded-xl text-sm">
+              Request Product Transfer
+            </button>
+
+            <Card className="p-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Transfer History</p>
+              {transfers.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-4">No transfers yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {transfers.map((t) => (
+                    <div key={t.id} className={`rounded-xl p-3 border ${
+                      t.status === "pending" ? "bg-yellow-50 border-yellow-200" :
+                      t.status === "completed" ? "bg-green-50 border-green-200" :
+                      t.status === "rejected" ? "bg-red-50 border-red-200" :
+                      "bg-blue-50 border-blue-200"
+                    }`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-bold text-gray-800">{t.products?.name}</p>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full capitalize ${
+                          t.status === "pending" ? "bg-yellow-200 text-yellow-700" :
+                          t.status === "completed" ? "bg-green-200 text-green-700" :
+                          t.status === "rejected" ? "bg-red-200 text-red-700" :
+                          "bg-blue-200 text-blue-700"
+                        }`}>
+                          {t.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {t.quantity} units · {t.from_branch?.name} → {t.to_branch?.name}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {t.requester?.full_name} · {new Date(t.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}
+                      </p>
+                      {t.notes && <p className="text-xs text-gray-400 italic mt-1">{t.notes}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Nav */}
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-white border-t border-gray-100 flex items-center justify-around px-2 py-2 z-30">
+        {BM_TABS.map((item) => (
+          <button key={item.key} onClick={() => setBmTab(item.key)}
+            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors ${bmTab === item.key ? "bg-forest-50 text-forest-700" : "text-gray-400"}`}>
+            <span className="text-xl">{item.icon}</span>
+            <span className={`text-xs font-medium ${bmTab === item.key ? "text-forest-700" : "text-gray-400"}`}>{item.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Transfer Request Modal */}
+      {showTransferModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-black text-gray-800 text-base">Request Product Transfer</h3>
+              <button onClick={() => { setShowTransferModal(false); setTransferProduct(null); setTransferSearch(""); }} className="text-gray-400 text-xl">✕</button>
+            </div>
+
+            {!transferProduct ? (
+              <>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Search Product</p>
+                <input type="text" value={transferSearch} onChange={(e) => setTransferSearch(e.target.value)}
+                  placeholder="Search product name..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-2" />
+                <div className="space-y-1 max-h-48 overflow-y-auto">
+                  {transferSearchResults.map((p) => (
+                    <button key={p.id} onClick={() => { setTransferProduct(p); setTransferSearch(""); setTransferSearchResults([]); }}
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-gray-50 flex justify-between items-center">
+                      <p className="text-sm font-medium text-gray-800">{p.name}</p>
+                      <p className="text-xs text-gray-400">Stock: {p.stock_quantity}</p>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-forest-50 border border-forest-200 rounded-xl p-3 mb-3">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold text-gray-800 text-sm">{transferProduct.name}</p>
+                      <p className="text-xs text-gray-500">Available: {transferProduct.stock_quantity}</p>
+                    </div>
+                    <button onClick={() => setTransferProduct(null)} className="text-xs text-red-500 font-semibold">Change</button>
+                  </div>
+                </div>
+
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Transfer To</p>
+                <select value={transferToBranch} onChange={(e) => setTransferToBranch(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 bg-white mb-3">
+                  <option value="">Select destination branch...</option>
+                  {allBranches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Quantity</p>
+                <input type="number" value={transferQty} onChange={(e) => setTransferQty(e.target.value)}
+                  placeholder="How many units to transfer?"
+                  className="w-full border-2 border-forest-300 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-forest-500 mb-3" />
+
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Notes (Optional)</p>
+                <input type="text" value={transferNotes} onChange={(e) => setTransferNotes(e.target.value)}
+                  placeholder="Reason for transfer..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-4" />
+
+                <button onClick={submitTransfer} disabled={transferSaving || !transferToBranch || !transferQty}
+                  className="w-full bg-forest-600 text-white font-bold py-3.5 rounded-2xl text-sm disabled:opacity-50">
+                  {transferSaving ? "Sending..." : "Send Transfer Request"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // STAFF DASHBOARD
 // ═══════════════════════════════════════════════════════════════
 function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
   if (profile.role === "cashier") {
     return (
       <CashierPOS
+        profile={profile}
+        business={business}
+        branch={branch}
+        onLogout={onLogout}
+        showToast={showToast}
+      />
+    );
+  }
+
+  if (profile.role === "branch_manager") {
+    return (
+      <BranchManagerDashboard
         profile={profile}
         business={business}
         branch={branch}
