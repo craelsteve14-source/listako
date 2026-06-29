@@ -2344,6 +2344,218 @@ function AuditLogViewer({ businessId }) {
   );
 }
 
+const downloadCSV = (filename, headers, rows) => {
+  const escape = (v) => {
+    const s = String(v ?? "");
+    return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = [headers.join(","), ...rows.map((r) => r.map(escape).join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
+};
+
+function SettingsPanel({ business, products, branches, staff, showToast, onLogout, onUpdated }) {
+  const [bizForm, setBizForm] = useState({
+    name: business.name || "",
+    receipt_header: business.receipt_header || "",
+    receipt_footer: business.receipt_footer || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [exportingTx, setExportingTx] = useState(false);
+
+  const saveBusiness = async () => {
+    if (!bizForm.name.trim()) return showToast("Business name is required.", "error");
+    setSaving(true);
+    const { error } = await supabase.from("businesses").update({
+      name: bizForm.name.trim(),
+      receipt_header: bizForm.receipt_header.trim() || null,
+      receipt_footer: bizForm.receipt_footer.trim() || null,
+    }).eq("id", business.id);
+    setSaving(false);
+    if (error) return showToast("Failed to save. Try again.", "error");
+    showToast("Business settings updated!", "success");
+    onUpdated();
+  };
+
+  const exportProducts = () => {
+    if (products.length === 0) return showToast("No products to export.", "error");
+    downloadCSV(
+      `listako-products-${new Date().toISOString().slice(0, 10)}.csv`,
+      ["Name", "Barcode", "Price", "Wholesale Price", "Stock", "Category", "Low Stock Threshold"],
+      products.map((p) => [p.name, p.barcode || "", p.price, p.wholesale_price || "", p.stock_quantity, p.category, p.low_stock_threshold])
+    );
+    showToast("Products exported!", "success");
+  };
+
+  const exportTransactions = async () => {
+    setExportingTx(true);
+    const { data } = await supabase.from("transactions").select("*, transaction_items(*)")
+      .eq("business_id", business.id).eq("status", "completed")
+      .order("created_at", { ascending: false }).limit(500);
+    setExportingTx(false);
+    if (!data || data.length === 0) return showToast("No transactions to export.", "error");
+    downloadCSV(
+      `listako-transactions-${new Date().toISOString().slice(0, 10)}.csv`,
+      ["Date", "Receipt #", "Total", "Items", "Payment", "Cashier", "Customer"],
+      data.map((t) => [
+        new Date(t.created_at).toLocaleString("en-PH"),
+        t.receipt_number || t.id.slice(0, 8),
+        t.total_amount,
+        (t.transaction_items || []).length,
+        t.payment_method || "cash",
+        t.cashier_name || "",
+        t.customer_name || "",
+      ])
+    );
+    showToast("Transactions exported!", "success");
+  };
+
+  const exportCustomers = async () => {
+    const { data } = await supabase.from("customers").select("*").eq("business_id", business.id).order("name");
+    if (!data || data.length === 0) return showToast("No customers to export.", "error");
+    downloadCSV(
+      `listako-customers-${new Date().toISOString().slice(0, 10)}.csv`,
+      ["Name", "Phone", "Email", "Address", "Suki", "Visits", "Total Spent"],
+      data.map((c) => [c.name, c.phone || "", c.email || "", c.address || "", c.is_suki ? "Yes" : "No", c.visit_count || 0, c.total_spent || 0])
+    );
+    showToast("Customers exported!", "success");
+  };
+
+  const lowStockProducts = products.filter((p) => p.stock_quantity <= (p.low_stock_threshold || 10));
+
+  return (
+    <div className="p-4 space-y-4">
+      <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide">Settings</h2>
+
+      <Card className="p-4 space-y-3">
+        <p className="font-bold text-gray-800 text-sm">Business Profile</p>
+        <Field label="Business Name" value={bizForm.name}
+          onChange={(v) => setBizForm((f) => ({ ...f, name: v }))} placeholder="My Store" />
+        <Field label="Receipt Header (optional)" value={bizForm.receipt_header}
+          onChange={(v) => setBizForm((f) => ({ ...f, receipt_header: v }))} placeholder="Thank you for shopping!" />
+        <Field label="Receipt Footer (optional)" value={bizForm.receipt_footer}
+          onChange={(v) => setBizForm((f) => ({ ...f, receipt_footer: v }))} placeholder="Visit us again!" />
+        <button onClick={saveBusiness} disabled={saving}
+          className="w-full bg-forest-600 text-white font-bold py-3 rounded-xl disabled:opacity-60 text-sm">
+          {saving ? "Saving..." : "Save Business Info"}
+        </button>
+      </Card>
+
+      <Card className="p-4 space-y-3">
+        <p className="font-bold text-gray-800 text-sm">Export Data (CSV)</p>
+        <p className="text-xs text-gray-400">Download your data as spreadsheet files.</p>
+        <div className="grid grid-cols-1 gap-2">
+          <button onClick={exportProducts}
+            className="flex items-center gap-2 bg-blue-50 text-blue-700 font-semibold py-2.5 px-4 rounded-xl text-sm">
+            📦 Export Products ({products.length})
+          </button>
+          <button onClick={exportTransactions} disabled={exportingTx}
+            className="flex items-center gap-2 bg-green-50 text-green-700 font-semibold py-2.5 px-4 rounded-xl text-sm disabled:opacity-60">
+            {exportingTx ? "Exporting..." : "💰 Export Transactions (Last 500)"}
+          </button>
+          <button onClick={exportCustomers}
+            className="flex items-center gap-2 bg-purple-50 text-purple-700 font-semibold py-2.5 px-4 rounded-xl text-sm">
+            👤 Export Customers
+          </button>
+        </div>
+      </Card>
+
+      {lowStockProducts.length > 0 && (
+        <Card className="p-4 space-y-2">
+          <p className="font-bold text-red-600 text-sm">⚠️ Low Stock Alert ({lowStockProducts.length})</p>
+          <div className="space-y-1.5">
+            {lowStockProducts.slice(0, 10).map((p) => (
+              <div key={p.id} className="flex items-center justify-between bg-red-50 rounded-lg px-3 py-2">
+                <p className="text-xs font-medium text-gray-700 truncate flex-1">{p.name}</p>
+                <p className="text-xs font-bold text-red-600 ml-2">{p.stock_quantity} left</p>
+              </div>
+            ))}
+            {lowStockProducts.length > 10 && (
+              <p className="text-xs text-gray-400 text-center">+{lowStockProducts.length - 10} more items</p>
+            )}
+          </div>
+        </Card>
+      )}
+
+      <Card className="p-4 space-y-2">
+        <p className="font-bold text-gray-800 text-sm">App Info</p>
+        <div className="space-y-1 text-xs text-gray-500">
+          <p>ListaKo v1.0 — Filipino-First Business Manager</p>
+          <p>Products: {products.length} · Branches: {branches.length} · Staff: {staff.length}</p>
+          <p>Plan: {business.plan ? business.plan.charAt(0).toUpperCase() + business.plan.slice(1) : "Trial"}</p>
+        </div>
+      </Card>
+
+      <button onClick={() => setShowHelp(true)}
+        className="w-full bg-gold-100 text-gold-800 font-bold py-3 rounded-xl text-sm">
+        📖 How to Use ListaKo
+      </button>
+
+      <button onClick={onLogout}
+        className="w-full bg-red-50 text-red-500 font-semibold py-3 rounded-xl text-sm">
+        Logout
+      </button>
+
+      {showHelp && (
+        <Modal title="Paano Gamitin ang ListaKo" onClose={() => setShowHelp(false)}>
+          <div className="space-y-4 text-sm text-gray-700">
+            <div>
+              <p className="font-bold text-forest-700 mb-1">📊 Dashboard</p>
+              <p className="text-xs text-gray-500">Tingnan ang revenue, transactions, at low stock alerts ngayong araw.</p>
+            </div>
+            <div>
+              <p className="font-bold text-forest-700 mb-1">📈 Analytics</p>
+              <p className="text-xs text-gray-500">I-view ang charts para sa revenue trends, best sellers, at cashier performance.</p>
+            </div>
+            <div>
+              <p className="font-bold text-forest-700 mb-1">📦 Produkto</p>
+              <p className="text-xs text-gray-500">Mag-add, edit, at manage ng products. Pwedeng mag-generate ng barcode at mag-set ng wholesale pricing.</p>
+            </div>
+            <div>
+              <p className="font-bold text-forest-700 mb-1">🏪 Branch</p>
+              <p className="text-xs text-gray-500">Mag-manage ng iba't ibang branches ng iyong negosyo.</p>
+            </div>
+            <div>
+              <p className="font-bold text-forest-700 mb-1">👥 Staff</p>
+              <p className="text-xs text-gray-500">Mag-add ng cashiers, inventory staff, at branch managers. I-assign sila sa mga branches.</p>
+            </div>
+            <div>
+              <p className="font-bold text-forest-700 mb-1">⏳ Pending</p>
+              <p className="text-xs text-gray-500">I-approve ang mga void requests, product transfers, at bagong products.</p>
+            </div>
+            <div>
+              <p className="font-bold text-forest-700 mb-1">👤 Suki</p>
+              <p className="text-xs text-gray-500">I-track ang iyong loyal customers at ang kanilang purchase history.</p>
+            </div>
+            <div>
+              <p className="font-bold text-forest-700 mb-1">📋 Logs</p>
+              <p className="text-xs text-gray-500">I-review ang audit trail ng lahat ng actions sa system.</p>
+            </div>
+            <div>
+              <p className="font-bold text-forest-700 mb-1">⚙️ Settings</p>
+              <p className="text-xs text-gray-500">I-edit ang business info, receipt headers, at mag-export ng data.</p>
+            </div>
+            <div className="bg-gold-50 rounded-xl p-3">
+              <p className="font-bold text-gold-700 text-xs mb-1">💡 Tips</p>
+              <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
+                <li>Mag-scan ng barcode gamit ang camera ng cashier</li>
+                <li>I-set ang wholesale pricing para sa bulk buyers</li>
+                <li>Gamitin ang "Utang" feature para sa credit na customers</li>
+                <li>Ma-install ang ListaKo bilang app sa phone — i-tap ang "Add to Home Screen"</li>
+              </ul>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }) {
   const [tab, setTab] = useState(() => {
     return localStorage.getItem("owner_tab") || "dashboard";
@@ -2717,6 +2929,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     { key: "pending", icon: (pendingProducts.length + pendingTransfers.length) > 0 ? "🔴" : "⏳", label: "Pending" },
     { key: "customers", icon: "👤", label: "Suki" },
     { key: "logs", icon: "📋", label: "Logs" },
+    { key: "settings", icon: "⚙️", label: "Settings" },
     ...(isSuperAdmin ? [{ key: "admin", icon: "👑", label: "Admin" }] : []),
   ];
 
@@ -3425,6 +3638,18 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
 
             {tab === "logs" && (
               <AuditLogViewer businessId={business.id} />
+            )}
+
+            {tab === "settings" && (
+              <SettingsPanel
+                business={business}
+                products={products}
+                branches={branches}
+                staff={staff}
+                showToast={showToast}
+                onLogout={onLogout}
+                onUpdated={fetchAll}
+              />
             )}
           </>
         )}
