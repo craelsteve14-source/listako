@@ -307,7 +307,7 @@ function OTPScreen({ email, type, onBack, onSuccess, showToast }) {
       </div>
       <div className="flex-1 flex flex-col items-center justify-center px-5 py-8 max-w-md mx-auto w-full">
         <div className="w-16 h-16 bg-forest-100 rounded-2xl flex items-center justify-center mb-4 text-3xl">
-          {type === "forgot" ? "🔑" : "📱"}
+          {type === "forgot" ? <NavIcon name="key" size={24} color="#c9a84c" /> : <NavIcon name="phone" size={24} color="#c9a84c" />}
         </div>
         <h3 className="text-lg font-black text-gray-800 mb-1 text-center">Ilagay ang OTP Code</h3>
         <p className="text-sm text-gray-500 text-center mb-6">
@@ -357,7 +357,7 @@ function PendingScreen({ business, onLogout }) {
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm text-center">
         <div className="w-20 h-20 bg-yellow-100 rounded-3xl flex items-center justify-center mx-auto mb-4 text-4xl">
-          ⏳
+          <NavIcon name="clock" size={48} color="#d97706" />
         </div>
         <h1 className="text-2xl font-black text-gray-800">Nasa Review Pa</h1>
         <p className="text-gray-500 text-sm mt-2 leading-relaxed">
@@ -366,15 +366,15 @@ function PendingScreen({ business, onLogout }) {
           kasalukuyang sinusuri ng aming team.
         </p>
         <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-2xl p-4 text-left space-y-2">
-          <p className="text-sm font-bold text-yellow-800">📋 Susunod na Hakbang:</p>
+          <p className="text-sm font-bold text-yellow-800 flex items-center gap-1.5"><NavIcon name="logs" size={16} color="currentColor" /> Susunod na Hakbang:</p>
           <p className="text-xs text-yellow-700">• Aabisuhan ka namin sa loob ng 24 oras</p>
           <p className="text-xs text-yellow-700">• Tingnan ang iyong email para sa update</p>
           <p className="text-xs text-yellow-700">• Makipag-ugnayan sa amin kung may katanungan</p>
         </div>
         <div className="mt-4 bg-white border border-gray-100 rounded-2xl p-4 text-left space-y-2 shadow-sm">
           <p className="text-xs font-bold text-gray-500 uppercase">Makipag-ugnayan</p>
-          <p className="text-sm text-gray-700">📧 {SUPER_ADMIN_EMAIL}</p>
-          <p className="text-sm text-gray-700">📱 {ADMIN_PHONE}</p>
+          <p className="text-sm text-gray-700 flex items-center gap-1.5"><NavIcon name="mail" size={16} color="currentColor" /> {SUPER_ADMIN_EMAIL}</p>
+          <p className="text-sm text-gray-700 flex items-center gap-1.5"><NavIcon name="phone" size={16} color="currentColor" /> {ADMIN_PHONE}</p>
         </div>
         <button
           onClick={onLogout}
@@ -395,7 +395,7 @@ function RejectedScreen({ business, onLogout }) {
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm text-center">
         <div className="w-20 h-20 bg-red-100 rounded-3xl flex items-center justify-center mx-auto mb-4 text-4xl">
-          ❌
+          <NavIcon name="x" size={48} color="#dc2626" />
         </div>
         <h1 className="text-2xl font-black text-gray-800">Hindi Na-approve</h1>
         <p className="text-gray-500 text-sm mt-2">
@@ -412,8 +412,8 @@ function RejectedScreen({ business, onLogout }) {
           <p className="text-xs font-bold text-gray-500 uppercase mb-2">
             Makipag-ugnayan para sa tulong
           </p>
-          <p className="text-sm text-gray-700">📧 {SUPER_ADMIN_EMAIL}</p>
-          <p className="text-sm text-gray-700">📱 {ADMIN_PHONE}</p>
+          <p className="text-sm text-gray-700 flex items-center gap-1.5"><NavIcon name="mail" size={16} color="currentColor" /> {SUPER_ADMIN_EMAIL}</p>
+          <p className="text-sm text-gray-700 flex items-center gap-1.5"><NavIcon name="phone" size={16} color="currentColor" /> {ADMIN_PHONE}</p>
         </div>
         <button
           onClick={onLogout}
@@ -435,7 +435,7 @@ function TrialExpiredScreen({ business, onLogout }) {
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
           <div className="w-20 h-20 bg-orange-100 rounded-3xl flex items-center justify-center mx-auto mb-4 text-4xl">
-            ⏰
+            <NavIcon name="clock" size={48} color="#d97706" />
           </div>
           <h1 className="text-2xl font-black text-gray-800">Na-expire na ang Trial</h1>
           <p className="text-gray-500 text-sm mt-2">
@@ -467,10 +467,10 @@ function TrialExpiredScreen({ business, onLogout }) {
           ))}
         </div>
         <div className="mt-5 bg-forest-50 border border-forest-200 rounded-2xl p-4">
-          <p className="text-sm font-bold text-forest-800 mb-2">💳 Paano Mag-subscribe:</p>
+          <p className="text-sm font-bold text-forest-800 mb-2 flex items-center gap-1.5"><NavIcon name="creditcard" size={16} color="currentColor" /> Paano Mag-subscribe:</p>
           <p className="text-xs text-forest-700">1. Pumili ng plan sa itaas</p>
           <p className="text-xs text-forest-700">2. Mag-GCash o Maya sa:</p>
-          <p className="text-sm font-black text-forest-800 mt-1">📱 {ADMIN_GCASH}</p>
+          <p className="text-sm font-black text-forest-800 mt-1 flex items-center gap-1.5"><NavIcon name="phone" size={16} color="currentColor" /> {ADMIN_GCASH}</p>
           <p className="text-xs text-forest-700 mt-1">3. I-send ang screenshot ng resibo sa:</p>
           <p className="text-xs font-semibold text-forest-800">{SUPER_ADMIN_EMAIL}</p>
           <p className="text-xs text-forest-700 mt-1">4. Ia-activate ang account sa loob ng 24 oras</p>
@@ -498,8 +498,8 @@ function TrialBanner({ business }) {
   return (
     <div className={`${color} text-white text-center text-xs py-2 px-4 font-medium`}>
       {daysLeft <= 0
-        ? "⚠️ Na-expire na ang iyong trial!"
-        : `⏰ Free Trial: ${daysLeft} araw na lang! Mag-subscribe na para mapatuloy.`}
+        ? "Na-expire na ang iyong trial!"
+        : `Free Trial: ${daysLeft} araw na lang! Mag-subscribe na para mapatuloy.`}
     </div>
   );
 }
@@ -605,7 +605,7 @@ function SuperAdminPanel({ showToast }) {
       <div className="bg-purple-700 px-4 pt-6 pb-4">
         <p className="text-purple-200 text-xs font-medium uppercase tracking-widest">Super Admin</p>
         <h1 className="text-white font-black text-xl">ListaKo Admin Panel</h1>
-        <p className="text-purple-300 text-xs mt-1">Maligayang pagdating, Crael! 👑</p>
+        <p className="text-purple-300 text-xs mt-1">Maligayang pagdating, Crael!</p>
       </div>
 
       {/* Stats */}
@@ -649,7 +649,7 @@ function SuperAdminPanel({ showToast }) {
           </div>
         ) : filtered.length === 0 ? (
           <div className="bg-white rounded-2xl p-8 text-center border border-gray-100">
-            <p className="text-3xl mb-2">🏪</p>
+            <p className="text-3xl mb-2"><NavIcon name="branch" size={36} color="#6b7280" /></p>
             <p className="text-gray-500 text-sm">Walang businesses dito.</p>
           </div>
         ) : (
@@ -1055,7 +1055,7 @@ function SignupScreen({ onBack, onSuccess, showToast }) {
             />
             <div className="bg-blue-50 rounded-xl p-3">
               <p className="text-xs text-blue-700 font-medium">
-                ℹ️ Ang iyong account ay irereview ng aming team bago ma-activate. Aabisuhan ka sa
+                Ang iyong account ay irereview ng aming team bago ma-activate. Aabisuhan ka sa
                 loob ng 24 oras.
               </p>
             </div>
@@ -1223,10 +1223,10 @@ function ForgotPasswordScreen({ onBack, onVerifyOTP, showToast }) {
           disabled={loading}
           className="w-full bg-gold-400 text-forest-900 font-bold py-4 rounded-2xl disabled:opacity-60 active:scale-95 transition-transform"
         >
-          {loading ? "Nagpapadala..." : "Magpadala ng OTP Code 📧"}
+          {loading ? "Nagpapadala..." : "Magpadala ng OTP Code"}
         </button>
         <div className="bg-blue-50 rounded-xl p-4">
-          <p className="text-xs text-blue-700 font-medium">💡 Tips:</p>
+          <p className="text-xs text-blue-700 font-medium flex items-center gap-1.5"><NavIcon name="lightbulb" size={16} color="currentColor" /> Tips:</p>
           <p className="text-xs text-blue-600 mt-1">• Tingnan ang iyong email inbox at Spam folder</p>
           <p className="text-xs text-blue-600">• Ang code ay may bisa lamang ng 1 oras</p>
         </div>
@@ -1417,7 +1417,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
 
   return (
     <Card className="p-4">
-      <p className="text-sm font-bold text-gray-700 mb-1">🏷️ Discount Control Panel</p>
+      <p className="text-sm font-bold text-gray-700 mb-1 flex items-center gap-1.5"><NavIcon name="tag" size={16} color="currentColor" /> Discount Control Panel</p>
       <p className="text-xs text-gray-400 mb-4">Full control over how discounts work in your store.</p>
 
       {/* Setting 1 — Enable/Disable */}
@@ -1486,7 +1486,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
 
           {/* Settings 5 & 6 — Bundle Rules */}
           <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
-            <p className="text-xs font-bold text-blue-700 mb-2">📦 Bundle Discount Rules</p>
+            <p className="text-xs font-bold text-blue-700 mb-2 flex items-center gap-1.5"><NavIcon name="products" size={16} color="currentColor" /> Bundle Discount Rules</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Min Quantity</p>
@@ -1551,7 +1551,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
               <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
             </div>
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2 mt-1">
-              <p className="text-xs text-yellow-700 font-medium">⚖️ Required by Philippine Law — RA 9994 (Senior Citizens) and RA 7277 (PWD Act)</p>
+              <p className="text-xs text-yellow-700 font-medium flex items-center gap-1.5"><NavIcon name="scale" size={16} color="currentColor" /> Required by Philippine Law — RA 9994 (Senior Citizens) and RA 7277 (PWD Act)</p>
             </div>
           </div>
 
@@ -2094,7 +2094,7 @@ function AnalyticsDashboard({ business, branches, showToast }) {
 
           <Card className="p-4">
             <div className="flex items-center justify-between mb-3">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Slow-Moving Products</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1">Slow-Moving Products</p>
               {slowMovers.length > 0 && (
                 <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
                   {slowMovers.length}
@@ -2374,7 +2374,7 @@ function AuditLogViewer({ businessId }) {
         <div className="py-8 text-center"><Spinner /></div>
       ) : logs.length === 0 ? (
         <Card className="p-8 text-center">
-          <p className="text-2xl mb-2">📋</p>
+          <p className="text-2xl mb-2"><NavIcon name="logs" size={36} color="#6b7280" /></p>
           <p className="text-xs text-gray-400">No activity logs found.</p>
         </Card>
       ) : (
@@ -2518,7 +2518,7 @@ function SettingsPanel({ business, products, branches, staff, showToast, onLogou
             </div>
           )}
           <label className="flex items-center justify-center gap-2 bg-blue-50 text-blue-700 font-semibold py-2.5 rounded-xl text-sm cursor-pointer border border-blue-200">
-            📱 {bizForm.gcash_qr ? "Change QR" : "Upload GCash QR"}
+            <NavIcon name="qrcode" size={16} color="currentColor" /> {bizForm.gcash_qr ? "Change QR" : "Upload GCash QR"}
             <input type="file" accept="image/*" className="hidden"
               onChange={async (e) => {
                 const file = e.target.files?.[0];
@@ -2540,22 +2540,22 @@ function SettingsPanel({ business, products, branches, staff, showToast, onLogou
         <div className="grid grid-cols-1 gap-2">
           <button onClick={exportProducts}
             className="flex items-center gap-2 bg-blue-50 text-blue-700 font-semibold py-2.5 px-4 rounded-xl text-sm">
-            📦 Export Products ({products.length})
+            <NavIcon name="download" size={16} color="currentColor" /> Export Products ({products.length})
           </button>
           <button onClick={exportTransactions} disabled={exportingTx}
             className="flex items-center gap-2 bg-green-50 text-green-700 font-semibold py-2.5 px-4 rounded-xl text-sm disabled:opacity-60">
-            {exportingTx ? "Exporting..." : "💰 Export Transactions (Last 500)"}
+            {exportingTx ? "Exporting..." : <><NavIcon name="download" size={16} color="currentColor" /> Export Transactions (Last 500)</>}
           </button>
           <button onClick={exportCustomers}
             className="flex items-center gap-2 bg-purple-50 text-purple-700 font-semibold py-2.5 px-4 rounded-xl text-sm">
-            👤 Export Customers
+            <NavIcon name="download" size={16} color="currentColor" /> Export Customers
           </button>
         </div>
       </Card>
 
       {lowStockProducts.length > 0 && (
         <Card className="p-4 space-y-2">
-          <p className="font-bold text-red-600 text-sm">⚠️ Low Stock Alert ({lowStockProducts.length})</p>
+          <p className="font-bold text-red-600 text-sm flex items-center gap-1.5"><NavIcon name="alert" size={16} color="#dc2626" /> Low Stock Alert ({lowStockProducts.length})</p>
           <div className="space-y-1.5">
             {lowStockProducts.slice(0, 10).map((p) => (
               <div key={p.id} className="flex items-center justify-between bg-red-50 rounded-lg px-3 py-2">
@@ -2581,7 +2581,7 @@ function SettingsPanel({ business, products, branches, staff, showToast, onLogou
 
       <button onClick={() => setShowHelp(true)}
         className="w-full bg-gold-100 text-gold-800 font-bold py-3 rounded-xl text-sm">
-        📖 How to Use ListaKo
+        <span className="flex items-center justify-center gap-2"><NavIcon name="book" size={16} color="#92400e" /> How to Use ListaKo</span>
       </button>
 
       <button onClick={onLogout}
@@ -2593,43 +2593,43 @@ function SettingsPanel({ business, products, branches, staff, showToast, onLogou
         <Modal title="Paano Gamitin ang ListaKo" onClose={() => setShowHelp(false)}>
           <div className="space-y-4 text-sm text-gray-700">
             <div>
-              <p className="font-bold text-forest-700 mb-1">📊 Dashboard</p>
+              <p className="font-bold text-forest-700 mb-1 flex items-center gap-1.5"><NavIcon name="dashboard" size={14} color="#15803d" /> Dashboard</p>
               <p className="text-xs text-gray-500">Tingnan ang revenue, transactions, at low stock alerts ngayong araw.</p>
             </div>
             <div>
-              <p className="font-bold text-forest-700 mb-1">📈 Analytics</p>
+              <p className="font-bold text-forest-700 mb-1 flex items-center gap-1.5"><NavIcon name="analytics" size={14} color="#15803d" /> Analytics</p>
               <p className="text-xs text-gray-500">I-view ang charts para sa revenue trends, best sellers, at cashier performance.</p>
             </div>
             <div>
-              <p className="font-bold text-forest-700 mb-1">📦 Produkto</p>
+              <p className="font-bold text-forest-700 mb-1 flex items-center gap-1.5"><NavIcon name="products" size={14} color="#15803d" /> Produkto</p>
               <p className="text-xs text-gray-500">Mag-add, edit, at manage ng products. Pwedeng mag-generate ng barcode at mag-set ng wholesale pricing.</p>
             </div>
             <div>
-              <p className="font-bold text-forest-700 mb-1">🏪 Branch</p>
+              <p className="font-bold text-forest-700 mb-1 flex items-center gap-1.5"><NavIcon name="branch" size={14} color="#15803d" /> Branch</p>
               <p className="text-xs text-gray-500">Mag-manage ng iba't ibang branches ng iyong negosyo.</p>
             </div>
             <div>
-              <p className="font-bold text-forest-700 mb-1">👥 Staff</p>
+              <p className="font-bold text-forest-700 mb-1 flex items-center gap-1.5"><NavIcon name="staff" size={14} color="#15803d" /> Staff</p>
               <p className="text-xs text-gray-500">Mag-add ng cashiers, inventory staff, at branch managers. I-assign sila sa mga branches.</p>
             </div>
             <div>
-              <p className="font-bold text-forest-700 mb-1">⏳ Pending</p>
+              <p className="font-bold text-forest-700 mb-1 flex items-center gap-1.5"><NavIcon name="pending" size={14} color="#15803d" /> Pending</p>
               <p className="text-xs text-gray-500">I-approve ang mga void requests, product transfers, at bagong products.</p>
             </div>
             <div>
-              <p className="font-bold text-forest-700 mb-1">👤 Suki</p>
+              <p className="font-bold text-forest-700 mb-1 flex items-center gap-1.5"><NavIcon name="customers" size={14} color="#15803d" /> Suki</p>
               <p className="text-xs text-gray-500">I-track ang iyong loyal customers at ang kanilang purchase history.</p>
             </div>
             <div>
-              <p className="font-bold text-forest-700 mb-1">📋 Logs</p>
+              <p className="font-bold text-forest-700 mb-1 flex items-center gap-1.5"><NavIcon name="logs" size={14} color="#15803d" /> Logs</p>
               <p className="text-xs text-gray-500">I-review ang audit trail ng lahat ng actions sa system.</p>
             </div>
             <div>
-              <p className="font-bold text-forest-700 mb-1">⚙️ Settings</p>
+              <p className="font-bold text-forest-700 mb-1 flex items-center gap-1.5"><NavIcon name="settings" size={14} color="#15803d" /> Settings</p>
               <p className="text-xs text-gray-500">I-edit ang business info, receipt headers, at mag-export ng data.</p>
             </div>
             <div className="bg-gold-50 rounded-xl p-3">
-              <p className="font-bold text-gold-700 text-xs mb-1">💡 Tips</p>
+              <p className="font-bold text-gold-700 text-xs mb-1 flex items-center gap-1.5"><NavIcon name="lightbulb" size={14} color="currentColor" /> Tips</p>
               <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
                 <li>Mag-scan ng barcode gamit ang camera ng cashier</li>
                 <li>I-set ang wholesale pricing para sa bulk buyers</li>
@@ -2886,7 +2886,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             )}
             <div className="flex gap-2">
               <label className="flex-1 flex items-center justify-center gap-2 bg-forest-50 text-forest-700 font-semibold py-2.5 rounded-xl text-sm cursor-pointer border border-forest-200">
-                📷 Take Photo
+                <NavIcon name="image" size={16} color="currentColor" /> Take Photo
                 <input type="file" accept="image/*" capture="environment" className="hidden"
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
@@ -2896,7 +2896,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                   }} />
               </label>
               <label className="flex-1 flex items-center justify-center gap-2 bg-gray-50 text-gray-600 font-semibold py-2.5 rounded-xl text-sm cursor-pointer border border-gray-200">
-                🖼️ Gallery
+                <NavIcon name="image" size={16} color="currentColor" /> Gallery
                 <input type="file" accept="image/*" className="hidden"
                   onChange={async (e) => {
                     const file = e.target.files?.[0];
@@ -3012,7 +3012,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
           </div>
           {branches.length === 0 && (
             <p className="text-xs text-yellow-600 bg-yellow-50 rounded-lg px-3 py-2">
-              ⚠️ Gumawa muna ng branch.
+              Gumawa muna ng branch.
             </p>
           )}
           <button
@@ -3048,27 +3048,18 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     fetchAll();
   };
 
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const pendingCount = pendingProducts.length + pendingTransfers.length;
-
-  const MAIN_TABS = [
-    { key: "dashboard", icon: "dashboard", label: "Home" },
-    { key: "products", icon: "products", label: "Produkto" },
+  const TABS = [
+    { key: "dashboard", icon: "dashboard", label: "Dashboard" },
     { key: "analytics", icon: "analytics", label: "Analytics" },
+    { key: "products", icon: "products", label: "Produkto" },
     { key: "branches", icon: "branch", label: "Branch" },
-  ];
-
-  const MORE_TABS = [
     { key: "staff", icon: "staff", label: "Staff" },
-    { key: "pending", icon: "pending", label: "Pending", badge: pendingCount },
+    { key: "pending", icon: "pending", label: "Pending", badge: (pendingProducts.length + pendingTransfers.length) > 0 },
     { key: "customers", icon: "customers", label: "Suki" },
     { key: "logs", icon: "logs", label: "Logs" },
     { key: "settings", icon: "settings", label: "Settings" },
     ...(isSuperAdmin ? [{ key: "admin", icon: "admin", label: "Admin" }] : []),
   ];
-
-  const ALL_TABS = [...MAIN_TABS, ...MORE_TABS];
-  const TABS = ALL_TABS;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col max-w-lg mx-auto">
@@ -3085,9 +3076,9 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             {/* Notification Bell */}
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative bg-forest-700 bg-opacity-60 text-forest-200 px-3 py-2.5 rounded-xl border border-forest-600"
+              className="relative bg-forest-800 bg-opacity-50 text-forest-200 px-3 py-2 rounded-xl"
             >
-              <NavIcon name="bell" size={18} color="#c9a84c" />
+              <NavIcon name="bell" size={20} color="currentColor" />
               {notifications.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-black w-5 h-5 rounded-full flex items-center justify-center">
                   {notifications.length}
@@ -3112,7 +3103,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
         <div className="bg-white border-b border-gray-100 shadow-sm">
           <div className="flex items-center justify-between px-4 py-3">
             <p className="text-sm font-bold text-gray-800">
-              Notifications {notifications.length > 0 && `(${notifications.length})`}
+              <span className="inline-flex items-center gap-1.5"><NavIcon name="bell" size={16} color="currentColor" /> Notifications {notifications.length > 0 && `(${notifications.length})`}</span>
             </p>
             {notifications.length > 0 && (
               <button
@@ -3186,7 +3177,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                             business_id: business.id,
                             recipient_id: txn?.cashier_id || null,
                             type: "void_approved",
-                            title: "✅ Void Request Approved",
+                            title: "Void Request Approved",
                             message: `Your void request for ${txn?.receipt_number} (₱${Number(txn?.total_amount).toFixed(2)}) has been approved by the owner.`,
                             is_read: false,
                           });
@@ -3224,7 +3215,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                             business_id: business.id,
                             recipient_id: txn?.cashier_id || null,
                             type: "void_declined",
-                            title: "❌ Void Request Declined",
+                            title: "Void Request Declined",
                             message: `Your void request for ${txn?.receipt_number} (₱${Number(txn?.total_amount).toFixed(2)}) was declined by the owner. The transaction remains active.`,
                             is_read: false,
                           });
@@ -3270,7 +3261,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                             business_id: business.id,
                             recipient_id: n.sender_id,
                             type: "discount_approved",
-                            title: "✅ High Discount Approved",
+                            title: "High Discount Approved",
                             message: `Your ${approvedPercent}% discount request has been approved by the owner. Tap "Confirm Payment" now to complete the transaction.`,
                             is_read: false,
                           });
@@ -3301,7 +3292,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                             business_id: business.id,
                             recipient_id: n.sender_id,
                             type: "discount_declined",
-                            title: "❌ High Discount Declined",
+                            title: "High Discount Declined",
                             message: "Your high discount request was declined by the owner. Please apply a lower discount.",
                             is_read: false,
                           });
@@ -3349,25 +3340,25 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
 
                 <div className="grid grid-cols-2 gap-3">
                   <StatCard
-                    icon={<NavIcon name="products" size={20} color="#2563eb" />}
+                    icon={<NavIcon name="products" size={20} color="currentColor" />}
                     label="Products"
                     value={products.length}
                     color="bg-blue-50 text-blue-700"
                   />
                   <StatCard
-                    icon={<NavIcon name="branch" size={20} color="#7c3aed" />}
+                    icon={<NavIcon name="branch" size={20} color="currentColor" />}
                     label="Branches"
                     value={branches.length}
                     color="bg-purple-50 text-purple-700"
                   />
                   <StatCard
-                    icon={<NavIcon name="staff" size={20} color="#d97706" />}
+                    icon={<NavIcon name="staff" size={20} color="currentColor" />}
                     label="Staff"
                     value={staff.length}
-                    color="bg-amber-50 text-amber-700"
+                    color="bg-yellow-50 text-yellow-700"
                   />
                   <StatCard
-                    icon={<NavIcon name="money" size={20} color="#dc2626" />}
+                    icon={<NavIcon name="money" size={20} color="currentColor" />}
                     label="Utang Balance"
                     value={`₱${utangTotal.toFixed(0)}`}
                     color="bg-red-50 text-red-600"
@@ -3376,7 +3367,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
 
                 {branches.length === 0 && (
                   <Card className="p-4 border-l-4 border-yellow-400">
-                    <p className="text-sm font-semibold text-gray-700">Start Setup 🚀</p>
+                    <p className="text-sm font-semibold text-gray-700">Start Setup</p>
                     <p className="text-xs text-gray-500 mt-1">
                       Create a branch, add products, and invite staff to get started.
                     </p>
@@ -3470,7 +3461,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                 </div>
                 {products.length === 0 ? (
                   <Card className="p-8 text-center">
-                    <p className="text-3xl mb-2">📦</p>
+                    <p className="text-3xl mb-2"><NavIcon name="products" size={36} color="#6b7280" /></p>
                     <p className="font-semibold text-gray-600 text-sm">Wala pang produkto</p>
                   </Card>
                 ) : (
@@ -3498,7 +3489,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                                   : "bg-gray-100 text-gray-500"
                               }`}
                             >
-                              {p.stock_quantity <= (p.low_stock_threshold || 10) ? "⚠️ " : ""}Stock:{" "}
+                              {p.stock_quantity <= (p.low_stock_threshold || 10) ? "" : ""}Stock:{" "}
                               {p.stock_quantity}
                             </span>
                             {p.category && p.category !== "Others" && (
@@ -3542,7 +3533,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                                 : "bg-gray-50 text-gray-400"
                             }`}
                           >
-                            {p.no_discount ? "🚫 No Discount" : "Allow Discount"}
+                            {p.no_discount ? <><NavIcon name="lock" size={14} color="currentColor" /> No Discount</> : "Allow Discount"}
                           </button>
                         </div>
                       </div>
@@ -3567,7 +3558,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                 </div>
                 {branches.length === 0 ? (
                   <Card className="p-8 text-center">
-                    <p className="text-3xl mb-2">🏪</p>
+                    <p className="text-3xl mb-2"><NavIcon name="branch" size={36} color="#6b7280" /></p>
                     <p className="font-semibold text-gray-600 text-sm">Wala pang branch</p>
                   </Card>
                 ) : (
@@ -3609,7 +3600,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                 </div>
                 {staff.length === 0 ? (
                   <Card className="p-8 text-center">
-                    <p className="text-3xl mb-2">👥</p>
+                    <p className="text-3xl mb-2"><NavIcon name="staff" size={36} color="#6b7280" /></p>
                     <p className="font-semibold text-gray-600 text-sm">Wala pang staff</p>
                   </Card>
                 ) : (
@@ -3655,14 +3646,14 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
 
                 {pendingProducts.length === 0 ? (
                   <Card className="p-8 text-center">
-                    <p className="text-3xl mb-2">✅</p>
+                    <p className="text-3xl mb-2"><NavIcon name="check" size={36} color="#6b7280" /></p>
                     <p className="font-semibold text-gray-600 text-sm">No pending products</p>
                     <p className="text-xs text-gray-400 mt-1">All scanned products have been reviewed</p>
                   </Card>
                 ) : (
                   <>
                     <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-3">
-                      <p className="text-xs text-yellow-800 font-semibold">⚠️ Products below were scanned by your cashier but need your review.</p>
+                      <p className="text-xs text-yellow-800 font-semibold">Products below were scanned by your cashier but need your review.</p>
                       <p className="text-xs text-yellow-700 mt-1">Set the correct price and stock, then tap Activate.</p>
                     </div>
                     {pendingProducts.map((p) => (
@@ -3683,7 +3674,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                   </h2>
                   {pendingTransfers.length === 0 ? (
                     <Card className="p-6 text-center">
-                      <p className="text-2xl mb-1">📦</p>
+                      <p className="text-2xl mb-1"><NavIcon name="products" size={36} color="#6b7280" /></p>
                       <p className="text-xs text-gray-400">No pending transfer requests</p>
                     </Card>
                   ) : (
@@ -3748,7 +3739,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                   className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500" />
                 {customers.filter(c => !customerSearch.trim() || c.name.toLowerCase().includes(customerSearch.toLowerCase())).length === 0 ? (
                   <Card className="p-8 text-center">
-                    <p className="text-3xl mb-2">👤</p>
+                    <p className="text-3xl mb-2"><NavIcon name="customers" size={36} color="#6b7280" /></p>
                     <p className="font-semibold text-gray-600 text-sm">No customers yet</p>
                     <p className="text-xs text-gray-400 mt-1">Add your suki customers to track their purchases.</p>
                   </Card>
@@ -3795,60 +3786,29 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
         )}
       </div>
 
-      {/* More Menu Sheet */}
-      {showMoreMenu && (
-        <div className="fixed inset-0 z-50" onClick={() => setShowMoreMenu(false)}>
-          <div className="absolute inset-0 bg-black bg-opacity-30" />
-          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 w-full max-w-lg px-3" onClick={(e) => e.stopPropagation()}>
-            <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 grid grid-cols-3 gap-1">
-              {MORE_TABS.map((item) => (
-                <button
-                  key={item.key}
-                  onClick={() => { setTabPersisted(item.key); setShowMoreMenu(false); }}
-                  className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl transition-colors relative ${
-                    tab === item.key ? "bg-forest-50" : "hover:bg-gray-50 active:bg-gray-100"
-                  }`}
-                >
-                  <NavIcon name={item.icon} size={22} color={tab === item.key ? "#1a3a2a" : "#9ca3af"} />
-                  {item.badge > 0 && (
-                    <span className="absolute top-1.5 right-1/4 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{item.badge}</span>
-                  )}
-                  <span className={`text-xs font-medium ${tab === item.key ? "text-forest-700" : "text-gray-500"}`}>{item.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Bottom Nav */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-white border-t border-gray-100 z-30">
-        <div className="flex items-center justify-around px-3 py-1.5">
-          {MAIN_TABS.map((item) => (
-            <button
-              key={item.key}
-              onClick={() => { setTabPersisted(item.key); setShowMoreMenu(false); }}
-              className={`flex flex-col items-center gap-0.5 py-1.5 px-4 rounded-xl transition-all ${
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-white border-t border-gray-100 flex items-center justify-around px-2 py-2 z-30">
+        {TABS.map((item) => (
+          <button
+            key={item.key}
+            onClick={() => setTabPersisted(item.key)}
+            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors ${
+              tab === item.key ? "bg-forest-50 text-forest-700" : "text-gray-400"
+            }`}
+          >
+            <span className="relative">
+              <NavIcon name={item.icon} size={20} color="currentColor" />
+              {item.badge && <span className="absolute -top-1 -right-1.5 w-2 h-2 bg-red-500 rounded-full" />}
+            </span>
+            <span
+              className={`text-xs font-medium ${
                 tab === item.key ? "text-forest-700" : "text-gray-400"
               }`}
             >
-              <NavIcon name={item.icon} size={22} color={tab === item.key ? "#1a3a2a" : "#9ca3af"} />
-              <span className={`text-[10px] font-semibold ${tab === item.key ? "text-forest-700" : "text-gray-400"}`}>{item.label}</span>
-            </button>
-          ))}
-          <button
-            onClick={() => setShowMoreMenu(!showMoreMenu)}
-            className={`flex flex-col items-center gap-0.5 py-1.5 px-4 rounded-xl transition-all relative ${
-              MORE_TABS.some(t => t.key === tab) ? "text-forest-700" : "text-gray-400"
-            }`}
-          >
-            <NavIcon name="more" size={22} color={MORE_TABS.some(t => t.key === tab) ? "#1a3a2a" : "#9ca3af"} />
-            {pendingCount > 0 && (
-              <span className="absolute top-0.5 right-2 bg-red-500 text-white text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center">{pendingCount}</span>
-            )}
-            <span className={`text-[10px] font-semibold ${MORE_TABS.some(t => t.key === tab) ? "text-forest-700" : "text-gray-400"}`}>More</span>
+              {item.label}
+            </span>
           </button>
-        </div>
+        ))}
       </div>
 
       {showAddBranch && <AddBranchModal />}
@@ -4147,7 +4107,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
             </div>
             {Number(transaction?.discount_amount) > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-forest-600 font-medium">
+                <span className="text-forest-600 font-medium inline-flex items-center gap-1">
                   Discount ({transaction?.discount_type === "percent"
                     ? `${transaction?.discount_value}%`
                     : `₱${transaction?.discount_value} off`})
@@ -4473,7 +4433,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       await supabase.from("notifications").insert({
         business_id: business.id,
         type: "shift_report",
-        title: cashDiff < 0 ? "⚠️ Shift Cash Shortage" : "💰 Shift Closed",
+        title: cashDiff < 0 ? "Shift Cash Shortage" : "Shift Closed",
         message: `${profile.full_name} closed shift. Sales: ₱${totalSales.toFixed(2)}, ${totalTx} txns. Cash ${cashDiff >= 0 ? "over" : "short"} by ₱${Math.abs(cashDiff).toFixed(2)}.`,
         is_read: false,
       });
@@ -4689,7 +4649,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       await supabase.from("notifications").insert({
         business_id: business.id,
         type: "void_request",
-        title: "⚠️ Void Approval Needed",
+        title: "Void Approval Needed",
         message: `${profile.full_name} wants to void ${voidModal.receipt_number} (₱${Number(voidModal.total_amount).toFixed(2)}). Reason: ${voidReason.trim()}`,
         transaction_id: voidModal.id,
         is_read: false,
@@ -4781,7 +4741,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
         ? "Cash reconciled perfectly! ✓"
         : status === "over"
         ? `Cash is over by ₱${Math.abs(difference).toFixed(2)}`
-        : `Cash is short by ₱${Math.abs(difference).toFixed(2)} ⚠️`,
+        : `Cash is short by ₱${Math.abs(difference).toFixed(2)}`,
       status === "short" ? "error" : "success"
     );
     setReconcileModal(false);
@@ -4925,7 +4885,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           await supabase.from("notifications").insert({
             business_id: business.id,
             type: "discount_approval_request",
-            title: "🏷️ High Discount Approval Needed",
+            title: "High Discount Approval Needed",
             message: `${profile.full_name} is requesting a ${discountValue}% discount (above your ${business.manager_approval_threshold || 15}% threshold). Cart total: ₱${subtotal.toFixed(2)}. Reason: ${discountReason.trim()}`,
             is_read: false,
             recipient_id: null,
@@ -4995,7 +4955,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
         await supabase.from("notifications").insert({
           business_id: business.id,
           type: "discount",
-          title: "🏷️ Discount Applied",
+          title: "Discount Applied",
           message: `${profile.full_name} gave a ${discountType === "percent" ? `${discountValue}%` : `₱${Number(discountValue).toFixed(2)}`} discount on ${txn.receipt_number}. Amount: ₱${discountAmount.toFixed(2)} off. Reason: ${discountReason.trim()}`,
           is_read: false,
           recipient_id: null,
@@ -5173,7 +5133,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               className="text-xs px-2 py-2 rounded-xl font-medium border bg-forest-700 text-forest-200 border-forest-600"
               title={profile.pin_code ? "Change PIN" : "Set PIN"}
             >
-              {profile.pin_code ? "🔒" : "🔓"}
+              {profile.pin_code ? <NavIcon name="lock" size={16} color="#1a3a2a" /> : <NavIcon name="unlock" size={16} color="#9ca3af" />}
             </button>
             <button
               onClick={() => setShowShiftModal(true)}
@@ -5295,7 +5255,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               onClick={() => setScanning(true)}
               className="bg-forest-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm"
             >
-              📷 Scan
+              Scan
             </button>
           </div>
 
@@ -5479,8 +5439,8 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     </div>
                     {discountAmount > 0 && (
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-forest-600 font-medium">
-                          🏷️ Discount ({discountType === "percent" ? `${discountValue}%` : `₱${discountValue} off`})
+                        <span className="text-forest-600 font-medium inline-flex items-center gap-1">
+                          <NavIcon name="tag" size={14} color="currentColor" /> Discount ({discountType === "percent" ? `${discountValue}%` : `₱${discountValue} off`})
                         </span>
                         <span className="font-bold text-forest-600">-₱{discountAmount.toFixed(2)}</span>
                       </div>
@@ -5496,8 +5456,8 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 {business.discount_enabled !== false && (
                 <div className="mb-4">
                   <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
-                      🏷️ Apply Discount
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1">
+                      <NavIcon name="tag" size={14} color="currentColor" /> Apply Discount
                     </p>
                     {discountAmount > 0 && (
                       <button
@@ -5616,12 +5576,12 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                   <div className="border-2 border-red-300 rounded-2xl p-3 bg-red-50">
                     {paymentMethod === "gcash" && business.gcash_qr && (
                       <div className="mb-3 text-center">
-                        <p className="text-xs font-bold text-blue-700 mb-1">📱 Show this QR to customer</p>
+                        <p className="text-xs font-bold text-blue-700 mb-1 flex items-center gap-1.5"><NavIcon name="qrcode" size={16} color="currentColor" /> Show this QR to customer</p>
                         <img src={business.gcash_qr} alt="GCash QR" className="w-48 h-48 object-contain mx-auto rounded-xl border border-blue-200 bg-white p-1" />
                       </div>
                     )}
                     <p className="text-xs font-black text-red-600 uppercase mb-1">
-                      ⚠️ {paymentMethod === "gcash" ? "GCash" : "Maya"} Reference No. — REQUIRED
+                      {paymentMethod === "gcash" ? "GCash" : "Maya"} Reference No. — REQUIRED
                     </p>
                     <input
                       type="text"
@@ -5663,7 +5623,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     />
                     <div className="mt-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
                       <p className="text-xs text-orange-700 font-medium">
-                        ⚠️ This transaction will be recorded as utang. The customer owes ₱{total.toFixed(2)}.
+                        This transaction will be recorded as utang. The customer owes ₱{total.toFixed(2)}.
                       </p>
                     </div>
                   </div>
@@ -5726,7 +5686,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                   className="w-full bg-forest-600 text-white font-black py-4 rounded-2xl text-lg disabled:opacity-50 active:scale-95 transition-transform mb-4"
                 >
                   {cashierNotifs.some(n => n.type === "discount_declined")
-                    ? "❌ Discount Declined — Clear it first"
+                    ? "Discount Declined — Clear it first"
                     : processing
                     ? "Processing..."
                     : paymentMethod === "utang"
@@ -5783,7 +5743,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           ) : (
             <div className="space-y-3">
               <div className="flex justify-between items-center mb-1">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1">
                   Today's Transactions
                 </p>
                 <div className="flex items-center gap-2">
@@ -5799,7 +5759,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     onClick={() => setReconcileModal(true)}
                     className="text-xs bg-blue-50 text-blue-600 font-semibold px-3 py-1.5 rounded-lg border border-blue-100"
                   >
-                    💰 Count Cash
+                    <span className="inline-flex items-center gap-1"><NavIcon name="cash" size={14} color="currentColor" /> Count Cash</span>
                   </button>
                 </div>
               </div>
@@ -5873,7 +5833,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                   )}
                   {txn.status === "pending_void" && (
                     <div className="mt-1 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-1.5">
-                      <p className="text-xs text-yellow-700 font-semibold">⏳ Waiting for owner approval</p>
+                      <p className="text-xs text-yellow-700 font-semibold">Waiting for owner approval</p>
                       <p className="text-xs text-yellow-600 mt-0.5">Reason: {txn.void_request_reason}</p>
                     </div>
                   )}
@@ -5896,14 +5856,14 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             </div>
           ) : utangList.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-2xl mb-2">✅</p>
+              <p className="text-2xl mb-2"><NavIcon name="check" size={24} color="#6b7280" /></p>
               <p className="font-semibold text-gray-500 text-sm">No outstanding utang</p>
               <p className="text-xs text-gray-400 mt-1">All customers are paid up!</p>
             </div>
           ) : (
             <div className="space-y-3">
               <div className="flex justify-between items-center mb-1">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1">
                   Outstanding Utang
                 </p>
                 <p className="text-xs font-bold text-red-600">
@@ -5952,7 +5912,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     }}
                     className="text-xs text-forest-700 font-semibold bg-forest-50 px-3 py-1.5 rounded-lg"
                   >
-                    💵 Record Payment
+                    <span className="inline-flex items-center gap-1"><NavIcon name="cash" size={14} color="currentColor" /> Record Payment</span>
                   </button>
                 </div>
               ))}
@@ -5970,7 +5930,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           <div className="bg-white w-full rounded-t-3xl p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-black text-gray-800 text-base">
-                {newProductModal.notFound ? "Unknown Product" : "New Product Found! 🎉"}
+                {newProductModal.notFound ? "Unknown Product" : "New Product Found!"}
               </h3>
               <button onClick={() => setNewProductModal(null)} className="text-gray-400 text-xl">✕</button>
             </div>
@@ -5992,7 +5952,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                   <p className="text-xs font-mono text-gray-400 mt-0.5">{newProductModal.barcode}</p>
                   <div className="mt-2 bg-blue-50 rounded-xl px-3 py-2">
                     <p className="text-xs text-blue-700 font-medium">
-                      ℹ️ This product will be sent to your owner for price approval before it can be sold.
+                      This product will be sent to your owner for price approval before it can be sold.
                     </p>
                   </div>
                 </div>
@@ -6072,7 +6032,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             </p>
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2 mb-3">
               <p className="text-xs text-yellow-700 font-medium">
-                ⚠️ This will send a void request to your owner. The transaction will only be voided after owner approval.
+                This will send a void request to your owner. The transaction will only be voided after owner approval.
               </p>
             </div>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
@@ -6182,7 +6142,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-3xl p-6 w-72 text-center">
             <div className="w-14 h-14 bg-forest-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-              <span className="text-2xl">🔒</span>
+              <span className="text-2xl"><NavIcon name="lock" size={24} color="#d97706" /></span>
             </div>
             <h3 className="font-black text-gray-800 text-base mb-1">Enter PIN</h3>
             <p className="text-xs text-gray-500 mb-4">Enter your 4-digit PIN to confirm this transaction.</p>
@@ -6345,7 +6305,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             </p>
             {returnModal.transaction_items && (
               <div className="space-y-2 mb-4">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Select items to return</p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1">Select items to return</p>
                 {returnModal.transaction_items.map((item, i) => {
                   const selected = returnItems.find(r => r.idx === i);
                   return (
@@ -6416,7 +6376,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                   await supabase.from("notifications").insert({
                     business_id: business.id,
                     type: "return",
-                    title: "🔄 Return Processed",
+                    title: "Return Processed",
                     message: `${profile.full_name} processed a return of ₱${refundAmount.toFixed(2)} on ${returnModal.receipt_number}. Reason: ${returnReason.trim()}`,
                     is_read: false,
                   });
@@ -6438,7 +6398,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       {reconcileModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
           <div className="bg-white w-full rounded-t-3xl p-5">
-            <h3 className="font-black text-gray-800 text-base mb-1">💰 Cash Count</h3>
+            <h3 className="font-black text-gray-800 text-base mb-1 flex items-center gap-1.5"><NavIcon name="cash" size={16} color="currentColor" /> Cash Count</h3>
             <p className="text-xs text-gray-500 mb-4">
               Count all cash in the drawer and enter the total below.
             </p>
@@ -6454,7 +6414,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             />
             <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-4">
               <p className="text-xs text-blue-700 font-medium">
-                ℹ️ This will compare your cash count against today's cash transactions. Any difference will be reported to your owner immediately.
+                This will compare your cash count against today's cash transactions. Any difference will be reported to your owner immediately.
               </p>
             </div>
             <div className="flex gap-3">
@@ -6777,7 +6737,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {notifications.length === 0 ? (
             <div className="text-center py-12">
-              <p className="text-2xl mb-2">✅</p>
+              <p className="text-2xl mb-2"><NavIcon name="check" size={24} color="#6b7280" /></p>
               <p className="font-semibold text-gray-500 text-sm">No alerts</p>
               <p className="text-xs text-gray-400 mt-1">All stock levels are healthy!</p>
             </div>
@@ -7147,9 +7107,9 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              <StatCard icon={<NavIcon name="products" size={20} color="#2563eb" />} label="Products" value={branchProducts.length} color="bg-blue-50 text-blue-700" />
-              <StatCard icon={<NavIcon name="staff" size={20} color="#7c3aed" />} label="Staff" value={branchStaff.length} color="bg-purple-50 text-purple-700" />
-              <StatCard icon={<NavIcon name="transfers" size={20} color="#d97706" />} label="Transfers" value={transfers.filter(t => t.status === "pending").length} color="bg-amber-50 text-amber-700" />
+              <StatCard icon={<NavIcon name="products" size={20} color="currentColor" />} label="Products" value={branchProducts.length} color="bg-blue-50 text-blue-700" />
+              <StatCard icon={<NavIcon name="staff" size={20} color="currentColor" />} label="Staff" value={branchStaff.length} color="bg-purple-50 text-purple-700" />
+              <StatCard icon={<NavIcon name="transfers" size={20} color="currentColor" />} label="Transfers" value={transfers.filter(t => t.status === "pending").length} color="bg-yellow-50 text-yellow-700" />
             </div>
 
             {recentTx.length > 0 && (
@@ -7292,16 +7252,14 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
       </div>
 
       {/* Bottom Nav */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-white border-t border-gray-100 z-30">
-        <div className="flex items-center justify-around px-3 py-1.5">
-          {BM_TABS.map((item) => (
-            <button key={item.key} onClick={() => setBmTab(item.key)}
-              className={`flex flex-col items-center gap-0.5 py-1.5 px-5 rounded-xl transition-all ${bmTab === item.key ? "text-forest-700" : "text-gray-400"}`}>
-              <NavIcon name={item.icon} size={22} color={bmTab === item.key ? "#1a3a2a" : "#9ca3af"} />
-              <span className={`text-[10px] font-semibold ${bmTab === item.key ? "text-forest-700" : "text-gray-400"}`}>{item.label}</span>
-            </button>
-          ))}
-        </div>
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-white border-t border-gray-100 flex items-center justify-around px-2 py-2 z-30">
+        {BM_TABS.map((item) => (
+          <button key={item.key} onClick={() => setBmTab(item.key)}
+            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors ${bmTab === item.key ? "bg-forest-50 text-forest-700" : "text-gray-400"}`}>
+            <NavIcon name={item.icon} size={20} color="currentColor" />
+            <span className={`text-xs font-medium ${bmTab === item.key ? "text-forest-700" : "text-gray-400"}`}>{item.label}</span>
+          </button>
+        ))}
       </div>
 
       {/* Transfer Request Modal */}
@@ -7440,7 +7398,7 @@ function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
           {ROLE_LABELS[profile.role]}
         </span>
         <div className="mt-8 bg-white rounded-2xl border border-gray-100 p-5 text-left space-y-3 shadow-sm">
-          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Information</p>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1">Information</p>
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Name</span>
             <span className="font-semibold text-gray-800">{profile.full_name}</span>
@@ -7521,7 +7479,7 @@ function InstallPrompt() {
       <div className="fixed bottom-16 left-2 right-2 max-w-lg mx-auto bg-forest-800 text-white rounded-2xl p-4 shadow-2xl z-[90] border border-forest-600">
         <div className="flex items-start gap-3">
           <div className="w-12 h-12 bg-forest-600 rounded-xl flex items-center justify-center flex-shrink-0">
-            <span className="text-2xl">📲</span>
+            <span className="text-2xl"><NavIcon name="download" size={24} color="currentColor" /></span>
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-bold text-sm">I-install ang ListaKo</p>
@@ -7557,7 +7515,7 @@ function InstallPrompt() {
                 <span className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">1</span>
                 <div>
                   <p className="font-semibold text-gray-800 text-sm">I-tap ang Share button</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Ang icon na may arrow pataas (⬆️) sa ibaba ng Safari</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Ang icon na may arrow pataas sa ibaba ng Safari</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -7616,50 +7574,56 @@ export default function App() {
   const [branch, setBranch] = useState(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [appLoading, setAppLoading] = useState(true);
-  const [loadError, setLoadError] = useState(null);
   const [toast, setToast] = useState(null);
   const loadingRef = useRef(false);
 
   const showToast = (message, type = "success") => setToast({ message, type });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session: s } }) => {
-      setSession(s);
-      if (s) loadUserData(s.user.id);
-      else setAppLoading(false);
-    });
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
-      if (newSession) loadUserData(newSession.user.id);
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session) loadUserData(session.user.id);
       else {
         loadingRef.current = false;
         setProfile(null);
         setBusiness(null);
         setBranch(null);
         setIsSuperAdmin(false);
-        setLoadError(null);
         setScreen("landing");
         setAppLoading(false);
       }
     });
-    return () => subscription.unsubscribe();
+    const timer = setTimeout(() => {
+      if (loadingRef.current) return;
+      setAppLoading((v) => {
+        if (v) {
+          supabase.auth.getSession().then(({ data: { session: s } }) => {
+            if (!s) setAppLoading(false);
+          });
+        }
+        return v;
+      });
+    }, 3000);
+    return () => { subscription.unsubscribe(); clearTimeout(timer); };
   }, []);
 
   const loadUserData = async (userId) => {
     if (loadingRef.current) return;
     loadingRef.current = true;
     setAppLoading(true);
-    setLoadError(null);
     try {
-      const { data: prof, error: profErr } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .maybeSingle();
-      if (profErr || !prof) {
-        setLoadError("Profile: " + (profErr?.message || "not found") + " [uid:" + userId.slice(0, 8) + "]");
+      let prof = null;
+      for (let i = 0; i < 3; i++) {
+        const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+        if (data) { prof = data; break; }
+        if (error) break;
+        if (i < 2) await new Promise((r) => setTimeout(r, 1000));
+      }
+      if (!prof) {
+        showToast("Hindi mahanap ang profile. Subukan muli.", "error");
+        await supabase.auth.signOut();
         return;
       }
       setProfile(prof);
@@ -7669,8 +7633,9 @@ export default function App() {
         .select("*")
         .eq("id", prof.business_id)
         .maybeSingle();
-      if (bizErr || !biz) {
-        setLoadError("Business: " + (bizErr?.message || "not found") + " [bid:" + prof.business_id.slice(0, 8) + "]");
+      if (!biz) {
+        showToast(bizErr ? "Error sa pag-load ng business." : "Hindi mahanap ang business data.", "error");
+        await supabase.auth.signOut();
         return;
       }
       setBusiness(biz);
@@ -7691,7 +7656,8 @@ export default function App() {
         .maybeSingle();
       setIsSuperAdmin(!!sa);
     } catch (err) {
-      setLoadError("Error: " + (err?.message || "Unknown error"));
+      showToast("May error sa pag-load. Subukan muli.", "error");
+      await supabase.auth.signOut();
     } finally {
       loadingRef.current = false;
       setAppLoading(false);
@@ -7732,28 +7698,6 @@ export default function App() {
   };
 
   if (appLoading) return <Spinner />;
-
-  if (session && loadError) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen bg-forest-800 gap-4 px-6 text-center">
-        <div className="text-red-400 text-4xl mb-2">!</div>
-        <p className="text-ivory-200 font-bold text-lg">Hindi ma-load ang data</p>
-        <p className="text-forest-300 text-xs break-all">{loadError}</p>
-        <button
-          onClick={() => { loadingRef.current = false; loadUserData(session.user.id); }}
-          className="mt-4 bg-gold-400 text-forest-900 font-bold py-3 px-8 rounded-2xl active:scale-95"
-        >
-          Subukan Muli
-        </button>
-        <button
-          onClick={handleLogout}
-          className="text-forest-400 text-sm underline mt-2"
-        >
-          Logout
-        </button>
-      </div>
-    );
-  }
 
   // Logged in
   if (session && profile && business) {
