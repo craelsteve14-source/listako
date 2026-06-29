@@ -39,10 +39,10 @@ const PLANS = {
 // ROLE CONFIG
 // ═══════════════════════════════════════════════════════════════
 const ROLE_COLORS = {
-  owner: "bg-purple-100 text-purple-700",
+  owner: "bg-gold-100 text-gold-800",
   branch_manager: "bg-blue-100 text-blue-700",
-  inventory_staff: "bg-yellow-100 text-yellow-700",
-  cashier: "bg-green-100 text-green-700",
+  inventory_staff: "bg-forest-100 text-forest-700",
+  cashier: "bg-ivory-300 text-forest-700",
 };
 const ROLE_LABELS = {
   owner: "Owner",
@@ -96,7 +96,7 @@ function Toast({ message, type, onClose }) {
       ? "bg-red-500"
       : type === "warning"
       ? "bg-yellow-500"
-      : "bg-green-600";
+      : "bg-forest-600";
   return (
     <div
       className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 ${bg} text-white px-5 py-3 rounded-xl shadow-lg text-sm font-medium max-w-xs text-center`}
@@ -111,9 +111,9 @@ function Toast({ message, type, onClose }) {
 // ═══════════════════════════════════════════════════════════════
 function Spinner() {
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-50 gap-3">
-      <div className="w-12 h-12 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
-      <p className="text-green-700 text-sm font-medium">Naglo-load...</p>
+    <div className="flex flex-col items-center justify-center h-screen bg-forest-800 gap-4">
+      <div className="w-12 h-12 border-4 border-gold-400 border-t-transparent rounded-full animate-spin" />
+      <p className="text-forest-300 text-sm font-medium tracking-wide">Loading...</p>
     </div>
   );
 }
@@ -133,7 +133,7 @@ function Field({ label, value, onChange, placeholder, type = "text", maxLength }
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={maxLength}
-        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest-500 focus:border-transparent"
       />
     </div>
   );
@@ -170,8 +170,8 @@ function OTPInput({ value, onChange }) {
           value={d}
           onChange={(e) => handleChange(i, e.target.value)}
           onKeyDown={(e) => handleKeyDown(i, e)}
-          className="w-11 h-14 text-center text-xl font-black border-2 rounded-xl focus:outline-none focus:border-green-500 bg-white"
-          style={{ borderColor: d ? "#16a34a" : "#e5e7eb" }}
+          className="w-11 h-14 text-center text-xl font-black border-2 rounded-xl focus:outline-none focus:border-forest-500 bg-white"
+          style={{ borderColor: d ? "#c9a84c" : "#e5e7eb" }}
         />
       ))}
     </div>
@@ -232,7 +232,7 @@ function OTPScreen({ email, type, onBack, onSuccess, showToast }) {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="bg-green-700 px-4 py-5 flex items-center gap-3">
+      <div className="bg-forest-700 px-4 py-5 flex items-center gap-3">
         <button onClick={onBack} className="text-white text-xl">
           ←
         </button>
@@ -241,13 +241,13 @@ function OTPScreen({ email, type, onBack, onSuccess, showToast }) {
         </h2>
       </div>
       <div className="flex-1 flex flex-col items-center justify-center px-5 py-8 max-w-md mx-auto w-full">
-        <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mb-4 text-3xl">
+        <div className="w-16 h-16 bg-forest-100 rounded-2xl flex items-center justify-center mb-4 text-3xl">
           {type === "forgot" ? "🔑" : "📱"}
         </div>
         <h3 className="text-lg font-black text-gray-800 mb-1 text-center">Ilagay ang OTP Code</h3>
         <p className="text-sm text-gray-500 text-center mb-6">
           Nag-send kami ng 6-digit code sa{" "}
-          <span className="font-semibold text-green-700">{email}</span>
+          <span className="font-semibold text-forest-700">{email}</span>
         </p>
         <OTPInput value={otp} onChange={setOtp} />
         {type === "forgot" && (
@@ -264,7 +264,7 @@ function OTPScreen({ email, type, onBack, onSuccess, showToast }) {
         <button
           onClick={handleVerify}
           disabled={loading || otp.length < 6}
-          className="w-full bg-green-600 text-white font-bold py-4 rounded-2xl mt-6 disabled:opacity-60 active:scale-95 transition-transform"
+          className="w-full bg-gold-400 text-forest-900 font-bold py-4 rounded-2xl mt-6 disabled:opacity-60 active:scale-95 transition-transform"
         >
           {loading
             ? "Sine-check..."
@@ -275,7 +275,7 @@ function OTPScreen({ email, type, onBack, onSuccess, showToast }) {
         <button
           onClick={handleResend}
           disabled={resendTimer > 0}
-          className="mt-4 text-sm font-medium disabled:text-gray-400 text-green-700"
+          className="mt-4 text-sm font-medium disabled:text-gray-400 text-forest-700"
         >
           {resendTimer > 0 ? `Mag-resend sa ${resendTimer}s` : "Hindi natanggap? Mag-resend"}
         </button>
@@ -393,7 +393,7 @@ function TrialExpiredScreen({ business, onLogout }) {
                     {plan.staff === 999 ? "Unlimited" : plan.staff} staff
                   </p>
                 </div>
-                <p className="text-xl font-black text-green-700">
+                <p className="text-xl font-black text-forest-700">
                   ₱{plan.price}
                   <span className="text-xs font-medium text-gray-400">/buwan</span>
                 </p>
@@ -401,14 +401,14 @@ function TrialExpiredScreen({ business, onLogout }) {
             </div>
           ))}
         </div>
-        <div className="mt-5 bg-green-50 border border-green-200 rounded-2xl p-4">
-          <p className="text-sm font-bold text-green-800 mb-2">💳 Paano Mag-subscribe:</p>
-          <p className="text-xs text-green-700">1. Pumili ng plan sa itaas</p>
-          <p className="text-xs text-green-700">2. Mag-GCash o Maya sa:</p>
-          <p className="text-sm font-black text-green-800 mt-1">📱 {ADMIN_GCASH}</p>
-          <p className="text-xs text-green-700 mt-1">3. I-send ang screenshot ng resibo sa:</p>
-          <p className="text-xs font-semibold text-green-800">{SUPER_ADMIN_EMAIL}</p>
-          <p className="text-xs text-green-700 mt-1">4. Ia-activate ang account sa loob ng 24 oras</p>
+        <div className="mt-5 bg-forest-50 border border-forest-200 rounded-2xl p-4">
+          <p className="text-sm font-bold text-forest-800 mb-2">💳 Paano Mag-subscribe:</p>
+          <p className="text-xs text-forest-700">1. Pumili ng plan sa itaas</p>
+          <p className="text-xs text-forest-700">2. Mag-GCash o Maya sa:</p>
+          <p className="text-sm font-black text-forest-800 mt-1">📱 {ADMIN_GCASH}</p>
+          <p className="text-xs text-forest-700 mt-1">3. I-send ang screenshot ng resibo sa:</p>
+          <p className="text-xs font-semibold text-forest-800">{SUPER_ADMIN_EMAIL}</p>
+          <p className="text-xs text-forest-700 mt-1">4. Ia-activate ang account sa loob ng 24 oras</p>
         </div>
         <button
           onClick={onLogout}
@@ -525,7 +525,7 @@ function SuperAdminPanel({ showToast }) {
 
   const STATUS_COLORS = {
     pending: "bg-yellow-100 text-yellow-700",
-    approved: "bg-green-100 text-green-700",
+    approved: "bg-forest-100 text-forest-700",
     trial: "bg-blue-100 text-blue-700",
     rejected: "bg-red-100 text-red-700",
     suspended: "bg-gray-100 text-gray-700",
@@ -632,7 +632,7 @@ function SuperAdminPanel({ showToast }) {
                     <>
                       <button
                         onClick={() => approve(biz)}
-                        className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg font-bold"
+                        className="text-xs bg-forest-600 text-white px-3 py-1.5 rounded-lg font-bold"
                       >
                         ✓ Approve
                       </button>
@@ -675,7 +675,7 @@ function SuperAdminPanel({ showToast }) {
                   {biz.status === "rejected" && (
                     <button
                       onClick={() => approve(biz)}
-                      className="text-xs bg-green-50 text-green-600 px-3 py-1.5 rounded-lg font-medium"
+                      className="text-xs bg-forest-50 text-forest-600 px-3 py-1.5 rounded-lg font-medium"
                     >
                       I-approve na
                     </button>
@@ -683,7 +683,7 @@ function SuperAdminPanel({ showToast }) {
                   {biz.status === "suspended" && (
                     <button
                       onClick={() => approve(biz)}
-                      className="text-xs bg-green-50 text-green-600 px-3 py-1.5 rounded-lg font-medium"
+                      className="text-xs bg-forest-50 text-forest-600 px-3 py-1.5 rounded-lg font-medium"
                     >
                       I-restore
                     </button>
@@ -733,42 +733,61 @@ function SuperAdminPanel({ showToast }) {
 // ═══════════════════════════════════════════════════════════════
 // LANDING SCREEN
 // ═══════════════════════════════════════════════════════════════
+function LedgerIcon({ className = "w-10 h-10", color = "#c9a84c" }) {
+  return (
+    <svg className={className} viewBox="0 0 48 48" fill="none">
+      <path d="M12 14h18M12 22h14M12 30h10" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
+      <path d="M30 22l6 6-6 6" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function ListaKoLogo({ size = "text-4xl", light = false }) {
+  return (
+    <h1 className={`${size} font-black tracking-tight ${light ? "text-white" : "text-ivory-50"}`}>
+      Lista<span className="font-playfair italic text-gold-400">Ko</span>
+    </h1>
+  );
+}
+
 function LandingScreen({ onShowSignup, onShowLogin }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-700 via-green-600 to-emerald-500 flex flex-col items-center justify-between px-6 py-12">
+    <div className="min-h-screen bg-forest-800 flex flex-col items-center justify-between px-6 py-12">
       <div className="flex-1 flex flex-col items-center justify-center text-center">
-        <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center shadow-xl mb-6">
-          <span className="text-4xl">🏪</span>
+        <div className="w-20 h-20 bg-forest-700 rounded-3xl flex items-center justify-center shadow-xl mb-6 border border-forest-600">
+          <LedgerIcon className="w-10 h-10" />
         </div>
-        <h1 className="text-4xl font-black text-white tracking-tight mb-1">ListaKo</h1>
-        <p className="text-green-100 text-sm font-medium mb-2 tracking-widest uppercase">
+        <ListaKoLogo size="text-4xl" />
+        <p className="text-gold-400 text-xs font-medium mb-2 tracking-[0.25em] uppercase mt-1">
           Business Manager
         </p>
-        <p className="text-green-50 text-base mt-4 max-w-xs leading-relaxed">
-          Para sa mga may-ari ng tindahan. Subaybayan ang benta, imbentaryo, at kita — kahit
-          walang internet.
+        <p className="text-forest-200 text-sm mt-6 max-w-xs leading-relaxed">
+          Track revenue, inventory, and staff — with precision. Built for every Filipino store.
         </p>
-        <div className="mt-4 bg-green-800 bg-opacity-30 rounded-2xl px-4 py-2">
-          <p className="text-green-200 text-xs font-medium">
-            🎉 7-day na libreng trial para sa bagong users!
+        <div className="mt-4 bg-forest-700 bg-opacity-60 rounded-2xl px-5 py-2.5 border border-forest-600">
+          <p className="text-gold-400 text-xs font-semibold tracking-wider uppercase">
+            Complimentary Access
+          </p>
+          <p className="text-forest-300 text-xs mt-0.5">
+            7 Days · No commitment required
           </p>
         </div>
       </div>
       <div className="w-full max-w-sm space-y-3">
         <button
           onClick={onShowSignup}
-          className="w-full bg-white text-green-700 font-bold py-4 rounded-2xl text-base shadow-lg active:scale-95 transition-transform"
+          className="w-full bg-gold-400 text-forest-900 font-bold py-4 rounded-2xl text-sm tracking-wider uppercase shadow-lg active:scale-95 transition-transform"
         >
-          Gumawa ng Account — Libre!
+          Create Account
         </button>
         <button
           onClick={onShowLogin}
-          className="w-full bg-green-800 bg-opacity-40 text-white font-semibold py-4 rounded-2xl text-base border border-green-400 border-opacity-40 active:scale-95 transition-transform"
+          className="w-full bg-transparent text-ivory-200 font-semibold py-4 rounded-2xl text-sm border border-forest-500 active:scale-95 transition-transform tracking-wider uppercase"
         >
-          Mag-login
+          Sign In
         </button>
-        <p className="text-green-200 text-xs text-center pt-2">
-          Libre. Para sa lahat ng tindahan sa Pilipinas. 🇵🇭
+        <p className="text-forest-400 text-xs text-center pt-2">
+          ListaKo · For every business in the Philippines
         </p>
       </div>
     </div>
@@ -846,19 +865,19 @@ function SignupScreen({ onBack, onSuccess, showToast }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="bg-green-700 px-4 py-5 flex items-center gap-3">
-        <button onClick={step === 1 ? onBack : () => setStep(1)} className="text-white text-xl">
+    <div className="min-h-screen bg-ivory-100 flex flex-col">
+      <div className="bg-forest-800 px-4 py-5 flex items-center gap-3">
+        <button onClick={step === 1 ? onBack : () => setStep(1)} className="text-gold-400 text-xl">
           ←
         </button>
         <div>
-          <h2 className="text-white font-bold text-lg">Gumawa ng Account</h2>
-          <p className="text-green-200 text-xs">Hakbang {step} ng 2 • 7-day free trial!</p>
+          <h2 className="text-ivory-50 font-bold text-lg">Create Account</h2>
+          <p className="text-forest-300 text-xs">Step {step} of 2 · 7-day complimentary access</p>
         </div>
       </div>
-      <div className="h-1 bg-green-100">
+      <div className="h-1 bg-forest-200">
         <div
-          className="h-1 bg-green-600 transition-all duration-300"
+          className="h-1 bg-gold-400 transition-all duration-300"
           style={{ width: step === 1 ? "50%" : "100%" }}
         />
       </div>
@@ -895,9 +914,9 @@ function SignupScreen({ onBack, onSuccess, showToast }) {
             />
             <button
               onClick={handleNext}
-              className="w-full bg-green-600 text-white font-bold py-4 rounded-2xl active:scale-95 transition-transform"
+              className="w-full bg-gold-400 text-forest-900 font-bold py-4 rounded-2xl active:scale-95 transition-transform tracking-wide"
             >
-              Susunod →
+              Next →
             </button>
           </>
         ) : (
@@ -931,7 +950,7 @@ function SignupScreen({ onBack, onSuccess, showToast }) {
             <button
               onClick={handleSignup}
               disabled={loading}
-              className="w-full bg-green-600 text-white font-bold py-4 rounded-2xl disabled:opacity-60 active:scale-95 transition-transform"
+              className="w-full bg-gold-400 text-forest-900 font-bold py-4 rounded-2xl disabled:opacity-60 active:scale-95 transition-transform tracking-wide"
             >
               {loading ? "Ginagawa ang account..." : "Gumawa ng Account ✓"}
             </button>
@@ -969,19 +988,19 @@ function LoginScreen({ onBack, onSuccess, onForgotPassword, showToast }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="bg-green-700 px-4 py-5 flex items-center gap-3">
-        <button onClick={onBack} className="text-white text-xl">
+    <div className="min-h-screen bg-ivory-100 flex flex-col">
+      <div className="bg-forest-800 px-4 py-5 flex items-center gap-3">
+        <button onClick={onBack} className="text-gold-400 text-xl">
           ←
         </button>
-        <h2 className="text-white font-bold text-lg">Mag-login</h2>
+        <h2 className="text-ivory-50 font-bold text-lg">Sign In</h2>
       </div>
       <div className="flex-1 flex flex-col justify-center px-5 py-6 space-y-4 max-w-md mx-auto w-full">
         <div className="text-center mb-2">
-          <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-            <span className="text-3xl">🔐</span>
+          <div className="w-16 h-16 bg-forest-700 rounded-2xl flex items-center justify-center mx-auto mb-3">
+            <LedgerIcon className="w-8 h-8" />
           </div>
-          <p className="text-gray-500 text-sm">I-enter ang iyong ListaKo credentials</p>
+          <p className="text-gray-500 text-sm">Enter your ListaKo credentials</p>
         </div>
         <Field
           label="Email Address"
@@ -994,24 +1013,24 @@ function LoginScreen({ onBack, onSuccess, onForgotPassword, showToast }) {
           label="Password"
           value={form.password}
           onChange={(v) => set("password", v)}
-          placeholder="Ang iyong password"
+          placeholder="Your password"
           type="password"
         />
         <button
           onClick={handleLogin}
           disabled={loading}
-          className="w-full bg-green-600 text-white font-bold py-4 rounded-2xl disabled:opacity-60 active:scale-95 transition-transform"
+          className="w-full bg-gold-400 text-forest-900 font-bold py-4 rounded-2xl disabled:opacity-60 active:scale-95 transition-transform tracking-wide"
         >
-          {loading ? "Naglo-login..." : "Mag-login →"}
+          {loading ? "Signing in..." : "Sign In →"}
         </button>
         <button
           onClick={onForgotPassword}
-          className="text-center text-sm text-green-700 font-medium py-2"
+          className="text-center text-sm text-forest-600 font-medium py-2"
         >
-          Nakalimutan ang password? 🔑
+          Forgot password?
         </button>
         <p className="text-center text-xs text-gray-400">
-          Wala pang account? Makipag-ugnayan sa iyong owner.
+          No account yet? Contact your store owner.
         </p>
       </div>
     </div>
@@ -1041,21 +1060,21 @@ function ForgotPasswordScreen({ onBack, onVerifyOTP, showToast }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="bg-green-700 px-4 py-5 flex items-center gap-3">
-        <button onClick={onBack} className="text-white text-xl">
+    <div className="min-h-screen bg-ivory-100 flex flex-col">
+      <div className="bg-forest-800 px-4 py-5 flex items-center gap-3">
+        <button onClick={onBack} className="text-gold-400 text-xl">
           ←
         </button>
-        <h2 className="text-white font-bold text-lg">Nakalimutan ang Password</h2>
+        <h2 className="text-ivory-50 font-bold text-lg">Forgot Password</h2>
       </div>
       <div className="flex-1 flex flex-col justify-center px-5 py-6 max-w-md mx-auto w-full space-y-4">
         <div className="text-center mb-2">
-          <div className="w-16 h-16 bg-yellow-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-            <span className="text-3xl">🔑</span>
+          <div className="w-16 h-16 bg-forest-700 rounded-2xl flex items-center justify-center mx-auto mb-3">
+            <LedgerIcon className="w-8 h-8" />
           </div>
-          <h3 className="font-black text-gray-800 text-lg">I-reset ang Password</h3>
+          <h3 className="font-black text-gray-800 text-lg">Reset Password</h3>
           <p className="text-sm text-gray-500 mt-1">
-            Magpapadala kami ng OTP code sa iyong email.
+            We'll send an OTP code to your email.
           </p>
         </div>
         <Field
@@ -1068,7 +1087,7 @@ function ForgotPasswordScreen({ onBack, onVerifyOTP, showToast }) {
         <button
           onClick={handleSend}
           disabled={loading}
-          className="w-full bg-green-600 text-white font-bold py-4 rounded-2xl disabled:opacity-60 active:scale-95 transition-transform"
+          className="w-full bg-gold-400 text-forest-900 font-bold py-4 rounded-2xl disabled:opacity-60 active:scale-95 transition-transform"
         >
           {loading ? "Nagpapadala..." : "Magpadala ng OTP Code 📧"}
         </button>
@@ -1109,7 +1128,7 @@ function Card({ children, className = "" }) {
   );
 }
 
-function StatCard({ icon, label, value, color = "bg-green-50 text-green-700" }) {
+function StatCard({ icon, label, value, color = "bg-forest-50 text-forest-700" }) {
   return (
     <Card className="p-4 flex items-center gap-3">
       <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${color}`}>
@@ -1184,7 +1203,7 @@ function PendingProductCard({ product, onActivate, showToast }) {
             value={price}
             onChange={(e) => setPrice(e.target.value)}
             placeholder="0.00"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
           />
         </div>
         <div>
@@ -1196,7 +1215,7 @@ function PendingProductCard({ product, onActivate, showToast }) {
             value={stock}
             onChange={(e) => setStock(e.target.value)}
             placeholder="0"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
           />
         </div>
       </div>
@@ -1204,7 +1223,7 @@ function PendingProductCard({ product, onActivate, showToast }) {
         <button
           onClick={activate}
           disabled={saving}
-          className="flex-1 bg-green-600 text-white font-bold py-2.5 rounded-xl text-sm disabled:opacity-60"
+          className="flex-1 bg-forest-600 text-white font-bold py-2.5 rounded-xl text-sm disabled:opacity-60"
         >
           {saving ? "Saving..." : "✓ Activate Product"}
         </button>
@@ -1276,7 +1295,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
         <button
           onClick={() => set("discount_enabled", !settings.discount_enabled)}
           className={`w-12 h-6 rounded-full transition-colors relative ${
-            settings.discount_enabled ? "bg-green-500" : "bg-gray-300"
+            settings.discount_enabled ? "bg-forest-500" : "bg-gray-300"
           }`}
         >
           <div className={`w-5 h-5 bg-white rounded-full absolute top-0.5 transition-all ${
@@ -1300,7 +1319,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
                 <button key={t.key} onClick={() => set("discount_types_allowed", t.key)}
                   className={`flex-1 py-2 rounded-xl text-xs font-semibold border ${
                     settings.discount_types_allowed === t.key
-                      ? "bg-green-600 text-white border-green-600"
+                      ? "bg-forest-600 text-white border-forest-600"
                       : "bg-white text-gray-600 border-gray-200"
                   }`}>
                   {t.label}
@@ -1316,7 +1335,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
               <div className="relative">
                 <input type="number" value={settings.max_discount_percent}
                   onChange={e => set("max_discount_percent", e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 pr-8" />
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 pr-8" />
                 <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
               </div>
             </div>
@@ -1325,7 +1344,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
               <div className="relative">
                 <input type="number" value={settings.max_discount_fixed}
                   onChange={e => set("max_discount_fixed", e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 pl-6" />
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 pl-6" />
                 <span className="absolute left-3 top-2 text-gray-400 text-sm">₱</span>
               </div>
             </div>
@@ -1360,7 +1379,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Max Discounts Per Cashier Per Day</p>
             <input type="number" value={settings.max_discounts_per_cashier_per_day}
               onChange={e => set("max_discounts_per_cashier_per_day", e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500" />
             <p className="text-xs text-gray-400 mt-1">After this limit, cashier cannot give more discounts today</p>
           </div>
 
@@ -1370,7 +1389,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
             <div className="relative">
               <input type="number" value={settings.manager_approval_threshold}
                 onChange={e => set("manager_approval_threshold", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 pr-8" />
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 pr-8" />
               <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
             </div>
             <p className="text-xs text-gray-400 mt-1">Discounts above this % need owner approval first</p>
@@ -1382,7 +1401,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
             <div className="relative">
               <input type="number" value={settings.suki_discount_percent}
                 onChange={e => set("suki_discount_percent", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 pr-8" />
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 pr-8" />
               <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
             </div>
             <p className="text-xs text-gray-400 mt-1">Auto-applied for registered suki customers</p>
@@ -1394,7 +1413,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
             <div className="relative">
               <input type="number" value={settings.senior_pwd_discount_percent}
                 onChange={e => set("senior_pwd_discount_percent", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 pr-8" />
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 pr-8" />
               <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
             </div>
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2 mt-1">
@@ -1410,13 +1429,13 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
                 <p className="text-xs text-gray-400 mb-1">Start Time</p>
                 <input type="time" value={settings.discount_start_time}
                   onChange={e => set("discount_start_time", e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500" />
               </div>
               <div>
                 <p className="text-xs text-gray-400 mb-1">End Time</p>
                 <input type="time" value={settings.discount_end_time}
                   onChange={e => set("discount_end_time", e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500" />
               </div>
             </div>
             <p className="text-xs text-gray-400 mt-1">Cashier cannot give discounts outside these hours</p>
@@ -1426,7 +1445,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
       )}
 
       <button onClick={save} disabled={saving}
-        className="w-full bg-green-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-60 mt-4">
+        className="w-full bg-forest-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-60 mt-4">
         {saving ? "Saving..." : "Save All Discount Settings"}
       </button>
     </Card>
@@ -1522,7 +1541,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
           <button
             onClick={save}
             disabled={saving}
-            className="w-full bg-green-600 text-white font-bold py-3 rounded-xl disabled:opacity-60"
+            className="w-full bg-forest-600 text-white font-bold py-3 rounded-xl disabled:opacity-60"
           >
             {saving ? "Sine-save..." : "I-save ang Branch"}
           </button>
@@ -1531,6 +1550,8 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     );
   };
 
+  const PRODUCT_CATEGORIES = ["Beverages", "Snacks", "Household", "Personal Care", "Frozen", "Dairy", "Canned Goods", "Others"];
+
   const ProductModal = ({ existing, onClose }) => {
     const [form, setForm] = useState({
       name: existing?.name || "",
@@ -1538,6 +1559,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
       price: existing?.price || "",
       stock_quantity: existing?.stock_quantity || "",
       low_stock_threshold: existing?.low_stock_threshold || "10",
+      category: existing?.category || "Others",
     });
     const [saving, setSaving] = useState(false);
     const save = async () => {
@@ -1552,6 +1574,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
         price: Number(form.price),
         stock_quantity: Number(form.stock_quantity) || 0,
         low_stock_threshold: Number(form.low_stock_threshold) || 10,
+        category: form.category,
       };
       const { error } = existing
         ? await supabase.from("products").update(payload).eq("id", existing.id)
@@ -1580,6 +1603,14 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             onChange={(v) => setForm((f) => ({ ...f, barcode: v }))}
             placeholder="I-type ang barcode"
           />
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Category</label>
+            <select value={form.category}
+              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 bg-white">
+              {PRODUCT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <Field
               label="Presyo (₱)"
@@ -1606,7 +1637,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
           <button
             onClick={save}
             disabled={saving}
-            className="w-full bg-green-600 text-white font-bold py-3 rounded-xl disabled:opacity-60"
+            className="w-full bg-forest-600 text-white font-bold py-3 rounded-xl disabled:opacity-60"
           >
             {saving ? "Sine-save..." : existing ? "I-update" : "I-save ang Produkto"}
           </button>
@@ -1672,7 +1703,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             <select
               value={form.role}
               onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest-500"
             >
               <option value="cashier">Cashier</option>
               <option value="inventory_staff">Inventory Staff</option>
@@ -1686,7 +1717,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             <select
               value={form.branch_id}
               onChange={(e) => setForm((f) => ({ ...f, branch_id: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-500"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest-500"
             >
               <option value="">— Pumili ng Branch —</option>
               {branches.map((b) => (
@@ -1704,7 +1735,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
           <button
             onClick={save}
             disabled={saving || branches.length === 0}
-            className="w-full bg-green-600 text-white font-bold py-3 rounded-xl disabled:opacity-60"
+            className="w-full bg-forest-600 text-white font-bold py-3 rounded-xl disabled:opacity-60"
           >
             {saving ? "Sine-send..." : "Mag-invite ng Staff"}
           </button>
@@ -1746,19 +1777,19 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col max-w-lg mx-auto">
       <TrialBanner business={business} />
-      <div className="bg-green-700 px-4 pt-5 pb-4">
+      <div className="bg-forest-800 px-4 pt-5 pb-4">
         <div className="flex items-center justify-between mb-1">
           <div>
-            <p className="text-green-200 text-xs font-medium uppercase tracking-widest">
-              {isSuperAdmin ? "👑 Super Admin" : "Owner"}
+            <p className="text-gold-400 text-xs font-medium uppercase tracking-widest">
+              {isSuperAdmin ? "Super Admin" : "Administrator"}
             </p>
-            <h1 className="text-white font-black text-xl leading-tight">{business.name}</h1>
+            <h1 className="text-ivory-50 font-black text-xl leading-tight">{business.name}</h1>
           </div>
           <div className="flex items-center gap-2">
             {/* Notification Bell */}
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative bg-green-800 bg-opacity-50 text-green-100 px-3 py-2 rounded-xl"
+              className="relative bg-forest-800 bg-opacity-50 text-forest-200 px-3 py-2 rounded-xl"
             >
               🔔
               {notifications.length > 0 && (
@@ -1769,14 +1800,14 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             </button>
             <button
               onClick={onLogout}
-              className="bg-green-800 bg-opacity-50 text-green-100 text-xs px-3 py-2 rounded-xl font-medium"
+              className="bg-forest-700 text-gold-400 text-xs px-3 py-2 rounded-xl font-medium border border-forest-600"
             >
               Logout
             </button>
           </div>
         </div>
-        <p className="text-green-300 text-xs">
-          Maligayang pagdating, {profile.full_name.split(" ")[0]}! 👋
+        <p className="text-forest-300 text-xs">
+          Welcome, {profile.full_name.split(" ")[0]}
         </p>
       </div>
 
@@ -1798,7 +1829,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                     .is("recipient_id", null); // Only owner notifications
                   fetchAll();
                 }}
-                className="text-xs text-green-700 font-semibold"
+                className="text-xs text-forest-700 font-semibold"
               >
                 Mark all read
               </button>
@@ -1866,7 +1897,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                           showToast("Void approved! Transaction has been voided.", "success");
                           fetchAll();
                         }}
-                        className="flex-1 bg-green-600 text-white font-bold py-2 rounded-xl text-xs"
+                        className="flex-1 bg-forest-600 text-white font-bold py-2 rounded-xl text-xs"
                       >
                         ✓ Approve Void
                       </button>
@@ -1911,7 +1942,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                     </div>
                   )}
                   {n.action_taken && (
-                    <p className={`text-xs font-bold mt-1 ${n.action_taken === "approved" ? "text-green-600" : "text-red-500"}`}>
+                    <p className={`text-xs font-bold mt-1 ${n.action_taken === "approved" ? "text-forest-600" : "text-red-500"}`}>
                       {n.action_taken === "approved" ? "✓ You approved this void" : "✕ You declined this void"}
                     </p>
                   )}
@@ -1950,7 +1981,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                           showToast("Discount approved! Cashier can now process the payment.", "success");
                           fetchAll();
                         }}
-                        className="flex-1 bg-green-600 text-white font-bold py-2 rounded-xl text-xs"
+                        className="flex-1 bg-forest-600 text-white font-bold py-2 rounded-xl text-xs"
                       >
                         ✓ Approve Discount
                       </button>
@@ -1999,7 +2030,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
       <div className="flex-1 overflow-y-auto pb-24">
         {loading ? (
           <div className="flex justify-center items-center h-40">
-            <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-forest-600 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : (
           <>
@@ -2008,14 +2039,14 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             {tab === "dashboard" && (
               <div className="p-4 space-y-4">
                 {/* Revenue card */}
-                <div className="bg-green-700 rounded-2xl p-4">
-                  <p className="text-green-200 text-xs font-semibold uppercase tracking-widest mb-1">
+                <div className="bg-forest-700 rounded-2xl p-4">
+                  <p className="text-gold-300 text-xs font-semibold uppercase tracking-widest mb-1">
                     Today's Revenue
                   </p>
                   <p className="text-3xl font-black text-white tracking-tight">
                     ₱{todayRevenue.toFixed(2)}
                   </p>
-                  <p className="text-green-300 text-xs mt-1">
+                  <p className="text-forest-300 text-xs mt-1">
                     {todayTxCount} transaction{todayTxCount !== 1 ? "s" : ""} completed today
                   </p>
                 </div>
@@ -2056,7 +2087,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                     <div className="flex gap-2 mt-3">
                       <button
                         onClick={() => setTabPersisted("branches")}
-                        className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg font-medium"
+                        className="text-xs bg-forest-600 text-white px-3 py-1.5 rounded-lg font-medium"
                       >
                         Add Branch
                       </button>
@@ -2090,7 +2121,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                               })}
                             </p>
                           </div>
-                          <p className="font-black text-green-700">
+                          <p className="font-black text-forest-700">
                             ₱{Number(tx.total_amount).toFixed(2)}
                           </p>
                         </Card>
@@ -2111,7 +2142,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                             <p className="font-semibold text-gray-800 text-sm">{b.name}</p>
                             <p className="text-xs text-gray-400">{b.address || "No address"}</p>
                           </div>
-                          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-lg font-medium">
+                          <span className="text-xs bg-forest-100 text-forest-700 px-2 py-1 rounded-lg font-medium">
                             Active
                           </span>
                         </Card>
@@ -2132,7 +2163,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                   </h2>
                   <button
                     onClick={() => setShowAddProduct(true)}
-                    className="bg-green-600 text-white text-xs px-3 py-2 rounded-xl font-bold"
+                    className="bg-forest-600 text-white text-xs px-3 py-2 rounded-xl font-bold"
                   >
                     + Magdagdag
                   </button>
@@ -2151,20 +2182,27 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                           <p className="text-xs text-gray-400">
                             {p.barcode ? `Barcode: ${p.barcode}` : "Walang barcode"}
                           </p>
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className="text-sm font-black text-green-700">
+                          <div className="flex items-center gap-2 mt-2 flex-wrap">
+                            <span className="text-sm font-black text-forest-700">
                               ₱{Number(p.price).toFixed(2)}
                             </span>
                             <span
                               className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                p.stock_quantity <= p.low_stock_threshold
+                                p.stock_quantity <= 0
                                   ? "bg-red-100 text-red-600"
+                                  : p.stock_quantity <= (p.low_stock_threshold || 10)
+                                  ? "bg-yellow-100 text-yellow-600"
                                   : "bg-gray-100 text-gray-500"
                               }`}
                             >
-                              {p.stock_quantity <= p.low_stock_threshold ? "⚠️ " : ""}Stock:{" "}
+                              {p.stock_quantity <= (p.low_stock_threshold || 10) ? "⚠️ " : ""}Stock:{" "}
                               {p.stock_quantity}
                             </span>
+                            {p.category && p.category !== "Others" && (
+                              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600">
+                                {p.category}
+                              </span>
+                            )}
                             {p.no_discount && (
                               <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-600">
                                 No Discount
@@ -2219,7 +2257,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                   </h2>
                   <button
                     onClick={() => setShowAddBranch(true)}
-                    className="bg-green-600 text-white text-xs px-3 py-2 rounded-xl font-bold"
+                    className="bg-forest-600 text-white text-xs px-3 py-2 rounded-xl font-bold"
                   >
                     + Magdagdag
                   </button>
@@ -2261,7 +2299,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                   </h2>
                   <button
                     onClick={() => setShowAddStaff(true)}
-                    className="bg-green-600 text-white text-xs px-3 py-2 rounded-xl font-bold"
+                    className="bg-forest-600 text-white text-xs px-3 py-2 rounded-xl font-bold"
                   >
                     + Mag-invite
                   </button>
@@ -2347,13 +2385,13 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             key={item.key}
             onClick={() => setTabPersisted(item.key)}
             className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors ${
-              tab === item.key ? "bg-green-50 text-green-700" : "text-gray-400"
+              tab === item.key ? "bg-forest-50 text-forest-700" : "text-gray-400"
             }`}
           >
             <span className="text-xl">{item.icon}</span>
             <span
               className={`text-xs font-medium ${
-                tab === item.key ? "text-green-700" : "text-gray-400"
+                tab === item.key ? "text-forest-700" : "text-gray-400"
               }`}
             >
               {item.label}
@@ -2436,18 +2474,18 @@ function BarcodeScanner({ onDetected, onClose }) {
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="relative w-72 h-44">
             {/* Corner brackets */}
-            <div className={`absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 rounded-tl-lg transition-colors ${scanSuccess ? "border-green-300" : "border-green-400"}`}></div>
-            <div className={`absolute top-0 right-0 w-10 h-10 border-t-4 border-r-4 rounded-tr-lg transition-colors ${scanSuccess ? "border-green-300" : "border-green-400"}`}></div>
-            <div className={`absolute bottom-0 left-0 w-10 h-10 border-b-4 border-l-4 rounded-bl-lg transition-colors ${scanSuccess ? "border-green-300" : "border-green-400"}`}></div>
-            <div className={`absolute bottom-0 right-0 w-10 h-10 border-b-4 border-r-4 rounded-br-lg transition-colors ${scanSuccess ? "border-green-300" : "border-green-400"}`}></div>
+            <div className={`absolute top-0 left-0 w-10 h-10 border-t-4 border-l-4 rounded-tl-lg transition-colors ${scanSuccess ? "border-forest-300" : "border-gold-400"}`}></div>
+            <div className={`absolute top-0 right-0 w-10 h-10 border-t-4 border-r-4 rounded-tr-lg transition-colors ${scanSuccess ? "border-forest-300" : "border-gold-400"}`}></div>
+            <div className={`absolute bottom-0 left-0 w-10 h-10 border-b-4 border-l-4 rounded-bl-lg transition-colors ${scanSuccess ? "border-forest-300" : "border-gold-400"}`}></div>
+            <div className={`absolute bottom-0 right-0 w-10 h-10 border-b-4 border-r-4 rounded-br-lg transition-colors ${scanSuccess ? "border-forest-300" : "border-gold-400"}`}></div>
 
             {/* Scanning line */}
-            <div className={`absolute top-1/2 left-0 right-0 h-0.5 animate-pulse transition-colors ${scanSuccess ? "bg-green-300" : "bg-green-400"} opacity-80`}></div>
+            <div className={`absolute top-1/2 left-0 right-0 h-0.5 animate-pulse transition-colors ${scanSuccess ? "bg-gold-300" : "bg-gold-400"} opacity-80`}></div>
 
             {/* Success flash */}
             {scanSuccess && (
-              <div className="absolute inset-0 bg-green-400 bg-opacity-20 rounded-lg flex items-center justify-center">
-                <p className="text-green-300 font-black text-lg">✓ Scanned!</p>
+              <div className="absolute inset-0 bg-gold-400 bg-opacity-20 rounded-lg flex items-center justify-center">
+                <p className="text-forest-300 font-black text-lg">✓ Scanned!</p>
               </div>
             )}
           </div>
@@ -2459,7 +2497,7 @@ function BarcodeScanner({ onDetected, onClose }) {
             {scanSuccess ? "✓ Barcode detected!" : "Point camera at the barcode"}
           </p>
           {lastScan ? (
-            <p className="text-green-400 text-xs font-mono mt-1 opacity-80">{lastScan}</p>
+            <p className="text-gold-400 text-xs font-mono mt-1 opacity-80">{lastScan}</p>
           ) : null}
         </div>
       </div>
@@ -2474,11 +2512,11 @@ function BarcodeScanner({ onDetected, onClose }) {
             onChange={(e) => setManualCode(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleManual()}
             placeholder="Enter barcode number..."
-            className="flex-1 bg-white bg-opacity-10 text-white border border-white border-opacity-20 rounded-xl px-4 py-3 text-sm placeholder-gray-500 focus:outline-none focus:border-green-400"
+            className="flex-1 bg-white bg-opacity-10 text-white border border-white border-opacity-20 rounded-xl px-4 py-3 text-sm placeholder-gray-500 focus:outline-none focus:border-gold-400"
           />
           <button
             onClick={handleManual}
-            className="bg-green-600 text-white px-4 py-3 rounded-xl font-bold text-sm"
+            className="bg-forest-600 text-white px-4 py-3 rounded-xl font-bold text-sm"
           >
             Search
           </button>
@@ -2502,17 +2540,114 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
       hour12: true,
     });
 
+  const paymentLabel = {
+    cash: "Cash", gcash: "GCash", maya: "Maya", card: "Card", utang: "Utang",
+  }[transaction?.payment_method] || "Cash";
+
+  const buildReceiptText = () => {
+    const lines = [];
+    lines.push(business?.name || "Store");
+    if (branch?.name) lines.push(branch.name);
+    lines.push("─".repeat(28));
+    lines.push(`${transaction?.receipt_number}  ${formatDate(transaction?.created_at || new Date())}`);
+    lines.push("─".repeat(28));
+    items.forEach((item) => {
+      lines.push(`${item.product_name}`);
+      lines.push(`  ₱${Number(item.unit_price).toFixed(2)} × ${item.quantity}  =  ₱${Number(item.subtotal).toFixed(2)}`);
+    });
+    lines.push("─".repeat(28));
+    lines.push(`Subtotal: ₱${Number(transaction?.original_amount || transaction?.total_amount).toFixed(2)}`);
+    if (Number(transaction?.discount_amount) > 0) {
+      const discLabel = transaction?.discount_type === "percent"
+        ? `${transaction?.discount_value}%` : `₱${transaction?.discount_value} off`;
+      lines.push(`Discount (${discLabel}): -₱${Number(transaction?.discount_amount).toFixed(2)}`);
+    }
+    lines.push(`Total: ₱${Number(transaction?.total_amount).toFixed(2)}`);
+    lines.push(`Payment: ${paymentLabel}`);
+    if (transaction?.payment_method === "cash") {
+      lines.push(`Cash Tendered: ₱${Number(transaction?.amount_tendered).toFixed(2)}`);
+      lines.push(`Change: ₱${Number(transaction?.change_amount).toFixed(2)}`);
+    }
+    if (transaction?.reference_number) {
+      lines.push(`Ref #: ${transaction.reference_number}`);
+    }
+    if (transaction?.customer_name) {
+      lines.push(`Customer: ${transaction.customer_name}`);
+    }
+    lines.push("─".repeat(28));
+    lines.push(`Cashier: ${cashier?.full_name}`);
+    lines.push("Powered by ListaKo");
+    return lines.join("\n");
+  };
+
+  const handleShare = async () => {
+    const text = buildReceiptText();
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Receipt ${transaction?.receipt_number}`, text });
+      } catch (e) {
+        if (e.name !== "AbortError") {
+          await navigator.clipboard?.writeText(text);
+        }
+      }
+    } else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(text);
+      alert("Receipt copied to clipboard!");
+    }
+  };
+
+  const handlePrint = () => {
+    let printDiv = document.getElementById("print-receipt");
+    if (!printDiv) {
+      printDiv = document.createElement("div");
+      printDiv.id = "print-receipt";
+      printDiv.style.display = "none";
+      document.body.appendChild(printDiv);
+    }
+    const discountHtml = Number(transaction?.discount_amount) > 0
+      ? `<div class="receipt-row"><span>Discount</span><span>-₱${Number(transaction?.discount_amount).toFixed(2)}</span></div>` : "";
+    const cashHtml = transaction?.payment_method === "cash"
+      ? `<div class="receipt-row"><span>Cash</span><span>₱${Number(transaction?.amount_tendered).toFixed(2)}</span></div>
+         <div class="receipt-row receipt-total"><span>Change</span><span>₱${Number(transaction?.change_amount).toFixed(2)}</span></div>` : "";
+    const refHtml = transaction?.reference_number
+      ? `<div class="receipt-row"><span>Ref #</span><span>${transaction.reference_number}</span></div>` : "";
+    printDiv.innerHTML = `
+      <div class="receipt-header">
+        <h2>${business?.name || "Store"}</h2>
+        <p>${branch?.name || ""}</p>
+        <p>${transaction?.receipt_number} | ${formatDate(transaction?.created_at || new Date())}</p>
+      </div>
+      <div class="receipt-divider"></div>
+      ${items.map(i => `<div class="receipt-item"><div class="receipt-row"><span class="item-name">${i.product_name}</span><span>₱${Number(i.subtotal).toFixed(2)}</span></div><div class="item-detail">₱${Number(i.unit_price).toFixed(2)} × ${i.quantity}</div></div>`).join("")}
+      <div class="receipt-divider"></div>
+      <div class="receipt-row"><span>Subtotal</span><span>₱${Number(transaction?.original_amount || transaction?.total_amount).toFixed(2)}</span></div>
+      ${discountHtml}
+      <div class="receipt-row receipt-total"><span>TOTAL</span><span>₱${Number(transaction?.total_amount).toFixed(2)}</span></div>
+      <div class="receipt-row"><span>Payment</span><span>${paymentLabel}</span></div>
+      ${cashHtml}
+      ${refHtml}
+      <div class="receipt-divider"></div>
+      <div class="receipt-footer">
+        <p>Cashier: ${cashier?.full_name || ""}</p>
+        <p>Powered by ListaKo</p>
+      </div>
+    `;
+    printDiv.style.display = "block";
+    window.print();
+    printDiv.style.display = "none";
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 px-4">
-      <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl">
-        <div className="bg-green-700 px-5 py-5 text-center">
-          <p className="text-green-200 text-xs font-medium uppercase tracking-widest mb-1">
+      <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+        <div className="bg-forest-800 px-5 py-5 text-center flex-shrink-0">
+          <p className="text-gold-400 text-xs font-medium uppercase tracking-widest mb-1">
             Official Receipt
           </p>
-          <h2 className="text-white font-black text-lg">{business?.name}</h2>
-          <p className="text-green-300 text-xs mt-1">{branch?.name || ""}</p>
+          <h2 className="text-ivory-50 font-black text-lg">{business?.name}</h2>
+          <p className="text-forest-300 text-xs mt-1">{branch?.name || ""}</p>
         </div>
-        <div className="px-5 py-4">
+        <div className="px-5 py-4 overflow-y-auto flex-1">
           <div className="flex justify-between text-xs text-gray-400 mb-3">
             <span>{transaction?.receipt_number}</span>
             <span>{formatDate(transaction?.created_at || new Date())}</span>
@@ -2543,12 +2678,12 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
             </div>
             {Number(transaction?.discount_amount) > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-green-600 font-medium">
-                  🏷️ Discount ({transaction?.discount_type === "percent"
+                <span className="text-forest-600 font-medium">
+                  Discount ({transaction?.discount_type === "percent"
                     ? `${transaction?.discount_value}%`
                     : `₱${transaction?.discount_value} off`})
                 </span>
-                <span className="font-bold text-green-600">
+                <span className="font-bold text-forest-600">
                   -₱{Number(transaction?.discount_amount).toFixed(2)}
                 </span>
               </div>
@@ -2560,17 +2695,47 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Cash Tendered</span>
-              <span className="font-medium text-gray-800">
-                ₱{Number(transaction?.amount_tendered).toFixed(2)}
+              <span className="text-gray-500">Payment</span>
+              <span className={`font-semibold px-2 py-0.5 rounded-full text-xs ${
+                transaction?.payment_method === "gcash" ? "bg-blue-50 text-blue-600"
+                : transaction?.payment_method === "maya" ? "bg-forest-50 text-forest-600"
+                : transaction?.payment_method === "card" ? "bg-purple-50 text-purple-600"
+                : transaction?.payment_method === "utang" ? "bg-orange-50 text-orange-600"
+                : "bg-gray-50 text-gray-600"
+              }`}>
+                {paymentLabel}
               </span>
             </div>
-            <div className="flex justify-between text-base font-black">
-              <span className="text-gray-800">Change</span>
-              <span className="text-green-700">
-                ₱{Number(transaction?.change_amount).toFixed(2)}
-              </span>
-            </div>
+            {transaction?.payment_method === "cash" && (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Cash Tendered</span>
+                  <span className="font-medium text-gray-800">
+                    ₱{Number(transaction?.amount_tendered).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-base font-black">
+                  <span className="text-gray-800">Change</span>
+                  <span className="text-forest-700">
+                    ₱{Number(transaction?.change_amount).toFixed(2)}
+                  </span>
+                </div>
+              </>
+            )}
+            {transaction?.reference_number && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Ref #</span>
+                <span className="font-mono font-semibold text-gray-800">
+                  {transaction.reference_number}
+                </span>
+              </div>
+            )}
+            {transaction?.customer_name && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Customer</span>
+                <span className="font-medium text-gray-800">{transaction.customer_name}</span>
+              </div>
+            )}
           </div>
           <div className="border-t border-dashed border-gray-200 mt-3 mb-3"></div>
           <div className="text-center">
@@ -2578,19 +2743,35 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
             <p className="text-xs text-gray-300 mt-1">Powered by ListaKo</p>
           </div>
         </div>
-        <div className="px-5 pb-5 flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
-          >
-            Close
-          </button>
-          <button
-            onClick={onNewTransaction}
-            className="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl text-sm"
-          >
-            New Sale
-          </button>
+        <div className="px-5 pb-5 flex-shrink-0">
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={handleShare}
+              className="flex-1 bg-blue-50 text-blue-600 font-semibold py-2.5 rounded-xl text-xs border border-blue-100 active:bg-blue-100"
+            >
+              Share Receipt
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex-1 bg-purple-50 text-purple-600 font-semibold py-2.5 rounded-xl text-xs border border-purple-100 active:bg-purple-100"
+            >
+              Print Receipt
+            </button>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
+            >
+              Close
+            </button>
+            <button
+              onClick={onNewTransaction}
+              className="flex-1 bg-forest-600 text-white font-bold py-3 rounded-xl text-sm"
+            >
+              New Sale
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -2718,6 +2899,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState("All");
   const [processing, setProcessing] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const [receiptItems, setReceiptItems] = useState([]);
@@ -2755,25 +2937,33 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
     );
   };
 
-  // Search products
+  const CATEGORIES = ["All", "Beverages", "Snacks", "Household", "Personal Care", "Frozen", "Dairy", "Canned Goods", "Others"];
+
+  // Search products with category filter
   useEffect(() => {
-    if (!searchQuery.trim()) {
+    if (!searchQuery.trim() && categoryFilter === "All") {
       setSearchResults([]);
       return;
     }
     const timer = setTimeout(async () => {
       setSearching(true);
-      const { data } = await supabase
+      let query = supabase
         .from("products")
         .select("*")
         .eq("business_id", business.id)
-        .ilike("name", `%${searchQuery}%`)
-        .limit(8);
+        .eq("status", "active");
+      if (searchQuery.trim()) {
+        query = query.ilike("name", `%${searchQuery}%`);
+      }
+      if (categoryFilter !== "All") {
+        query = query.eq("category", categoryFilter);
+      }
+      const { data } = await query.order("name").limit(20);
       setSearchResults(data || []);
       setSearching(false);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery, business.id]);
+  }, [searchQuery, categoryFilter, business.id]);
 
   // State for new product found modal
   const [newProductModal, setNewProductModal] = useState(null);
@@ -3213,19 +3403,40 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
         });
       }
 
-      // Deduct stock — non-blocking
+      // Deduct stock, log history, check low stock
       for (const item of cart) {
         try {
           const { data: prod } = await supabase
             .from("products")
-            .select("stock_quantity")
+            .select("stock_quantity, low_stock_threshold, name")
             .eq("id", item.product_id)
             .maybeSingle();
           if (prod) {
+            const newQty = Math.max(0, prod.stock_quantity - item.quantity);
             await supabase
               .from("products")
-              .update({ stock_quantity: Math.max(0, prod.stock_quantity - item.quantity) })
+              .update({ stock_quantity: newQty })
               .eq("id", item.product_id);
+            await supabase.from("stock_history").insert({
+              business_id: business.id,
+              product_id: item.product_id,
+              changed_by: profile.id,
+              change_type: "sale",
+              quantity_before: prod.stock_quantity,
+              quantity_after: newQty,
+              quantity_change: -item.quantity,
+              notes: `Sale: ${txn.receipt_number}`,
+            });
+            if (newQty <= (prod.low_stock_threshold || 10) && prod.stock_quantity > (prod.low_stock_threshold || 10)) {
+              await supabase.from("notifications").insert({
+                business_id: business.id,
+                type: "low_stock",
+                title: "Low Stock Alert",
+                message: `${prod.name} is down to ${newQty} units (threshold: ${prod.low_stock_threshold || 10}).`,
+                product_id: item.product_id,
+                is_read: false,
+              });
+            }
           }
         } catch (stockErr) {
           console.warn("Stock deduction skipped:", stockErr);
@@ -3337,26 +3548,26 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col max-w-lg mx-auto">
       {/* Header */}
-      <div className="bg-green-700 px-4 pt-5 pb-4 flex-shrink-0">
+      <div className="bg-forest-800 px-4 pt-5 pb-4 flex-shrink-0">
         <div className="flex items-center justify-between mb-1">
           <div>
-            <p className="text-green-200 text-xs font-medium uppercase tracking-widest">Cashier</p>
-            <h1 className="text-white font-black text-lg leading-tight">{business.name}</h1>
+            <p className="text-gold-400 text-xs font-medium uppercase tracking-widest">Cashier</p>
+            <h1 className="text-ivory-50 font-black text-lg leading-tight">{business.name}</h1>
           </div>
           <button
             onClick={onLogout}
-            className="bg-green-800 bg-opacity-50 text-green-100 text-xs px-3 py-2 rounded-xl font-medium"
+            className="bg-forest-700 text-gold-400 text-xs px-3 py-2 rounded-xl font-medium border border-forest-600"
           >
             Logout
           </button>
         </div>
-        <p className="text-green-300 text-xs">
+        <p className="text-forest-300 text-xs">
           {branch?.name || "No branch"} · {profile.full_name}
         </p>
       </div>
 
       {/* Tab bar */}
-      <div className="bg-green-800 flex px-2 gap-1 flex-shrink-0">
+      <div className="bg-forest-900 flex px-2 gap-1 flex-shrink-0">
         {[
           { key: "pos", label: "POS" },
           { key: "history", label: "Sales" },
@@ -3366,7 +3577,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             key={t.key}
             onClick={() => setPosTabPersisted(t.key)}
             className={`flex-1 py-2.5 text-xs font-semibold rounded-t-lg transition-colors ${
-              posTab === t.key ? "bg-gray-50 text-green-700" : "text-green-300"
+              posTab === t.key ? "bg-ivory-100 text-forest-700" : "text-forest-400"
             }`}
           >
             {t.label}
@@ -3384,14 +3595,14 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               {cashierNotifs.map((n) => (
                 <div key={n.id} className={`rounded-2xl p-3 border ${
                   n.type === "void_approved" || n.type === "discount_approved"
-                    ? "bg-green-50 border-green-200"
+                    ? "bg-forest-50 border-forest-200"
                     : "bg-red-50 border-red-200"
                 }`}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <p className={`text-xs font-bold ${
                         n.type === "void_approved" || n.type === "discount_approved"
-                          ? "text-green-700" : "text-red-700"
+                          ? "text-forest-700" : "text-red-700"
                       }`}>{n.title}</p>
                       <p className="text-xs text-gray-600 mt-0.5">{n.message}</p>
                       {/* Auto-clear discount if declined */}
@@ -3437,18 +3648,35 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search product by name..."
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 pr-8"
+                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 pr-8"
               />
               {searching && (
-                <div className="absolute right-3 top-3 w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+                <div className="absolute right-3 top-3 w-4 h-4 border-2 border-forest-500 border-t-transparent rounded-full animate-spin"></div>
               )}
             </div>
             <button
               onClick={() => setScanning(true)}
-              className="bg-green-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm"
+              className="bg-forest-600 text-white px-4 py-2.5 rounded-xl font-bold text-sm"
             >
               📷 Scan
             </button>
+          </div>
+
+          {/* Category filter chips */}
+          <div className="px-4 pb-2 flex gap-1.5 overflow-x-auto flex-shrink-0 hide-scrollbar">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                  categoryFilter === cat
+                    ? "bg-forest-600 text-white border-forest-600"
+                    : "bg-white text-gray-500 border-gray-200"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
 
           {/* Search results */}
@@ -3458,7 +3686,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 <button
                   key={p.id}
                   onClick={() => addToCart(p)}
-                  className={`w-full px-4 py-3 text-left flex items-center justify-between border-b border-gray-50 last:border-0 active:bg-green-50 ${
+                  className={`w-full px-4 py-3 text-left flex items-center justify-between border-b border-gray-50 last:border-0 active:bg-forest-50 ${
                     p.stock_quantity <= 0 ? "opacity-50" : "hover:bg-gray-50"
                   }`}
                 >
@@ -3476,7 +3704,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       {p.stock_quantity <= 0 ? "Out of stock" : `Stock: ${p.stock_quantity}`}
                     </p>
                   </div>
-                  <span className="text-sm font-black text-green-700">
+                  <span className="text-sm font-black text-forest-700">
                     ₱{Number(p.price).toFixed(2)}
                   </span>
                 </button>
@@ -3488,18 +3716,18 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           <div className="flex-1 overflow-y-auto px-4 py-3">
             {cart.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <div className="w-16 h-16 bg-forest-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
                     <path
                       d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"
-                      stroke="#16a34a"
+                      stroke="#1e5631"
                       strokeWidth="1.5"
                       strokeLinejoin="round"
                     />
-                    <line x1="3" y1="6" x2="21" y2="6" stroke="#16a34a" strokeWidth="1.5" />
+                    <line x1="3" y1="6" x2="21" y2="6" stroke="#1e5631" strokeWidth="1.5" />
                     <path
                       d="M16 10a4 4 0 01-8 0"
-                      stroke="#16a34a"
+                      stroke="#1e5631"
                       strokeWidth="1.5"
                       strokeLinecap="round"
                     />
@@ -3537,12 +3765,12 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       </span>
                       <button
                         onClick={() => updateQty(item.product_id, 1)}
-                        className="w-7 h-7 rounded-lg bg-green-100 text-green-700 font-bold text-base flex items-center justify-center active:bg-green-200"
+                        className="w-7 h-7 rounded-lg bg-forest-100 text-forest-700 font-bold text-base flex items-center justify-center active:bg-forest-200"
                       >
                         +
                       </button>
                     </div>
-                    <p className="text-sm font-black text-green-700 w-16 text-right">
+                    <p className="text-sm font-black text-forest-700 w-16 text-right">
                       ₱{item.subtotal.toFixed(2)}
                     </p>
                   </div>
@@ -3562,7 +3790,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               </div>
               <button
                 onClick={() => setCheckoutModePersisted(true)}
-                className="w-full bg-green-600 text-white font-bold py-4 rounded-2xl text-base active:scale-95 transition-transform"
+                className="w-full bg-gold-400 text-forest-900 font-bold py-4 rounded-2xl text-base active:scale-95 transition-transform"
               >
                 Proceed to Checkout →
               </button>
@@ -3608,15 +3836,15 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     </div>
                     {discountAmount > 0 && (
                       <div className="flex justify-between text-sm mb-1">
-                        <span className="text-green-600 font-medium">
+                        <span className="text-forest-600 font-medium">
                           🏷️ Discount ({discountType === "percent" ? `${discountValue}%` : `₱${discountValue} off`})
                         </span>
-                        <span className="font-bold text-green-600">-₱{discountAmount.toFixed(2)}</span>
+                        <span className="font-bold text-forest-600">-₱{discountAmount.toFixed(2)}</span>
                       </div>
                     )}
                     <div className="flex justify-between mt-1">
                       <span className="font-black text-gray-800">Total</span>
-                      <span className="font-black text-green-700 text-lg">₱{total.toFixed(2)}</span>
+                      <span className="font-black text-forest-700 text-lg">₱{total.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -3669,7 +3897,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                         }}
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold border ${
                           customerType === t.key
-                            ? "bg-green-600 text-white border-green-600"
+                            ? "bg-forest-600 text-white border-forest-600"
                             : "bg-white text-gray-600 border-gray-200"
                         }`}>
                         {t.label}
@@ -3684,13 +3912,13 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                         {(business.discount_types_allowed === "both" || business.discount_types_allowed === "percent" || !business.discount_types_allowed) && (
                           <button onClick={() => { setDiscountTypePersisted("percent"); setDiscountValuePersisted(""); }}
                             className={`flex-1 py-2 rounded-xl text-sm font-semibold border ${
-                              discountType === "percent" ? "bg-green-600 text-white border-green-600" : "bg-white text-gray-600 border-gray-200"
+                              discountType === "percent" ? "bg-forest-600 text-white border-forest-600" : "bg-white text-gray-600 border-gray-200"
                             }`}>% Percent</button>
                         )}
                         {(business.discount_types_allowed === "both" || business.discount_types_allowed === "fixed" || !business.discount_types_allowed) && (
                           <button onClick={() => { setDiscountTypePersisted("fixed"); setDiscountValuePersisted(""); }}
                             className={`flex-1 py-2 rounded-xl text-sm font-semibold border ${
-                              discountType === "fixed" ? "bg-green-600 text-white border-green-600" : "bg-white text-gray-600 border-gray-200"
+                              discountType === "fixed" ? "bg-forest-600 text-white border-forest-600" : "bg-white text-gray-600 border-gray-200"
                             }`}>₱ Fixed</button>
                         )}
                       </div>
@@ -3699,7 +3927,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                         placeholder={discountType === "percent"
                           ? `Max ${business.max_discount_percent || 20}%`
                           : `Max ₱${business.max_discount_fixed || 500}`}
-                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-2" />
+                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-2" />
                     </>
                   )}
 
@@ -3711,8 +3939,8 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                   )}
 
                   {discountAmount > 0 && (
-                    <div className="bg-green-50 border border-green-200 rounded-xl px-3 py-2">
-                      <p className="text-xs text-green-700 font-semibold">
+                    <div className="bg-forest-50 border border-forest-200 rounded-xl px-3 py-2">
+                      <p className="text-xs text-forest-700 font-semibold">
                         ✓ Discount of ₱{discountAmount.toFixed(2)} applied — New total: ₱{total.toFixed(2)}
                       </p>
                     </div>
@@ -3731,7 +3959,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       onClick={() => setPaymentMethodPersisted(m.key)}
                       className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${
                         paymentMethod === m.key
-                          ? "bg-green-600 text-white border-green-600"
+                          ? "bg-forest-600 text-white border-forest-600"
                           : "bg-white text-gray-600 border-gray-200"
                       }`}
                     >
@@ -3759,7 +3987,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       value={customerName}
                       onChange={(e) => setCustomerNamePersisted(e.target.value)}
                       placeholder="Customer name (optional)..."
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white mt-2"
+                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 bg-white mt-2"
                     />
                   </div>
                 )}
@@ -3775,14 +4003,14 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       value={customerName}
                       onChange={(e) => setCustomerNamePersisted(e.target.value)}
                       placeholder="Enter customer name..."
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-2"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-2"
                     />
                     <input
                       type="tel"
                       value={customerPhone}
                       onChange={(e) => setCustomerPhonePersisted(e.target.value)}
                       placeholder="Phone number (optional)..."
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
                     />
                     <div className="mt-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
                       <p className="text-xs text-orange-700 font-medium">
@@ -3803,12 +4031,12 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       value={amountTendered}
                       onChange={(e) => setAmountTenderedPersisted(e.target.value)}
                       placeholder="Enter amount..."
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-green-500"
+                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-forest-500"
                     />
                     {amountTendered && Number(amountTendered) >= total && (
-                      <div className="mt-2 bg-green-50 rounded-xl px-4 py-3 flex justify-between">
-                        <span className="font-semibold text-green-700">Change</span>
-                        <span className="font-black text-green-700 text-lg">
+                      <div className="mt-2 bg-forest-50 rounded-xl px-4 py-3 flex justify-between">
+                        <span className="font-semibold text-forest-700">Change</span>
+                        <span className="font-black text-forest-700 text-lg">
                           ₱{change.toFixed(2)}
                         </span>
                       </div>
@@ -3846,7 +4074,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     ((paymentMethod === "gcash" || paymentMethod === "maya") && !gcashRef.trim()) ||
                     cashierNotifs.some(n => n.type === "discount_declined")
                   }
-                  className="w-full bg-green-600 text-white font-black py-4 rounded-2xl text-lg disabled:opacity-50 active:scale-95 transition-transform mb-4"
+                  className="w-full bg-forest-600 text-white font-black py-4 rounded-2xl text-lg disabled:opacity-50 active:scale-95 transition-transform mb-4"
                 >
                   {cashierNotifs.some(n => n.type === "discount_declined")
                     ? "❌ Discount Declined — Clear it first"
@@ -3871,14 +4099,14 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               {cashierNotifs.map((n) => (
                 <div key={n.id} className={`rounded-2xl p-3 border ${
                   n.type === "void_approved" || n.type === "discount_approved"
-                    ? "bg-green-50 border-green-200"
+                    ? "bg-forest-50 border-forest-200"
                     : "bg-red-50 border-red-200"
                 }`}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <p className={`text-xs font-bold ${
                         n.type === "void_approved" || n.type === "discount_approved"
-                          ? "text-green-700"
+                          ? "text-forest-700"
                           : "text-red-700"
                       }`}>{n.title}</p>
                       <p className="text-xs text-gray-600 mt-0.5">{n.message}</p>
@@ -3897,7 +4125,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           )}
           {loadingHistory ? (
             <div className="flex justify-center py-8">
-              <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-8 h-8 border-4 border-forest-600 border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : history.length === 0 ? (
             <div className="text-center py-12">
@@ -3910,7 +4138,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                   Today's Transactions
                 </p>
                 <div className="flex items-center gap-2">
-                  <p className="text-xs font-bold text-green-700">
+                  <p className="text-xs font-bold text-forest-700">
                     ₱
                     {history
                       .filter((t) => t.status === "completed")
@@ -3950,13 +4178,13 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                         className={`font-black ${
                           txn.status === "voided"
                             ? "text-red-400 line-through"
-                            : "text-green-700"
+                            : "text-forest-700"
                         }`}
                       >
                         ₱{Number(txn.total_amount).toFixed(2)}
                       </p>
                       <div className="flex gap-1 mt-0.5 justify-end">
-                        <span className="text-xs bg-green-50 text-green-600 px-2 py-0.5 rounded-full font-medium capitalize">
+                        <span className="text-xs bg-forest-50 text-forest-600 px-2 py-0.5 rounded-full font-medium capitalize">
                           {txn.payment_method}
                         </span>
                         {txn.status === "voided" && (
@@ -4011,7 +4239,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {loadingUtang ? (
             <div className="flex justify-center py-8">
-              <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-8 h-8 border-4 border-forest-600 border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : utangList.length === 0 ? (
             <div className="text-center py-12">
@@ -4069,7 +4297,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       setUtangPayModal(u);
                       setUtangPayAmount("");
                     }}
-                    className="text-xs text-green-700 font-semibold bg-green-50 px-3 py-1.5 rounded-lg"
+                    className="text-xs text-forest-700 font-semibold bg-forest-50 px-3 py-1.5 rounded-lg"
                   >
                     💵 Record Payment
                   </button>
@@ -4153,7 +4381,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 }
                 setNewProductModal(null);
               }}
-              className="w-full bg-green-600 text-white font-bold py-3 rounded-2xl text-sm"
+              className="w-full bg-forest-600 text-white font-bold py-3 rounded-2xl text-sm"
             >
               Send to Owner for Review
             </button>
@@ -4244,7 +4472,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               value={utangPayAmount}
               onChange={(e) => setUtangPayAmount(e.target.value)}
               placeholder="Enter exact amount received..."
-              className="w-full border-2 border-green-300 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-green-500 mb-2"
+              className="w-full border-2 border-forest-300 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-forest-500 mb-2"
             />
             <div className="flex gap-2 mb-3 flex-wrap">
               {[
@@ -4263,12 +4491,12 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             {utangPayAmount && Number(utangPayAmount) > 0 && (
               <div className={`rounded-xl px-4 py-2 mb-3 ${
                 Number(utangPayAmount) >= (Number(utangPayModal.amount) - Number(utangPayModal.amount_paid))
-                  ? "bg-green-50 border border-green-200"
+                  ? "bg-forest-50 border border-forest-200"
                   : "bg-yellow-50 border border-yellow-200"
               }`}>
                 <p className={`text-xs font-semibold ${
                   Number(utangPayAmount) >= (Number(utangPayModal.amount) - Number(utangPayModal.amount_paid))
-                    ? "text-green-700"
+                    ? "text-forest-700"
                     : "text-yellow-700"
                 }`}>
                   {Number(utangPayAmount) >= (Number(utangPayModal.amount) - Number(utangPayModal.amount_paid))
@@ -4287,7 +4515,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               <button
                 onClick={markUtangPaid}
                 disabled={!utangPayAmount || Number(utangPayAmount) <= 0}
-                className="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50"
+                className="flex-1 bg-forest-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50"
               >
                 Confirm Payment ✓
               </button>
@@ -4342,6 +4570,505 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// INVENTORY STAFF PANEL
+// ═══════════════════════════════════════════════════════════════
+function InventoryStaffPanel({ profile, business, branch, onLogout, showToast }) {
+  const CATEGORIES = ["All", "Beverages", "Snacks", "Household", "Personal Care", "Frozen", "Dairy", "Canned Goods", "Others"];
+  const [invTab, setInvTab] = useState("products");
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [editModal, setEditModal] = useState(null);
+  const [editQty, setEditQty] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [restockModal, setRestockModal] = useState(false);
+  const [restockProduct, setRestockProduct] = useState(null);
+  const [restockSearch, setRestockSearch] = useState("");
+  const [restockQty, setRestockQty] = useState("");
+  const [restockSupplier, setRestockSupplier] = useState("");
+  const [restockNotes, setRestockNotes] = useState("");
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchSelected, setBatchSelected] = useState({});
+  const [batchQty, setBatchQty] = useState({});
+  const [savingBatch, setSavingBatch] = useState(false);
+  const [historyModal, setHistoryModal] = useState(null);
+  const [stockHistory, setStockHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+
+  const loadProducts = useCallback(async () => {
+    setLoading(true);
+    let query = supabase
+      .from("products")
+      .select("*")
+      .eq("business_id", business.id)
+      .eq("status", "active");
+    if (categoryFilter !== "All") query = query.eq("category", categoryFilter);
+    if (searchQuery.trim()) query = query.ilike("name", `%${searchQuery}%`);
+    const { data } = await query.order("name");
+    setProducts(data || []);
+    setLoading(false);
+  }, [business.id, categoryFilter, searchQuery]);
+
+  const loadNotifications = useCallback(async () => {
+    const { data } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("business_id", business.id)
+      .in("type", ["low_stock"])
+      .eq("is_read", false)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setNotifications(data || []);
+  }, [business.id]);
+
+  useEffect(() => { loadProducts(); }, [loadProducts]);
+  useEffect(() => { loadNotifications(); const iv = setInterval(loadNotifications, 15000); return () => clearInterval(iv); }, [loadNotifications]);
+
+  const updateStock = async () => {
+    const newQty = Number(editQty);
+    if (isNaN(newQty) || newQty < 0) return showToast("Enter a valid quantity.", "error");
+    const oldQty = editModal.stock_quantity;
+    await supabase.from("products").update({ stock_quantity: newQty }).eq("id", editModal.id);
+    await supabase.from("stock_history").insert({
+      business_id: business.id,
+      product_id: editModal.id,
+      changed_by: profile.id,
+      change_type: "manual_edit",
+      quantity_before: oldQty,
+      quantity_after: newQty,
+      quantity_change: newQty - oldQty,
+      notes: editNotes.trim() || "Manual stock update",
+    });
+    showToast(`${editModal.name} stock updated to ${newQty}.`, "success");
+    setEditModal(null);
+    setEditQty("");
+    setEditNotes("");
+    loadProducts();
+  };
+
+  const submitRestock = async () => {
+    if (!restockProduct) return showToast("Select a product first.", "error");
+    const qty = Number(restockQty);
+    if (isNaN(qty) || qty <= 0) return showToast("Enter a valid quantity.", "error");
+    const oldQty = restockProduct.stock_quantity;
+    const newQty = oldQty + qty;
+    await supabase.from("products").update({ stock_quantity: newQty }).eq("id", restockProduct.id);
+    await supabase.from("stock_history").insert({
+      business_id: business.id,
+      product_id: restockProduct.id,
+      changed_by: profile.id,
+      change_type: "restock",
+      quantity_before: oldQty,
+      quantity_after: newQty,
+      quantity_change: qty,
+      notes: restockSupplier.trim() ? `Supplier: ${restockSupplier.trim()}. ${restockNotes.trim()}` : restockNotes.trim() || "Delivery received",
+    });
+    showToast(`${restockProduct.name}: +${qty} units restocked (now ${newQty}).`, "success");
+    setRestockModal(false);
+    setRestockProduct(null);
+    setRestockSearch("");
+    setRestockQty("");
+    setRestockSupplier("");
+    setRestockNotes("");
+    loadProducts();
+  };
+
+  const saveBatchUpdate = async () => {
+    const selectedIds = Object.keys(batchSelected).filter(id => batchSelected[id]);
+    if (selectedIds.length === 0) return showToast("No products selected.", "error");
+    setSavingBatch(true);
+    let updated = 0;
+    for (const id of selectedIds) {
+      const newQty = Number(batchQty[id]);
+      if (isNaN(newQty) || newQty < 0) continue;
+      const prod = products.find(p => p.id === id);
+      if (!prod || prod.stock_quantity === newQty) continue;
+      await supabase.from("products").update({ stock_quantity: newQty }).eq("id", id);
+      await supabase.from("stock_history").insert({
+        business_id: business.id,
+        product_id: id,
+        changed_by: profile.id,
+        change_type: "batch_update",
+        quantity_before: prod.stock_quantity,
+        quantity_after: newQty,
+        quantity_change: newQty - prod.stock_quantity,
+        notes: "Batch stock update",
+      });
+      updated++;
+    }
+    showToast(`${updated} product${updated !== 1 ? "s" : ""} updated.`, "success");
+    setBatchMode(false);
+    setBatchSelected({});
+    setBatchQty({});
+    setSavingBatch(false);
+    loadProducts();
+  };
+
+  const loadStockHistory = async (product) => {
+    setHistoryModal(product);
+    setLoadingHistory(true);
+    const { data } = await supabase
+      .from("stock_history")
+      .select("*")
+      .eq("product_id", product.id)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    setStockHistory(data || []);
+    setLoadingHistory(false);
+  };
+
+  const stockColor = (p) =>
+    p.stock_quantity <= 0 ? "text-red-600 bg-red-50" :
+    p.stock_quantity <= (p.low_stock_threshold || 10) ? "text-yellow-600 bg-yellow-50" :
+    "text-forest-600 bg-forest-50";
+
+  const stockBorder = (p) =>
+    p.stock_quantity <= 0 ? "border-red-200" :
+    p.stock_quantity <= (p.low_stock_threshold || 10) ? "border-yellow-200" :
+    "border-gray-100";
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col max-w-lg mx-auto">
+      <div className="bg-forest-800 px-4 pt-5 pb-4 flex-shrink-0">
+        <div className="flex items-center justify-between mb-1">
+          <div>
+            <p className="text-gold-400 text-xs font-medium uppercase tracking-widest">Inventory</p>
+            <h1 className="text-ivory-50 font-black text-lg leading-tight">{business.name}</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            {notifications.length > 0 && (
+              <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                {notifications.length}
+              </span>
+            )}
+            <button onClick={onLogout} className="bg-forest-700 text-gold-400 text-xs px-3 py-2 rounded-xl font-medium border border-forest-600">
+              Logout
+            </button>
+          </div>
+        </div>
+        <p className="text-forest-300 text-xs">{branch?.name || "No branch"} · {profile.full_name}</p>
+      </div>
+
+      <div className="bg-forest-900 flex px-2 gap-1 flex-shrink-0">
+        {[
+          { key: "products", label: "Products" },
+          { key: "alerts", label: `Alerts${notifications.length > 0 ? ` (${notifications.length})` : ""}` },
+          { key: "restock", label: "Restock" },
+        ].map((t) => (
+          <button key={t.key} onClick={() => setInvTab(t.key)}
+            className={`flex-1 py-2.5 text-xs font-semibold rounded-t-lg transition-colors ${
+              invTab === t.key ? "bg-ivory-100 text-forest-700" : "text-forest-400"
+            }`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {invTab === "products" && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="px-4 pt-3 pb-2 bg-white border-b border-gray-100 flex-shrink-0">
+            <input type="text" value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search products..."
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-2" />
+            <div className="flex gap-1.5 overflow-x-auto hide-scrollbar">
+              {CATEGORIES.map((cat) => (
+                <button key={cat} onClick={() => setCategoryFilter(cat)}
+                  className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                    categoryFilter === cat ? "bg-forest-600 text-white border-forest-600" : "bg-white text-gray-500 border-gray-200"
+                  }`}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="px-4 py-2 flex items-center justify-between flex-shrink-0">
+            <p className="text-xs text-gray-400">{products.length} product{products.length !== 1 ? "s" : ""}</p>
+            <button onClick={() => { setBatchMode(!batchMode); setBatchSelected({}); setBatchQty({}); }}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${
+                batchMode ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
+              }`}>
+              {batchMode ? "Cancel Batch" : "Batch Update"}
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4 pb-4">
+            {loading ? (
+              <div className="flex justify-center py-8"><div className="w-8 h-8 border-4 border-forest-600 border-t-transparent rounded-full animate-spin"></div></div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-12"><p className="font-semibold text-gray-500 text-sm">No products found</p></div>
+            ) : (
+              <div className="space-y-2">
+                {products.map((p) => (
+                  <div key={p.id} className={`bg-white rounded-xl p-3 border shadow-sm ${stockBorder(p)}`}>
+                    <div className="flex items-center gap-3">
+                      {batchMode && (
+                        <input type="checkbox" checked={!!batchSelected[p.id]}
+                          onChange={(e) => {
+                            setBatchSelected(prev => ({ ...prev, [p.id]: e.target.checked }));
+                            if (e.target.checked && !batchQty[p.id]) setBatchQty(prev => ({ ...prev, [p.id]: String(p.stock_quantity) }));
+                          }}
+                          className="w-5 h-5 rounded accent-forest-600 flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-800 text-sm truncate">{p.name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-gray-400">₱{Number(p.price).toFixed(2)}</span>
+                          {p.category && p.category !== "Others" && (
+                            <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{p.category}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {batchMode && batchSelected[p.id] ? (
+                          <input type="number" value={batchQty[p.id] || ""}
+                            onChange={(e) => setBatchQty(prev => ({ ...prev, [p.id]: e.target.value }))}
+                            className="w-16 border border-forest-300 rounded-lg px-2 py-1.5 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-forest-500" />
+                        ) : (
+                          <span className={`text-sm font-black px-2.5 py-1 rounded-lg ${stockColor(p)}`}>
+                            {p.stock_quantity}
+                          </span>
+                        )}
+                        {!batchMode && (
+                          <div className="flex flex-col gap-1">
+                            <button onClick={() => { setEditModal(p); setEditQty(String(p.stock_quantity)); }}
+                              className="text-xs bg-blue-50 text-blue-600 font-semibold px-2 py-1 rounded-lg">
+                              Edit
+                            </button>
+                            <button onClick={() => loadStockHistory(p)}
+                              className="text-xs bg-gray-50 text-gray-500 font-medium px-2 py-1 rounded-lg">
+                              Log
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {batchMode && Object.values(batchSelected).some(v => v) && (
+            <div className="px-4 py-3 bg-white border-t border-gray-100 flex-shrink-0">
+              <button onClick={saveBatchUpdate} disabled={savingBatch}
+                className="w-full bg-forest-600 text-white font-bold py-3.5 rounded-2xl text-sm disabled:opacity-50 active:scale-95 transition-transform">
+                {savingBatch ? "Saving..." : `Save All (${Object.values(batchSelected).filter(v => v).length} products)`}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {invTab === "alerts" && (
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+          {notifications.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-2xl mb-2">✅</p>
+              <p className="font-semibold text-gray-500 text-sm">No alerts</p>
+              <p className="text-xs text-gray-400 mt-1">All stock levels are healthy!</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Low Stock Alerts</p>
+              {notifications.map((n) => (
+                <div key={n.id} className="bg-white rounded-xl p-3 border border-red-200 shadow-sm">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-red-700">{n.title}</p>
+                      <p className="text-xs text-gray-600 mt-0.5">{n.message}</p>
+                      <p className="text-xs text-gray-400 mt-1">{new Date(n.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</p>
+                    </div>
+                    <button onClick={async () => {
+                      await supabase.from("notifications").update({ is_read: true }).eq("id", n.id);
+                      loadNotifications();
+                    }} className="text-gray-400 text-sm ml-2">✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {invTab === "restock" && (
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div className="text-center mb-4">
+            <button onClick={() => setRestockModal(true)}
+              className="bg-forest-600 text-white font-bold px-6 py-3 rounded-2xl text-sm active:scale-95 transition-transform">
+              + Receive Delivery
+            </button>
+          </div>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Low / Out of Stock</p>
+          {products.filter(p => p.stock_quantity <= (p.low_stock_threshold || 10)).length === 0 ? (
+            <div className="text-center py-8"><p className="text-xs text-gray-400">All products are well-stocked!</p></div>
+          ) : (
+            <div className="space-y-2">
+              {products.filter(p => p.stock_quantity <= (p.low_stock_threshold || 10)).sort((a, b) => a.stock_quantity - b.stock_quantity).map((p) => (
+                <div key={p.id} className={`bg-white rounded-xl p-3 border shadow-sm ${stockBorder(p)}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 text-sm truncate">{p.name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Threshold: {p.low_stock_threshold || 10}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-black px-2.5 py-1 rounded-lg ${stockColor(p)}`}>{p.stock_quantity}</span>
+                      <button onClick={() => { setRestockModal(true); setRestockProduct(p); setRestockSearch(p.name); }}
+                        className="text-xs bg-forest-50 text-forest-600 font-semibold px-3 py-1.5 rounded-lg">
+                        Restock
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {editModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-3xl p-5">
+            <h3 className="font-black text-gray-800 text-base mb-1">Edit Stock</h3>
+            <p className="text-sm text-gray-600 mb-1">{editModal.name}</p>
+            <p className="text-xs text-gray-400 mb-3">Current stock: {editModal.stock_quantity}</p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">New Quantity</p>
+            <input type="number" value={editQty} onChange={(e) => setEditQty(e.target.value)}
+              className="w-full border-2 border-blue-300 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2" />
+            <input type="text" value={editNotes} onChange={(e) => setEditNotes(e.target.value)}
+              placeholder="Reason for change (optional)..."
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-4" />
+            <div className="flex gap-3">
+              <button onClick={() => { setEditModal(null); setEditQty(""); setEditNotes(""); }}
+                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm">Cancel</button>
+              <button onClick={updateStock}
+                className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl text-sm">Update Stock</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {restockModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-black text-gray-800 text-base">Receive Delivery</h3>
+              <button onClick={() => { setRestockModal(false); setRestockProduct(null); setRestockSearch(""); setRestockQty(""); setRestockSupplier(""); setRestockNotes(""); }}
+                className="text-gray-400 text-xl">✕</button>
+            </div>
+            {!restockProduct ? (
+              <>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Search Product</p>
+                <input type="text" value={restockSearch} onChange={(e) => setRestockSearch(e.target.value)}
+                  placeholder="Type product name..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-2" />
+                {restockSearch.trim() && (
+                  <div className="space-y-1 max-h-60 overflow-y-auto">
+                    {products.filter(p => p.name.toLowerCase().includes(restockSearch.toLowerCase())).map(p => (
+                      <button key={p.id} onClick={() => { setRestockProduct(p); setRestockSearch(p.name); }}
+                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-forest-50 active:bg-forest-100 flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-800">{p.name}</span>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${stockColor(p)}`}>{p.stock_quantity}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="bg-forest-50 border border-forest-200 rounded-xl p-3 mb-3">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold text-gray-800 text-sm">{restockProduct.name}</p>
+                      <p className="text-xs text-gray-500">Current stock: {restockProduct.stock_quantity}</p>
+                    </div>
+                    <button onClick={() => { setRestockProduct(null); setRestockSearch(""); }}
+                      className="text-xs text-red-500 font-semibold">Change</button>
+                  </div>
+                </div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Quantity Received</p>
+                <input type="number" value={restockQty} onChange={(e) => setRestockQty(e.target.value)}
+                  placeholder="How many units received?"
+                  className="w-full border-2 border-forest-300 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-forest-500 mb-3" />
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Supplier (Optional)</p>
+                <input type="text" value={restockSupplier} onChange={(e) => setRestockSupplier(e.target.value)}
+                  placeholder="Supplier name..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-2" />
+                <input type="text" value={restockNotes} onChange={(e) => setRestockNotes(e.target.value)}
+                  placeholder="Notes (optional)..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-4" />
+                {restockQty && Number(restockQty) > 0 && (
+                  <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 mb-3">
+                    <p className="text-xs text-blue-700 font-semibold">
+                      New stock will be: {restockProduct.stock_quantity} + {restockQty} = {restockProduct.stock_quantity + Number(restockQty)}
+                    </p>
+                  </div>
+                )}
+                <button onClick={submitRestock} disabled={!restockQty || Number(restockQty) <= 0}
+                  className="w-full bg-forest-600 text-white font-bold py-3.5 rounded-2xl text-sm disabled:opacity-50 active:scale-95 transition-transform">
+                  Confirm Restock
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {historyModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="font-black text-gray-800 text-base">Stock History</h3>
+                <p className="text-xs text-gray-500">{historyModal.name}</p>
+              </div>
+              <button onClick={() => { setHistoryModal(null); setStockHistory([]); }} className="text-gray-400 text-xl">✕</button>
+            </div>
+            {loadingHistory ? (
+              <div className="flex justify-center py-8"><div className="w-8 h-8 border-4 border-forest-600 border-t-transparent rounded-full animate-spin"></div></div>
+            ) : stockHistory.length === 0 ? (
+              <p className="text-center text-xs text-gray-400 py-8">No stock changes recorded yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {stockHistory.map((h) => (
+                  <div key={h.id} className="border border-gray-100 rounded-xl p-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                          h.change_type === "sale" ? "bg-red-50 text-red-600"
+                          : h.change_type === "restock" ? "bg-forest-50 text-forest-600"
+                          : h.change_type === "void" ? "bg-yellow-50 text-yellow-600"
+                          : "bg-blue-50 text-blue-600"
+                        }`}>
+                          {h.change_type === "sale" ? "Sale" : h.change_type === "restock" ? "Restock" : h.change_type === "void" ? "Void" : h.change_type === "batch_update" ? "Batch" : "Edit"}
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">{h.notes || "—"}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-black ${h.quantity_change >= 0 ? "text-forest-600" : "text-red-600"}`}>
+                          {h.quantity_change >= 0 ? "+" : ""}{h.quantity_change}
+                        </p>
+                        <p className="text-xs text-gray-400">{h.quantity_before} → {h.quantity_after}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(h.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // STAFF DASHBOARD
 // ═══════════════════════════════════════════════════════════════
 function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
@@ -4357,20 +5084,32 @@ function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
     );
   }
 
+  if (profile.role === "inventory_staff") {
+    return (
+      <InventoryStaffPanel
+        profile={profile}
+        business={business}
+        branch={branch}
+        onLogout={onLogout}
+        showToast={showToast}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm text-center">
-        <div className="w-20 h-20 bg-green-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
+        <div className="w-20 h-20 bg-forest-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
             <path
               d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"
-              stroke="#16a34a"
+              stroke="#1e5631"
               strokeWidth="1.5"
               strokeLinejoin="round"
             />
             <polyline
               points="9 22 9 12 15 12 15 22"
-              stroke="#16a34a"
+              stroke="#1e5631"
               strokeWidth="1.5"
               strokeLinejoin="round"
             />
@@ -4399,10 +5138,6 @@ function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
             <span className="text-gray-500">Role</span>
             <span className="font-semibold text-gray-800">{ROLE_LABELS[profile.role]}</span>
           </div>
-        </div>
-        <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
-          <p className="text-sm font-semibold text-yellow-800">Inventory Management</p>
-          <p className="text-xs text-yellow-600 mt-1">Coming in Phase 4. Stay tuned!</p>
         </div>
         <button
           onClick={onLogout}
