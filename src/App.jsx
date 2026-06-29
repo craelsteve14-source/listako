@@ -1531,6 +1531,8 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     );
   };
 
+  const PRODUCT_CATEGORIES = ["Beverages", "Snacks", "Household", "Personal Care", "Frozen", "Dairy", "Canned Goods", "Others"];
+
   const ProductModal = ({ existing, onClose }) => {
     const [form, setForm] = useState({
       name: existing?.name || "",
@@ -1538,6 +1540,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
       price: existing?.price || "",
       stock_quantity: existing?.stock_quantity || "",
       low_stock_threshold: existing?.low_stock_threshold || "10",
+      category: existing?.category || "Others",
     });
     const [saving, setSaving] = useState(false);
     const save = async () => {
@@ -1552,6 +1555,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
         price: Number(form.price),
         stock_quantity: Number(form.stock_quantity) || 0,
         low_stock_threshold: Number(form.low_stock_threshold) || 10,
+        category: form.category,
       };
       const { error } = existing
         ? await supabase.from("products").update(payload).eq("id", existing.id)
@@ -1580,6 +1584,14 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             onChange={(v) => setForm((f) => ({ ...f, barcode: v }))}
             placeholder="I-type ang barcode"
           />
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Category</label>
+            <select value={form.category}
+              onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 bg-white">
+              {PRODUCT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <Field
               label="Presyo (₱)"
@@ -2151,20 +2163,27 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                           <p className="text-xs text-gray-400">
                             {p.barcode ? `Barcode: ${p.barcode}` : "Walang barcode"}
                           </p>
-                          <div className="flex items-center gap-2 mt-2">
+                          <div className="flex items-center gap-2 mt-2 flex-wrap">
                             <span className="text-sm font-black text-green-700">
                               ₱{Number(p.price).toFixed(2)}
                             </span>
                             <span
                               className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                                p.stock_quantity <= p.low_stock_threshold
+                                p.stock_quantity <= 0
                                   ? "bg-red-100 text-red-600"
+                                  : p.stock_quantity <= (p.low_stock_threshold || 10)
+                                  ? "bg-yellow-100 text-yellow-600"
                                   : "bg-gray-100 text-gray-500"
                               }`}
                             >
-                              {p.stock_quantity <= p.low_stock_threshold ? "⚠️ " : ""}Stock:{" "}
+                              {p.stock_quantity <= (p.low_stock_threshold || 10) ? "⚠️ " : ""}Stock:{" "}
                               {p.stock_quantity}
                             </span>
+                            {p.category && p.category !== "Others" && (
+                              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600">
+                                {p.category}
+                              </span>
+                            )}
                             {p.no_discount && (
                               <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-orange-100 text-orange-600">
                                 No Discount
@@ -2502,17 +2521,114 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
       hour12: true,
     });
 
+  const paymentLabel = {
+    cash: "Cash", gcash: "GCash", maya: "Maya", card: "Card", utang: "Utang",
+  }[transaction?.payment_method] || "Cash";
+
+  const buildReceiptText = () => {
+    const lines = [];
+    lines.push(business?.name || "Store");
+    if (branch?.name) lines.push(branch.name);
+    lines.push("─".repeat(28));
+    lines.push(`${transaction?.receipt_number}  ${formatDate(transaction?.created_at || new Date())}`);
+    lines.push("─".repeat(28));
+    items.forEach((item) => {
+      lines.push(`${item.product_name}`);
+      lines.push(`  ₱${Number(item.unit_price).toFixed(2)} × ${item.quantity}  =  ₱${Number(item.subtotal).toFixed(2)}`);
+    });
+    lines.push("─".repeat(28));
+    lines.push(`Subtotal: ₱${Number(transaction?.original_amount || transaction?.total_amount).toFixed(2)}`);
+    if (Number(transaction?.discount_amount) > 0) {
+      const discLabel = transaction?.discount_type === "percent"
+        ? `${transaction?.discount_value}%` : `₱${transaction?.discount_value} off`;
+      lines.push(`Discount (${discLabel}): -₱${Number(transaction?.discount_amount).toFixed(2)}`);
+    }
+    lines.push(`Total: ₱${Number(transaction?.total_amount).toFixed(2)}`);
+    lines.push(`Payment: ${paymentLabel}`);
+    if (transaction?.payment_method === "cash") {
+      lines.push(`Cash Tendered: ₱${Number(transaction?.amount_tendered).toFixed(2)}`);
+      lines.push(`Change: ₱${Number(transaction?.change_amount).toFixed(2)}`);
+    }
+    if (transaction?.reference_number) {
+      lines.push(`Ref #: ${transaction.reference_number}`);
+    }
+    if (transaction?.customer_name) {
+      lines.push(`Customer: ${transaction.customer_name}`);
+    }
+    lines.push("─".repeat(28));
+    lines.push(`Cashier: ${cashier?.full_name}`);
+    lines.push("Powered by ListaKo");
+    return lines.join("\n");
+  };
+
+  const handleShare = async () => {
+    const text = buildReceiptText();
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Receipt ${transaction?.receipt_number}`, text });
+      } catch (e) {
+        if (e.name !== "AbortError") {
+          await navigator.clipboard?.writeText(text);
+        }
+      }
+    } else if (navigator.clipboard) {
+      await navigator.clipboard.writeText(text);
+      alert("Receipt copied to clipboard!");
+    }
+  };
+
+  const handlePrint = () => {
+    let printDiv = document.getElementById("print-receipt");
+    if (!printDiv) {
+      printDiv = document.createElement("div");
+      printDiv.id = "print-receipt";
+      printDiv.style.display = "none";
+      document.body.appendChild(printDiv);
+    }
+    const discountHtml = Number(transaction?.discount_amount) > 0
+      ? `<div class="receipt-row"><span>Discount</span><span>-₱${Number(transaction?.discount_amount).toFixed(2)}</span></div>` : "";
+    const cashHtml = transaction?.payment_method === "cash"
+      ? `<div class="receipt-row"><span>Cash</span><span>₱${Number(transaction?.amount_tendered).toFixed(2)}</span></div>
+         <div class="receipt-row receipt-total"><span>Change</span><span>₱${Number(transaction?.change_amount).toFixed(2)}</span></div>` : "";
+    const refHtml = transaction?.reference_number
+      ? `<div class="receipt-row"><span>Ref #</span><span>${transaction.reference_number}</span></div>` : "";
+    printDiv.innerHTML = `
+      <div class="receipt-header">
+        <h2>${business?.name || "Store"}</h2>
+        <p>${branch?.name || ""}</p>
+        <p>${transaction?.receipt_number} | ${formatDate(transaction?.created_at || new Date())}</p>
+      </div>
+      <div class="receipt-divider"></div>
+      ${items.map(i => `<div class="receipt-item"><div class="receipt-row"><span class="item-name">${i.product_name}</span><span>₱${Number(i.subtotal).toFixed(2)}</span></div><div class="item-detail">₱${Number(i.unit_price).toFixed(2)} × ${i.quantity}</div></div>`).join("")}
+      <div class="receipt-divider"></div>
+      <div class="receipt-row"><span>Subtotal</span><span>₱${Number(transaction?.original_amount || transaction?.total_amount).toFixed(2)}</span></div>
+      ${discountHtml}
+      <div class="receipt-row receipt-total"><span>TOTAL</span><span>₱${Number(transaction?.total_amount).toFixed(2)}</span></div>
+      <div class="receipt-row"><span>Payment</span><span>${paymentLabel}</span></div>
+      ${cashHtml}
+      ${refHtml}
+      <div class="receipt-divider"></div>
+      <div class="receipt-footer">
+        <p>Cashier: ${cashier?.full_name || ""}</p>
+        <p>Powered by ListaKo</p>
+      </div>
+    `;
+    printDiv.style.display = "block";
+    window.print();
+    printDiv.style.display = "none";
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 px-4">
-      <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl">
-        <div className="bg-green-700 px-5 py-5 text-center">
+      <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+        <div className="bg-green-700 px-5 py-5 text-center flex-shrink-0">
           <p className="text-green-200 text-xs font-medium uppercase tracking-widest mb-1">
             Official Receipt
           </p>
           <h2 className="text-white font-black text-lg">{business?.name}</h2>
           <p className="text-green-300 text-xs mt-1">{branch?.name || ""}</p>
         </div>
-        <div className="px-5 py-4">
+        <div className="px-5 py-4 overflow-y-auto flex-1">
           <div className="flex justify-between text-xs text-gray-400 mb-3">
             <span>{transaction?.receipt_number}</span>
             <span>{formatDate(transaction?.created_at || new Date())}</span>
@@ -2544,7 +2660,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
             {Number(transaction?.discount_amount) > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-green-600 font-medium">
-                  🏷️ Discount ({transaction?.discount_type === "percent"
+                  Discount ({transaction?.discount_type === "percent"
                     ? `${transaction?.discount_value}%`
                     : `₱${transaction?.discount_value} off`})
                 </span>
@@ -2560,17 +2676,47 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
               </span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500">Cash Tendered</span>
-              <span className="font-medium text-gray-800">
-                ₱{Number(transaction?.amount_tendered).toFixed(2)}
+              <span className="text-gray-500">Payment</span>
+              <span className={`font-semibold px-2 py-0.5 rounded-full text-xs ${
+                transaction?.payment_method === "gcash" ? "bg-blue-50 text-blue-600"
+                : transaction?.payment_method === "maya" ? "bg-green-50 text-green-600"
+                : transaction?.payment_method === "card" ? "bg-purple-50 text-purple-600"
+                : transaction?.payment_method === "utang" ? "bg-orange-50 text-orange-600"
+                : "bg-gray-50 text-gray-600"
+              }`}>
+                {paymentLabel}
               </span>
             </div>
-            <div className="flex justify-between text-base font-black">
-              <span className="text-gray-800">Change</span>
-              <span className="text-green-700">
-                ₱{Number(transaction?.change_amount).toFixed(2)}
-              </span>
-            </div>
+            {transaction?.payment_method === "cash" && (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Cash Tendered</span>
+                  <span className="font-medium text-gray-800">
+                    ₱{Number(transaction?.amount_tendered).toFixed(2)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-base font-black">
+                  <span className="text-gray-800">Change</span>
+                  <span className="text-green-700">
+                    ₱{Number(transaction?.change_amount).toFixed(2)}
+                  </span>
+                </div>
+              </>
+            )}
+            {transaction?.reference_number && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Ref #</span>
+                <span className="font-mono font-semibold text-gray-800">
+                  {transaction.reference_number}
+                </span>
+              </div>
+            )}
+            {transaction?.customer_name && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500">Customer</span>
+                <span className="font-medium text-gray-800">{transaction.customer_name}</span>
+              </div>
+            )}
           </div>
           <div className="border-t border-dashed border-gray-200 mt-3 mb-3"></div>
           <div className="text-center">
@@ -2578,19 +2724,35 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
             <p className="text-xs text-gray-300 mt-1">Powered by ListaKo</p>
           </div>
         </div>
-        <div className="px-5 pb-5 flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
-          >
-            Close
-          </button>
-          <button
-            onClick={onNewTransaction}
-            className="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl text-sm"
-          >
-            New Sale
-          </button>
+        <div className="px-5 pb-5 flex-shrink-0">
+          <div className="flex gap-2 mb-3">
+            <button
+              onClick={handleShare}
+              className="flex-1 bg-blue-50 text-blue-600 font-semibold py-2.5 rounded-xl text-xs border border-blue-100 active:bg-blue-100"
+            >
+              Share Receipt
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex-1 bg-purple-50 text-purple-600 font-semibold py-2.5 rounded-xl text-xs border border-purple-100 active:bg-purple-100"
+            >
+              Print Receipt
+            </button>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
+            >
+              Close
+            </button>
+            <button
+              onClick={onNewTransaction}
+              className="flex-1 bg-green-600 text-white font-bold py-3 rounded-xl text-sm"
+            >
+              New Sale
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -2718,6 +2880,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState("All");
   const [processing, setProcessing] = useState(false);
   const [receipt, setReceipt] = useState(null);
   const [receiptItems, setReceiptItems] = useState([]);
@@ -2755,25 +2918,33 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
     );
   };
 
-  // Search products
+  const CATEGORIES = ["All", "Beverages", "Snacks", "Household", "Personal Care", "Frozen", "Dairy", "Canned Goods", "Others"];
+
+  // Search products with category filter
   useEffect(() => {
-    if (!searchQuery.trim()) {
+    if (!searchQuery.trim() && categoryFilter === "All") {
       setSearchResults([]);
       return;
     }
     const timer = setTimeout(async () => {
       setSearching(true);
-      const { data } = await supabase
+      let query = supabase
         .from("products")
         .select("*")
         .eq("business_id", business.id)
-        .ilike("name", `%${searchQuery}%`)
-        .limit(8);
+        .eq("status", "active");
+      if (searchQuery.trim()) {
+        query = query.ilike("name", `%${searchQuery}%`);
+      }
+      if (categoryFilter !== "All") {
+        query = query.eq("category", categoryFilter);
+      }
+      const { data } = await query.order("name").limit(20);
       setSearchResults(data || []);
       setSearching(false);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery, business.id]);
+  }, [searchQuery, categoryFilter, business.id]);
 
   // State for new product found modal
   const [newProductModal, setNewProductModal] = useState(null);
@@ -3213,19 +3384,40 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
         });
       }
 
-      // Deduct stock — non-blocking
+      // Deduct stock, log history, check low stock
       for (const item of cart) {
         try {
           const { data: prod } = await supabase
             .from("products")
-            .select("stock_quantity")
+            .select("stock_quantity, low_stock_threshold, name")
             .eq("id", item.product_id)
             .maybeSingle();
           if (prod) {
+            const newQty = Math.max(0, prod.stock_quantity - item.quantity);
             await supabase
               .from("products")
-              .update({ stock_quantity: Math.max(0, prod.stock_quantity - item.quantity) })
+              .update({ stock_quantity: newQty })
               .eq("id", item.product_id);
+            await supabase.from("stock_history").insert({
+              business_id: business.id,
+              product_id: item.product_id,
+              changed_by: profile.id,
+              change_type: "sale",
+              quantity_before: prod.stock_quantity,
+              quantity_after: newQty,
+              quantity_change: -item.quantity,
+              notes: `Sale: ${txn.receipt_number}`,
+            });
+            if (newQty <= (prod.low_stock_threshold || 10) && prod.stock_quantity > (prod.low_stock_threshold || 10)) {
+              await supabase.from("notifications").insert({
+                business_id: business.id,
+                type: "low_stock",
+                title: "Low Stock Alert",
+                message: `${prod.name} is down to ${newQty} units (threshold: ${prod.low_stock_threshold || 10}).`,
+                product_id: item.product_id,
+                is_read: false,
+              });
+            }
           }
         } catch (stockErr) {
           console.warn("Stock deduction skipped:", stockErr);
@@ -3449,6 +3641,23 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             >
               📷 Scan
             </button>
+          </div>
+
+          {/* Category filter chips */}
+          <div className="px-4 pb-2 flex gap-1.5 overflow-x-auto flex-shrink-0 hide-scrollbar">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setCategoryFilter(cat)}
+                className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                  categoryFilter === cat
+                    ? "bg-green-600 text-white border-green-600"
+                    : "bg-white text-gray-500 border-gray-200"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
           </div>
 
           {/* Search results */}
@@ -4342,12 +4551,523 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// INVENTORY STAFF PANEL
+// ═══════════════════════════════════════════════════════════════
+function InventoryStaffPanel({ profile, business, branch, onLogout, showToast }) {
+  const CATEGORIES = ["All", "Beverages", "Snacks", "Household", "Personal Care", "Frozen", "Dairy", "Canned Goods", "Others"];
+  const [invTab, setInvTab] = useState("products");
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [editModal, setEditModal] = useState(null);
+  const [editQty, setEditQty] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [restockModal, setRestockModal] = useState(false);
+  const [restockProduct, setRestockProduct] = useState(null);
+  const [restockSearch, setRestockSearch] = useState("");
+  const [restockQty, setRestockQty] = useState("");
+  const [restockSupplier, setRestockSupplier] = useState("");
+  const [restockNotes, setRestockNotes] = useState("");
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchSelected, setBatchSelected] = useState({});
+  const [batchQty, setBatchQty] = useState({});
+  const [savingBatch, setSavingBatch] = useState(false);
+  const [historyModal, setHistoryModal] = useState(null);
+  const [stockHistory, setStockHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+
+  const loadProducts = useCallback(async () => {
+    setLoading(true);
+    let query = supabase
+      .from("products")
+      .select("*")
+      .eq("business_id", business.id)
+      .eq("status", "active");
+    if (categoryFilter !== "All") query = query.eq("category", categoryFilter);
+    if (searchQuery.trim()) query = query.ilike("name", `%${searchQuery}%`);
+    const { data } = await query.order("name");
+    setProducts(data || []);
+    setLoading(false);
+  }, [business.id, categoryFilter, searchQuery]);
+
+  const loadNotifications = useCallback(async () => {
+    const { data } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("business_id", business.id)
+      .in("type", ["low_stock"])
+      .eq("is_read", false)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    setNotifications(data || []);
+  }, [business.id]);
+
+  useEffect(() => { loadProducts(); }, [loadProducts]);
+  useEffect(() => { loadNotifications(); const iv = setInterval(loadNotifications, 15000); return () => clearInterval(iv); }, [loadNotifications]);
+
+  const updateStock = async () => {
+    const newQty = Number(editQty);
+    if (isNaN(newQty) || newQty < 0) return showToast("Enter a valid quantity.", "error");
+    const oldQty = editModal.stock_quantity;
+    await supabase.from("products").update({ stock_quantity: newQty }).eq("id", editModal.id);
+    await supabase.from("stock_history").insert({
+      business_id: business.id,
+      product_id: editModal.id,
+      changed_by: profile.id,
+      change_type: "manual_edit",
+      quantity_before: oldQty,
+      quantity_after: newQty,
+      quantity_change: newQty - oldQty,
+      notes: editNotes.trim() || "Manual stock update",
+    });
+    showToast(`${editModal.name} stock updated to ${newQty}.`, "success");
+    setEditModal(null);
+    setEditQty("");
+    setEditNotes("");
+    loadProducts();
+  };
+
+  const submitRestock = async () => {
+    if (!restockProduct) return showToast("Select a product first.", "error");
+    const qty = Number(restockQty);
+    if (isNaN(qty) || qty <= 0) return showToast("Enter a valid quantity.", "error");
+    const oldQty = restockProduct.stock_quantity;
+    const newQty = oldQty + qty;
+    await supabase.from("products").update({ stock_quantity: newQty }).eq("id", restockProduct.id);
+    await supabase.from("stock_history").insert({
+      business_id: business.id,
+      product_id: restockProduct.id,
+      changed_by: profile.id,
+      change_type: "restock",
+      quantity_before: oldQty,
+      quantity_after: newQty,
+      quantity_change: qty,
+      notes: restockSupplier.trim() ? `Supplier: ${restockSupplier.trim()}. ${restockNotes.trim()}` : restockNotes.trim() || "Delivery received",
+    });
+    showToast(`${restockProduct.name}: +${qty} units restocked (now ${newQty}).`, "success");
+    setRestockModal(false);
+    setRestockProduct(null);
+    setRestockSearch("");
+    setRestockQty("");
+    setRestockSupplier("");
+    setRestockNotes("");
+    loadProducts();
+  };
+
+  const saveBatchUpdate = async () => {
+    const selectedIds = Object.keys(batchSelected).filter(id => batchSelected[id]);
+    if (selectedIds.length === 0) return showToast("No products selected.", "error");
+    setSavingBatch(true);
+    let updated = 0;
+    for (const id of selectedIds) {
+      const newQty = Number(batchQty[id]);
+      if (isNaN(newQty) || newQty < 0) continue;
+      const prod = products.find(p => p.id === id);
+      if (!prod || prod.stock_quantity === newQty) continue;
+      await supabase.from("products").update({ stock_quantity: newQty }).eq("id", id);
+      await supabase.from("stock_history").insert({
+        business_id: business.id,
+        product_id: id,
+        changed_by: profile.id,
+        change_type: "batch_update",
+        quantity_before: prod.stock_quantity,
+        quantity_after: newQty,
+        quantity_change: newQty - prod.stock_quantity,
+        notes: "Batch stock update",
+      });
+      updated++;
+    }
+    showToast(`${updated} product${updated !== 1 ? "s" : ""} updated.`, "success");
+    setBatchMode(false);
+    setBatchSelected({});
+    setBatchQty({});
+    setSavingBatch(false);
+    loadProducts();
+  };
+
+  const loadStockHistory = async (product) => {
+    setHistoryModal(product);
+    setLoadingHistory(true);
+    const { data } = await supabase
+      .from("stock_history")
+      .select("*")
+      .eq("product_id", product.id)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    setStockHistory(data || []);
+    setLoadingHistory(false);
+  };
+
+  const stockColor = (p) =>
+    p.stock_quantity <= 0 ? "text-red-600 bg-red-50" :
+    p.stock_quantity <= (p.low_stock_threshold || 10) ? "text-yellow-600 bg-yellow-50" :
+    "text-green-600 bg-green-50";
+
+  const stockBorder = (p) =>
+    p.stock_quantity <= 0 ? "border-red-200" :
+    p.stock_quantity <= (p.low_stock_threshold || 10) ? "border-yellow-200" :
+    "border-gray-100";
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col max-w-lg mx-auto">
+      <div className="bg-green-700 px-4 pt-5 pb-4 flex-shrink-0">
+        <div className="flex items-center justify-between mb-1">
+          <div>
+            <p className="text-green-200 text-xs font-medium uppercase tracking-widest">Inventory</p>
+            <h1 className="text-white font-black text-lg leading-tight">{business.name}</h1>
+          </div>
+          <div className="flex items-center gap-2">
+            {notifications.length > 0 && (
+              <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                {notifications.length}
+              </span>
+            )}
+            <button onClick={onLogout} className="bg-green-800 bg-opacity-50 text-green-100 text-xs px-3 py-2 rounded-xl font-medium">
+              Logout
+            </button>
+          </div>
+        </div>
+        <p className="text-green-300 text-xs">{branch?.name || "No branch"} · {profile.full_name}</p>
+      </div>
+
+      <div className="bg-green-800 flex px-2 gap-1 flex-shrink-0">
+        {[
+          { key: "products", label: "Products" },
+          { key: "alerts", label: `Alerts${notifications.length > 0 ? ` (${notifications.length})` : ""}` },
+          { key: "restock", label: "Restock" },
+        ].map((t) => (
+          <button key={t.key} onClick={() => setInvTab(t.key)}
+            className={`flex-1 py-2.5 text-xs font-semibold rounded-t-lg transition-colors ${
+              invTab === t.key ? "bg-gray-50 text-green-700" : "text-green-300"
+            }`}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {invTab === "products" && (
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="px-4 pt-3 pb-2 bg-white border-b border-gray-100 flex-shrink-0">
+            <input type="text" value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search products..."
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-2" />
+            <div className="flex gap-1.5 overflow-x-auto hide-scrollbar">
+              {CATEGORIES.map((cat) => (
+                <button key={cat} onClick={() => setCategoryFilter(cat)}
+                  className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold border ${
+                    categoryFilter === cat ? "bg-green-600 text-white border-green-600" : "bg-white text-gray-500 border-gray-200"
+                  }`}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="px-4 py-2 flex items-center justify-between flex-shrink-0">
+            <p className="text-xs text-gray-400">{products.length} product{products.length !== 1 ? "s" : ""}</p>
+            <button onClick={() => { setBatchMode(!batchMode); setBatchSelected({}); setBatchQty({}); }}
+              className={`text-xs font-semibold px-3 py-1.5 rounded-lg ${
+                batchMode ? "bg-red-50 text-red-600" : "bg-blue-50 text-blue-600"
+              }`}>
+              {batchMode ? "Cancel Batch" : "Batch Update"}
+            </button>
+          </div>
+
+          <div className="flex-1 overflow-y-auto px-4 pb-4">
+            {loading ? (
+              <div className="flex justify-center py-8"><div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div></div>
+            ) : products.length === 0 ? (
+              <div className="text-center py-12"><p className="font-semibold text-gray-500 text-sm">No products found</p></div>
+            ) : (
+              <div className="space-y-2">
+                {products.map((p) => (
+                  <div key={p.id} className={`bg-white rounded-xl p-3 border shadow-sm ${stockBorder(p)}`}>
+                    <div className="flex items-center gap-3">
+                      {batchMode && (
+                        <input type="checkbox" checked={!!batchSelected[p.id]}
+                          onChange={(e) => {
+                            setBatchSelected(prev => ({ ...prev, [p.id]: e.target.checked }));
+                            if (e.target.checked && !batchQty[p.id]) setBatchQty(prev => ({ ...prev, [p.id]: String(p.stock_quantity) }));
+                          }}
+                          className="w-5 h-5 rounded accent-green-600 flex-shrink-0" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-gray-800 text-sm truncate">{p.name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span className="text-xs text-gray-400">₱{Number(p.price).toFixed(2)}</span>
+                          {p.category && p.category !== "Others" && (
+                            <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{p.category}</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {batchMode && batchSelected[p.id] ? (
+                          <input type="number" value={batchQty[p.id] || ""}
+                            onChange={(e) => setBatchQty(prev => ({ ...prev, [p.id]: e.target.value }))}
+                            className="w-16 border border-green-300 rounded-lg px-2 py-1.5 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-green-500" />
+                        ) : (
+                          <span className={`text-sm font-black px-2.5 py-1 rounded-lg ${stockColor(p)}`}>
+                            {p.stock_quantity}
+                          </span>
+                        )}
+                        {!batchMode && (
+                          <div className="flex flex-col gap-1">
+                            <button onClick={() => { setEditModal(p); setEditQty(String(p.stock_quantity)); }}
+                              className="text-xs bg-blue-50 text-blue-600 font-semibold px-2 py-1 rounded-lg">
+                              Edit
+                            </button>
+                            <button onClick={() => loadStockHistory(p)}
+                              className="text-xs bg-gray-50 text-gray-500 font-medium px-2 py-1 rounded-lg">
+                              Log
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {batchMode && Object.values(batchSelected).some(v => v) && (
+            <div className="px-4 py-3 bg-white border-t border-gray-100 flex-shrink-0">
+              <button onClick={saveBatchUpdate} disabled={savingBatch}
+                className="w-full bg-green-600 text-white font-bold py-3.5 rounded-2xl text-sm disabled:opacity-50 active:scale-95 transition-transform">
+                {savingBatch ? "Saving..." : `Save All (${Object.values(batchSelected).filter(v => v).length} products)`}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {invTab === "alerts" && (
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+          {notifications.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-2xl mb-2">✅</p>
+              <p className="font-semibold text-gray-500 text-sm">No alerts</p>
+              <p className="text-xs text-gray-400 mt-1">All stock levels are healthy!</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Low Stock Alerts</p>
+              {notifications.map((n) => (
+                <div key={n.id} className="bg-white rounded-xl p-3 border border-red-200 shadow-sm">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-red-700">{n.title}</p>
+                      <p className="text-xs text-gray-600 mt-0.5">{n.message}</p>
+                      <p className="text-xs text-gray-400 mt-1">{new Date(n.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</p>
+                    </div>
+                    <button onClick={async () => {
+                      await supabase.from("notifications").update({ is_read: true }).eq("id", n.id);
+                      loadNotifications();
+                    }} className="text-gray-400 text-sm ml-2">✕</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {invTab === "restock" && (
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          <div className="text-center mb-4">
+            <button onClick={() => setRestockModal(true)}
+              className="bg-green-600 text-white font-bold px-6 py-3 rounded-2xl text-sm active:scale-95 transition-transform">
+              + Receive Delivery
+            </button>
+          </div>
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Low / Out of Stock</p>
+          {products.filter(p => p.stock_quantity <= (p.low_stock_threshold || 10)).length === 0 ? (
+            <div className="text-center py-8"><p className="text-xs text-gray-400">All products are well-stocked!</p></div>
+          ) : (
+            <div className="space-y-2">
+              {products.filter(p => p.stock_quantity <= (p.low_stock_threshold || 10)).sort((a, b) => a.stock_quantity - b.stock_quantity).map((p) => (
+                <div key={p.id} className={`bg-white rounded-xl p-3 border shadow-sm ${stockBorder(p)}`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 text-sm truncate">{p.name}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Threshold: {p.low_stock_threshold || 10}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-sm font-black px-2.5 py-1 rounded-lg ${stockColor(p)}`}>{p.stock_quantity}</span>
+                      <button onClick={() => { setRestockModal(true); setRestockProduct(p); setRestockSearch(p.name); }}
+                        className="text-xs bg-green-50 text-green-600 font-semibold px-3 py-1.5 rounded-lg">
+                        Restock
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {editModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-3xl p-5">
+            <h3 className="font-black text-gray-800 text-base mb-1">Edit Stock</h3>
+            <p className="text-sm text-gray-600 mb-1">{editModal.name}</p>
+            <p className="text-xs text-gray-400 mb-3">Current stock: {editModal.stock_quantity}</p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">New Quantity</p>
+            <input type="number" value={editQty} onChange={(e) => setEditQty(e.target.value)}
+              className="w-full border-2 border-blue-300 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2" />
+            <input type="text" value={editNotes} onChange={(e) => setEditNotes(e.target.value)}
+              placeholder="Reason for change (optional)..."
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-4" />
+            <div className="flex gap-3">
+              <button onClick={() => { setEditModal(null); setEditQty(""); setEditNotes(""); }}
+                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm">Cancel</button>
+              <button onClick={updateStock}
+                className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl text-sm">Update Stock</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {restockModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-black text-gray-800 text-base">Receive Delivery</h3>
+              <button onClick={() => { setRestockModal(false); setRestockProduct(null); setRestockSearch(""); setRestockQty(""); setRestockSupplier(""); setRestockNotes(""); }}
+                className="text-gray-400 text-xl">✕</button>
+            </div>
+            {!restockProduct ? (
+              <>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Search Product</p>
+                <input type="text" value={restockSearch} onChange={(e) => setRestockSearch(e.target.value)}
+                  placeholder="Type product name..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-2" />
+                {restockSearch.trim() && (
+                  <div className="space-y-1 max-h-60 overflow-y-auto">
+                    {products.filter(p => p.name.toLowerCase().includes(restockSearch.toLowerCase())).map(p => (
+                      <button key={p.id} onClick={() => { setRestockProduct(p); setRestockSearch(p.name); }}
+                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-green-50 active:bg-green-100 flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-800">{p.name}</span>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${stockColor(p)}`}>{p.stock_quantity}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="bg-green-50 border border-green-200 rounded-xl p-3 mb-3">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold text-gray-800 text-sm">{restockProduct.name}</p>
+                      <p className="text-xs text-gray-500">Current stock: {restockProduct.stock_quantity}</p>
+                    </div>
+                    <button onClick={() => { setRestockProduct(null); setRestockSearch(""); }}
+                      className="text-xs text-red-500 font-semibold">Change</button>
+                  </div>
+                </div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Quantity Received</p>
+                <input type="number" value={restockQty} onChange={(e) => setRestockQty(e.target.value)}
+                  placeholder="How many units received?"
+                  className="w-full border-2 border-green-300 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-green-500 mb-3" />
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Supplier (Optional)</p>
+                <input type="text" value={restockSupplier} onChange={(e) => setRestockSupplier(e.target.value)}
+                  placeholder="Supplier name..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-2" />
+                <input type="text" value={restockNotes} onChange={(e) => setRestockNotes(e.target.value)}
+                  placeholder="Notes (optional)..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 mb-4" />
+                {restockQty && Number(restockQty) > 0 && (
+                  <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 mb-3">
+                    <p className="text-xs text-blue-700 font-semibold">
+                      New stock will be: {restockProduct.stock_quantity} + {restockQty} = {restockProduct.stock_quantity + Number(restockQty)}
+                    </p>
+                  </div>
+                )}
+                <button onClick={submitRestock} disabled={!restockQty || Number(restockQty) <= 0}
+                  className="w-full bg-green-600 text-white font-bold py-3.5 rounded-2xl text-sm disabled:opacity-50 active:scale-95 transition-transform">
+                  Confirm Restock
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {historyModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="font-black text-gray-800 text-base">Stock History</h3>
+                <p className="text-xs text-gray-500">{historyModal.name}</p>
+              </div>
+              <button onClick={() => { setHistoryModal(null); setStockHistory([]); }} className="text-gray-400 text-xl">✕</button>
+            </div>
+            {loadingHistory ? (
+              <div className="flex justify-center py-8"><div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin"></div></div>
+            ) : stockHistory.length === 0 ? (
+              <p className="text-center text-xs text-gray-400 py-8">No stock changes recorded yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {stockHistory.map((h) => (
+                  <div key={h.id} className="border border-gray-100 rounded-xl p-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                          h.change_type === "sale" ? "bg-red-50 text-red-600"
+                          : h.change_type === "restock" ? "bg-green-50 text-green-600"
+                          : h.change_type === "void" ? "bg-yellow-50 text-yellow-600"
+                          : "bg-blue-50 text-blue-600"
+                        }`}>
+                          {h.change_type === "sale" ? "Sale" : h.change_type === "restock" ? "Restock" : h.change_type === "void" ? "Void" : h.change_type === "batch_update" ? "Batch" : "Edit"}
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">{h.notes || "—"}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-black ${h.quantity_change >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          {h.quantity_change >= 0 ? "+" : ""}{h.quantity_change}
+                        </p>
+                        <p className="text-xs text-gray-400">{h.quantity_before} → {h.quantity_after}</p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {new Date(h.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // STAFF DASHBOARD
 // ═══════════════════════════════════════════════════════════════
 function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
   if (profile.role === "cashier") {
     return (
       <CashierPOS
+        profile={profile}
+        business={business}
+        branch={branch}
+        onLogout={onLogout}
+        showToast={showToast}
+      />
+    );
+  }
+
+  if (profile.role === "inventory_staff") {
+    return (
+      <InventoryStaffPanel
         profile={profile}
         business={business}
         branch={branch}
@@ -4399,10 +5119,6 @@ function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
             <span className="text-gray-500">Role</span>
             <span className="font-semibold text-gray-800">{ROLE_LABELS[profile.role]}</span>
           </div>
-        </div>
-        <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-2xl p-4">
-          <p className="text-sm font-semibold text-yellow-800">Inventory Management</p>
-          <p className="text-xs text-yellow-600 mt-1">Coming in Phase 4. Stay tuned!</p>
         </div>
         <button
           onClick={onLogout}
