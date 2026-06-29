@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useZxing } from "react-zxing";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 // ═══════════════════════════════════════════════════════════════
 // SUPABASE CLIENT
@@ -1452,6 +1453,688 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════
+// ANALYTICS DASHBOARD (Phase 6)
+// ═══════════════════════════════════════════════════════════════
+const CHART_COLORS = ["#1e5631", "#d4af37", "#3d7249", "#c9a84c", "#6b9a74", "#a8872a", "#a8c5af", "#866a22", "#d4e2d7", "#6b5520"];
+
+function AnalyticsDashboard({ business, branches, showToast }) {
+  const [analyticsTab, setAnalyticsTab] = useState("revenue");
+  const [timeFilter, setTimeFilter] = useState("week");
+  const [branchFilter, setBranchFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [revenueData, setRevenueData] = useState({ daily: [], weekly: [], monthly: [] });
+  const [bestSellers, setBestSellers] = useState([]);
+  const [slowMovers, setSlowMovers] = useState([]);
+  const [cashierStats, setCashierStats] = useState([]);
+  const [branchStats, setBranchStats] = useState([]);
+  const [shifts, setShifts] = useState([]);
+  const [exportingPDF, setExportingPDF] = useState(false);
+
+  const ANALYTICS_TABS = [
+    { key: "revenue", label: "Revenue" },
+    { key: "products", label: "Products" },
+    { key: "cashiers", label: "Cashiers" },
+    { key: "branches", label: "Branches" },
+    { key: "shifts", label: "Shifts" },
+  ];
+
+  const TIME_FILTERS = [
+    { key: "today", label: "Today" },
+    { key: "week", label: "This Week" },
+    { key: "month", label: "This Month" },
+  ];
+
+  const getDateRange = useCallback((filter) => {
+    const now = new Date();
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+    const start = new Date(now);
+    if (filter === "today") {
+      start.setHours(0, 0, 0, 0);
+    } else if (filter === "week") {
+      start.setDate(now.getDate() - 6);
+      start.setHours(0, 0, 0, 0);
+    } else {
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+    }
+    return { start, end };
+  }, []);
+
+  const fetchRevenue = useCallback(async () => {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    let query = supabase
+      .from("transactions")
+      .select("total_amount, created_at, branch_id")
+      .eq("business_id", business.id)
+      .eq("status", "completed")
+      .gte("created_at", sevenDaysAgo.toISOString())
+      .order("created_at");
+    if (branchFilter !== "all") query = query.eq("branch_id", branchFilter);
+    const { data: txns } = await query;
+
+    const dailyMap = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const key = d.toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric" });
+      dailyMap[key] = 0;
+    }
+    (txns || []).forEach((tx) => {
+      const d = new Date(tx.created_at);
+      const key = d.toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric" });
+      if (dailyMap[key] !== undefined) dailyMap[key] += Number(tx.total_amount);
+    });
+    const daily = Object.entries(dailyMap).map(([name, revenue]) => ({ name, revenue: Math.round(revenue * 100) / 100 }));
+
+    const fourWeeksAgo = new Date(now);
+    fourWeeksAgo.setDate(now.getDate() - 27);
+    fourWeeksAgo.setHours(0, 0, 0, 0);
+    let wQuery = supabase
+      .from("transactions")
+      .select("total_amount, created_at")
+      .eq("business_id", business.id)
+      .eq("status", "completed")
+      .gte("created_at", fourWeeksAgo.toISOString());
+    if (branchFilter !== "all") wQuery = wQuery.eq("branch_id", branchFilter);
+    const { data: wTxns } = await wQuery;
+    const weeklyMap = {};
+    for (let w = 3; w >= 0; w--) {
+      const wStart = new Date(now);
+      wStart.setDate(now.getDate() - (w * 7 + 6));
+      const wEnd = new Date(now);
+      wEnd.setDate(now.getDate() - w * 7);
+      const label = `Week ${4 - w}`;
+      weeklyMap[label] = 0;
+      (wTxns || []).forEach((tx) => {
+        const d = new Date(tx.created_at);
+        if (d >= wStart && d <= wEnd) weeklyMap[label] += Number(tx.total_amount);
+      });
+    }
+    const weekly = Object.entries(weeklyMap).map(([name, revenue]) => ({ name, revenue: Math.round(revenue * 100) / 100 }));
+
+    const sixMonthsAgo = new Date(now);
+    sixMonthsAgo.setMonth(now.getMonth() - 5);
+    sixMonthsAgo.setDate(1);
+    sixMonthsAgo.setHours(0, 0, 0, 0);
+    let mQuery = supabase
+      .from("transactions")
+      .select("total_amount, created_at")
+      .eq("business_id", business.id)
+      .eq("status", "completed")
+      .gte("created_at", sixMonthsAgo.toISOString());
+    if (branchFilter !== "all") mQuery = mQuery.eq("branch_id", branchFilter);
+    const { data: mTxns } = await mQuery;
+    const monthlyMap = {};
+    for (let m = 5; m >= 0; m--) {
+      const mDate = new Date(now);
+      mDate.setMonth(now.getMonth() - m);
+      const label = mDate.toLocaleDateString("en-PH", { month: "short", year: "2-digit" });
+      monthlyMap[label] = 0;
+    }
+    (mTxns || []).forEach((tx) => {
+      const d = new Date(tx.created_at);
+      const label = d.toLocaleDateString("en-PH", { month: "short", year: "2-digit" });
+      if (monthlyMap[label] !== undefined) monthlyMap[label] += Number(tx.total_amount);
+    });
+    const monthly = Object.entries(monthlyMap).map(([name, revenue]) => ({ name, revenue: Math.round(revenue * 100) / 100 }));
+
+    setRevenueData({ daily, weekly, monthly });
+  }, [business.id, branchFilter]);
+
+  const fetchBestSellers = useCallback(async () => {
+    const { start } = getDateRange(timeFilter);
+    let query = supabase
+      .from("transaction_items")
+      .select("product_id, product_name, quantity, subtotal, transactions!inner(business_id, status, created_at, branch_id)")
+      .eq("transactions.business_id", business.id)
+      .eq("transactions.status", "completed")
+      .gte("transactions.created_at", start.toISOString());
+    if (branchFilter !== "all") query = query.eq("transactions.branch_id", branchFilter);
+    const { data } = await query;
+
+    const productMap = {};
+    (data || []).forEach((item) => {
+      if (!productMap[item.product_id]) {
+        productMap[item.product_id] = { name: item.product_name, qty: 0, revenue: 0 };
+      }
+      productMap[item.product_id].qty += item.quantity;
+      productMap[item.product_id].revenue += Number(item.subtotal);
+    });
+    const sorted = Object.entries(productMap)
+      .map(([id, v]) => ({ id, ...v }))
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 10);
+    setBestSellers(sorted);
+  }, [business.id, timeFilter, branchFilter, getDateRange]);
+
+  const fetchSlowMovers = useCallback(async () => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    let query = supabase
+      .from("transaction_items")
+      .select("product_id, transactions!inner(business_id, status, created_at)")
+      .eq("transactions.business_id", business.id)
+      .eq("transactions.status", "completed")
+      .gte("transactions.created_at", thirtyDaysAgo.toISOString());
+    const { data: recentSales } = await query;
+    const soldIds = new Set((recentSales || []).map((i) => i.product_id));
+
+    const { data: allProducts } = await supabase
+      .from("products")
+      .select("id, name, price, stock_quantity, category")
+      .eq("business_id", business.id)
+      .eq("status", "active")
+      .order("name");
+    const slow = (allProducts || []).filter((p) => !soldIds.has(p.id));
+    setSlowMovers(slow);
+  }, [business.id]);
+
+  const fetchCashierStats = useCallback(async () => {
+    const { start } = getDateRange(timeFilter);
+    let query = supabase
+      .from("transactions")
+      .select("cashier_id, total_amount, created_at, profiles!inner(full_name)")
+      .eq("business_id", business.id)
+      .eq("status", "completed")
+      .gte("created_at", start.toISOString());
+    if (branchFilter !== "all") query = query.eq("branch_id", branchFilter);
+    const { data } = await query;
+
+    const cashierMap = {};
+    (data || []).forEach((tx) => {
+      const cid = tx.cashier_id;
+      if (!cashierMap[cid]) {
+        cashierMap[cid] = { name: tx.profiles?.full_name || "Unknown", txCount: 0, revenue: 0 };
+      }
+      cashierMap[cid].txCount += 1;
+      cashierMap[cid].revenue += Number(tx.total_amount);
+    });
+    const sorted = Object.entries(cashierMap)
+      .map(([id, v]) => ({ id, ...v, avg: v.txCount > 0 ? v.revenue / v.txCount : 0 }))
+      .sort((a, b) => b.revenue - a.revenue);
+    setCashierStats(sorted);
+  }, [business.id, timeFilter, branchFilter, getDateRange]);
+
+  const fetchBranchStats = useCallback(async () => {
+    const { start } = getDateRange(timeFilter);
+    const { data } = await supabase
+      .from("transactions")
+      .select("branch_id, total_amount")
+      .eq("business_id", business.id)
+      .eq("status", "completed")
+      .gte("created_at", start.toISOString());
+
+    const branchMap = {};
+    (branches || []).forEach((b) => { branchMap[b.id] = { name: b.name, revenue: 0, txCount: 0 }; });
+    (data || []).forEach((tx) => {
+      if (branchMap[tx.branch_id]) {
+        branchMap[tx.branch_id].revenue += Number(tx.total_amount);
+        branchMap[tx.branch_id].txCount += 1;
+      }
+    });
+    const sorted = Object.values(branchMap).sort((a, b) => b.revenue - a.revenue);
+    setBranchStats(sorted);
+  }, [business.id, branches, timeFilter, getDateRange]);
+
+  const fetchShifts = useCallback(async () => {
+    const { start } = getDateRange(timeFilter);
+    let query = supabase
+      .from("shifts")
+      .select("*, profiles!inner(full_name)")
+      .eq("business_id", business.id)
+      .gte("started_at", start.toISOString())
+      .order("started_at", { ascending: false })
+      .limit(50);
+    if (branchFilter !== "all") query = query.eq("branch_id", branchFilter);
+    const { data } = await query;
+    setShifts(data || []);
+  }, [business.id, timeFilter, branchFilter, getDateRange]);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchRevenue(),
+        fetchBestSellers(),
+        fetchSlowMovers(),
+        fetchCashierStats(),
+        fetchBranchStats(),
+        fetchShifts(),
+      ]);
+      setLoading(false);
+    };
+    load();
+  }, [fetchRevenue, fetchBestSellers, fetchSlowMovers, fetchCashierStats, fetchBranchStats, fetchShifts]);
+
+  const totalRevenue = useMemo(() => revenueData.daily.reduce((s, d) => s + d.revenue, 0), [revenueData.daily]);
+
+  const exportPDF = () => {
+    setExportingPDF(true);
+    const printDiv = document.createElement("div");
+    printDiv.id = "print-analytics";
+    printDiv.style.cssText = "padding:20px;font-family:sans-serif;font-size:12px;color:#000;";
+
+    let html = `<h1 style="font-size:18px;margin-bottom:4px;">${business.name} — Analytics Report</h1>`;
+    html += `<p style="font-size:11px;color:#666;margin-bottom:16px;">Generated: ${new Date().toLocaleDateString("en-PH", { dateStyle: "long" })}</p>`;
+    html += `<hr style="border-top:1px solid #ccc;margin-bottom:12px;">`;
+
+    html += `<h2 style="font-size:14px;margin-bottom:8px;">7-Day Revenue</h2>`;
+    html += `<table style="width:100%;border-collapse:collapse;margin-bottom:16px;">`;
+    html += `<tr style="background:#f0f0f0;"><th style="text-align:left;padding:4px 8px;border:1px solid #ddd;">Day</th><th style="text-align:right;padding:4px 8px;border:1px solid #ddd;">Revenue</th></tr>`;
+    revenueData.daily.forEach((d) => {
+      html += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${d.name}</td><td style="text-align:right;padding:4px 8px;border:1px solid #ddd;">₱${d.revenue.toFixed(2)}</td></tr>`;
+    });
+    html += `<tr style="font-weight:bold;"><td style="padding:4px 8px;border:1px solid #ddd;">Total</td><td style="text-align:right;padding:4px 8px;border:1px solid #ddd;">₱${totalRevenue.toFixed(2)}</td></tr>`;
+    html += `</table>`;
+
+    html += `<h2 style="font-size:14px;margin-bottom:8px;">Top 10 Best Sellers</h2>`;
+    html += `<table style="width:100%;border-collapse:collapse;margin-bottom:16px;">`;
+    html += `<tr style="background:#f0f0f0;"><th style="text-align:left;padding:4px 8px;border:1px solid #ddd;">#</th><th style="text-align:left;padding:4px 8px;border:1px solid #ddd;">Product</th><th style="text-align:right;padding:4px 8px;border:1px solid #ddd;">Qty</th><th style="text-align:right;padding:4px 8px;border:1px solid #ddd;">Revenue</th></tr>`;
+    bestSellers.forEach((p, i) => {
+      html += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${i + 1}</td><td style="padding:4px 8px;border:1px solid #ddd;">${p.name}</td><td style="text-align:right;padding:4px 8px;border:1px solid #ddd;">${p.qty}</td><td style="text-align:right;padding:4px 8px;border:1px solid #ddd;">₱${p.revenue.toFixed(2)}</td></tr>`;
+    });
+    html += `</table>`;
+
+    html += `<h2 style="font-size:14px;margin-bottom:8px;">Cashier Performance</h2>`;
+    html += `<table style="width:100%;border-collapse:collapse;margin-bottom:16px;">`;
+    html += `<tr style="background:#f0f0f0;"><th style="text-align:left;padding:4px 8px;border:1px solid #ddd;">Cashier</th><th style="text-align:right;padding:4px 8px;border:1px solid #ddd;">Transactions</th><th style="text-align:right;padding:4px 8px;border:1px solid #ddd;">Revenue</th><th style="text-align:right;padding:4px 8px;border:1px solid #ddd;">Avg</th></tr>`;
+    cashierStats.forEach((c) => {
+      html += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${c.name}</td><td style="text-align:right;padding:4px 8px;border:1px solid #ddd;">${c.txCount}</td><td style="text-align:right;padding:4px 8px;border:1px solid #ddd;">₱${c.revenue.toFixed(2)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #ddd;">₱${c.avg.toFixed(2)}</td></tr>`;
+    });
+    html += `</table>`;
+
+    printDiv.innerHTML = html;
+    document.body.appendChild(printDiv);
+    const origTitle = document.title;
+    document.title = `${business.name} Analytics Report`;
+    const style = document.createElement("style");
+    style.textContent = `@media print { body > *:not(#print-analytics) { display: none !important; } #print-analytics { display: block !important; } }`;
+    document.head.appendChild(style);
+    window.print();
+    document.body.removeChild(printDiv);
+    document.head.removeChild(style);
+    document.title = origTitle;
+    setExportingPDF(false);
+  };
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="bg-forest-800 text-white px-3 py-2 rounded-xl shadow-lg text-xs">
+        <p className="font-semibold">{label}</p>
+        <p className="text-gold-300 font-black">₱{Number(payload[0].value).toFixed(2)}</p>
+      </div>
+    );
+  };
+
+  if (loading) return <div className="p-8 text-center"><Spinner /><p className="text-gray-400 text-xs mt-2">Loading analytics...</p></div>;
+
+  return (
+    <div className="p-4 space-y-4 pb-8">
+      {/* Analytics sub-tabs */}
+      <div className="flex gap-1 overflow-x-auto hide-scrollbar -mx-1 px-1">
+        {ANALYTICS_TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setAnalyticsTab(t.key)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+              analyticsTab === t.key ? "bg-forest-600 text-white" : "bg-gray-100 text-gray-500"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Filters row */}
+      {analyticsTab !== "revenue" && (
+        <div className="flex gap-2 flex-wrap">
+          {TIME_FILTERS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setTimeFilter(f.key)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium ${
+                timeFilter === f.key ? "bg-gold-400 text-forest-900" : "bg-gray-100 text-gray-500"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+          {branches.length > 1 && (
+            <select
+              value={branchFilter}
+              onChange={(e) => setBranchFilter(e.target.value)}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
+            >
+              <option value="all">All Branches</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
+      {/* Branch filter for revenue tab */}
+      {analyticsTab === "revenue" && branches.length > 1 && (
+        <div className="flex gap-2">
+          <select
+            value={branchFilter}
+            onChange={(e) => setBranchFilter(e.target.value)}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
+          >
+            <option value="all">All Branches</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Export button */}
+      <div className="flex justify-end">
+        <button
+          onClick={exportPDF}
+          disabled={exportingPDF}
+          className="text-xs bg-forest-700 text-gold-300 px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
+        >
+          {exportingPDF ? "Exporting..." : "Export PDF"}
+        </button>
+      </div>
+
+      {/* ─── REVENUE TAB ─── */}
+      {analyticsTab === "revenue" && (
+        <div className="space-y-4">
+          <Card className="p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">7-Day Revenue Total</p>
+            <p className="text-2xl font-black text-forest-700">₱{totalRevenue.toFixed(2)}</p>
+          </Card>
+
+          <Card className="p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Daily Revenue (7 Days)</p>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={revenueData.daily}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                  <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Line type="monotone" dataKey="revenue" stroke="#1e5631" strokeWidth={2.5} dot={{ r: 4, fill: "#d4af37" }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Weekly Comparison</p>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={revenueData.weekly}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
+                    {revenueData.weekly.map((_, i) => (
+                      <Cell key={i} fill={i === revenueData.weekly.length - 1 ? "#d4af37" : "#1e5631"} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Monthly Comparison</p>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={revenueData.monthly}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="revenue" fill="#3d7249" radius={[6, 6, 0, 0]}>
+                    {revenueData.monthly.map((_, i) => (
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ─── PRODUCTS TAB ─── */}
+      {analyticsTab === "products" && (
+        <div className="space-y-4">
+          <Card className="p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Top 10 Best Sellers</p>
+            {bestSellers.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">No sales data for this period.</p>
+            ) : (
+              <div className="space-y-2">
+                {bestSellers.map((p, i) => (
+                  <div key={p.id} className="flex items-center gap-3">
+                    <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black ${
+                      i < 3 ? "bg-gold-100 text-gold-700" : "bg-gray-100 text-gray-500"
+                    }`}>
+                      {i + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{p.name}</p>
+                      <p className="text-xs text-gray-400">{p.qty} sold</p>
+                    </div>
+                    <p className="text-sm font-black text-forest-700">₱{p.revenue.toFixed(2)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {bestSellers.length > 0 && (
+            <Card className="p-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Best Sellers Chart</p>
+              <div className="h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={bestSellers.slice(0, 5)} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis type="number" tick={{ fontSize: 9 }} tickFormatter={(v) => `${v}`} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 9 }} width={80} />
+                    <Tooltip formatter={(v) => [`${v} units`, "Qty Sold"]} />
+                    <Bar dataKey="qty" radius={[0, 6, 6, 0]}>
+                      {bestSellers.slice(0, 5).map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          )}
+
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Slow-Moving Products</p>
+              {slowMovers.length > 0 && (
+                <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                  {slowMovers.length}
+                </span>
+              )}
+            </div>
+            {slowMovers.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">All products have recent sales.</p>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {slowMovers.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between bg-red-50 rounded-xl px-3 py-2">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">{p.name}</p>
+                      <p className="text-xs text-gray-400">{p.category} · Stock: {p.stock_quantity}</p>
+                    </div>
+                    <span className="text-xs bg-red-200 text-red-700 px-2 py-0.5 rounded-full font-semibold">
+                      No sales 30d
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* ─── CASHIERS TAB ─── */}
+      {analyticsTab === "cashiers" && (
+        <div className="space-y-4">
+          <Card className="p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Per-Cashier Performance</p>
+            {cashierStats.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">No cashier data for this period.</p>
+            ) : (
+              <div className="space-y-3">
+                {cashierStats.map((c, i) => (
+                  <div key={c.id} className="bg-gray-50 rounded-xl p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                          i === 0 ? "bg-gold-200 text-gold-800" : "bg-gray-200 text-gray-600"
+                        }`}>
+                          {i + 1}
+                        </span>
+                        <p className="text-sm font-bold text-gray-800">{c.name}</p>
+                      </div>
+                      <p className="text-sm font-black text-forest-700">₱{c.revenue.toFixed(2)}</p>
+                    </div>
+                    <div className="flex gap-4 ml-8">
+                      <p className="text-xs text-gray-400">{c.txCount} transactions</p>
+                      <p className="text-xs text-gray-400">Avg ₱{c.avg.toFixed(2)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {cashierStats.length > 0 && (
+            <Card className="p-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Revenue by Cashier</p>
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={cashierStats}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
+                      {cashierStats.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ─── BRANCHES TAB ─── */}
+      {analyticsTab === "branches" && (
+        <div className="space-y-4">
+          {branchStats.length === 0 ? (
+            <Card className="p-4">
+              <p className="text-xs text-gray-400 text-center py-4">No branch data available.</p>
+            </Card>
+          ) : (
+            <>
+              <Card className="p-4">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Branch Sales Comparison</p>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={branchStats}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                      <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
+                        {branchStats.map((_, i) => (
+                          <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+
+              <Card className="p-4">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Branch Details</p>
+                <div className="space-y-2">
+                  {branchStats.map((b, i) => (
+                    <div key={i} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">{b.name}</p>
+                        <p className="text-xs text-gray-400">{b.txCount} transactions</p>
+                      </div>
+                      <p className="text-sm font-black text-forest-700">₱{b.revenue.toFixed(2)}</p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ─── SHIFTS TAB ─── */}
+      {analyticsTab === "shifts" && (
+        <div className="space-y-4">
+          <Card className="p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Shift History</p>
+            {shifts.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">No shift records for this period.</p>
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {shifts.map((s) => (
+                  <div key={s.id} className={`rounded-xl p-3 border ${s.status === "open" ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"}`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm font-bold text-gray-800">{s.profiles?.full_name}</p>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        s.status === "open" ? "bg-green-200 text-green-700" : "bg-gray-200 text-gray-600"
+                      }`}>
+                        {s.status === "open" ? "Active" : "Closed"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-500 mt-2">
+                      <p>Start: {new Date(s.started_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</p>
+                      {s.ended_at && <p>End: {new Date(s.ended_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</p>}
+                      <p>Starting: ₱{Number(s.starting_cash || 0).toFixed(2)}</p>
+                      {s.ending_cash != null && <p>Ending: ₱{Number(s.ending_cash).toFixed(2)}</p>}
+                      {s.total_transactions != null && <p>Transactions: {s.total_transactions}</p>}
+                      {s.total_sales != null && <p>Sales: ₱{Number(s.total_sales).toFixed(2)}</p>}
+                      {s.cash_difference != null && (
+                        <p className={Number(s.cash_difference) < 0 ? "text-red-500 font-semibold" : "text-green-600 font-semibold"}>
+                          Diff: {Number(s.cash_difference) >= 0 ? "+" : ""}₱{Number(s.cash_difference).toFixed(2)}
+                        </p>
+                      )}
+                    </div>
+                    {s.notes && <p className="text-xs text-gray-400 mt-1 italic">{s.notes}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }) {
   const [tab, setTab] = useState(() => {
     return localStorage.getItem("owner_tab") || "dashboard";
@@ -1767,6 +2450,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
 
   const TABS = [
     { key: "dashboard", icon: "📊", label: "Dashboard" },
+    { key: "analytics", icon: "📈", label: "Analytics" },
     { key: "products", icon: "📦", label: "Produkto" },
     { key: "branches", icon: "🏪", label: "Branch" },
     { key: "staff", icon: "👥", label: "Staff" },
@@ -2153,6 +2837,10 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                 {/* Discount Settings Card */}
                 <DiscountSettingsCard business={business} showToast={showToast} onSaved={fetchAll} />
               </div>
+            )}
+
+            {tab === "analytics" && (
+              <AnalyticsDashboard business={business} branches={branches} showToast={showToast} />
             )}
 
             {tab === "products" && (
@@ -2915,6 +3603,94 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   const [cashCounted, setCashCounted] = useState("");
   const [cashierNotifs, setCashierNotifs] = useState([]);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [currentShift, setCurrentShift] = useState(null);
+  const [showShiftModal, setShowShiftModal] = useState(false);
+  const [shiftStartCash, setShiftStartCash] = useState("");
+  const [shiftEndCash, setShiftEndCash] = useState("");
+  const [shiftNotes, setShiftNotes] = useState("");
+  const [shiftLoading, setShiftLoading] = useState(false);
+
+  useEffect(() => {
+    const loadShift = async () => {
+      const { data } = await supabase
+        .from("shifts")
+        .select("*")
+        .eq("cashier_id", profile.id)
+        .eq("status", "open")
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setCurrentShift(data || null);
+    };
+    loadShift();
+  }, [profile.id]);
+
+  const openShift = async () => {
+    if (!shiftStartCash || isNaN(Number(shiftStartCash))) return;
+    setShiftLoading(true);
+    const { data, error } = await supabase
+      .from("shifts")
+      .insert({
+        business_id: business.id,
+        branch_id: branch?.id || null,
+        cashier_id: profile.id,
+        starting_cash: Number(shiftStartCash),
+      })
+      .select()
+      .maybeSingle();
+    setShiftLoading(false);
+    if (error) return showToast("Hindi ma-open ang shift.", "error");
+    setCurrentShift(data);
+    setShowShiftModal(false);
+    setShiftStartCash("");
+    showToast("Shift started!", "success");
+  };
+
+  const closeShift = async () => {
+    if (!currentShift) return;
+    if (!shiftEndCash || isNaN(Number(shiftEndCash))) return showToast("Enter the ending cash amount.", "error");
+    setShiftLoading(true);
+    const today = new Date(currentShift.started_at);
+    const { data: shiftTxns } = await supabase
+      .from("transactions")
+      .select("total_amount, payment_method")
+      .eq("business_id", business.id)
+      .eq("cashier_id", profile.id)
+      .eq("status", "completed")
+      .gte("created_at", currentShift.started_at);
+    const totalSales = (shiftTxns || []).reduce((s, t) => s + Number(t.total_amount), 0);
+    const totalTx = (shiftTxns || []).length;
+    const expectedCash = Number(currentShift.starting_cash) + (shiftTxns || []).filter(t => t.payment_method === "cash").reduce((s, t) => s + Number(t.total_amount), 0);
+    const cashDiff = Number(shiftEndCash) - expectedCash;
+    const { error } = await supabase
+      .from("shifts")
+      .update({
+        ended_at: new Date().toISOString(),
+        ending_cash: Number(shiftEndCash),
+        total_sales: totalSales,
+        total_transactions: totalTx,
+        cash_difference: cashDiff,
+        notes: shiftNotes.trim() || null,
+        status: "closed",
+      })
+      .eq("id", currentShift.id);
+    setShiftLoading(false);
+    if (error) return showToast("Hindi ma-close ang shift.", "error");
+    if (Math.abs(cashDiff) > 0) {
+      await supabase.from("notifications").insert({
+        business_id: business.id,
+        type: "shift_report",
+        title: cashDiff < 0 ? "⚠️ Shift Cash Shortage" : "💰 Shift Closed",
+        message: `${profile.full_name} closed shift. Sales: ₱${totalSales.toFixed(2)}, ${totalTx} txns. Cash ${cashDiff >= 0 ? "over" : "short"} by ₱${Math.abs(cashDiff).toFixed(2)}.`,
+        is_read: false,
+      });
+    }
+    setCurrentShift(null);
+    setShowShiftModal(false);
+    setShiftEndCash("");
+    setShiftNotes("");
+    showToast(`Shift closed! Sales: ₱${totalSales.toFixed(2)}`, "success");
+  };
 
   const subtotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
   const discountAmount = discountValue
@@ -3554,15 +4330,32 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             <p className="text-gold-400 text-xs font-medium uppercase tracking-widest">Cashier</p>
             <h1 className="text-ivory-50 font-black text-lg leading-tight">{business.name}</h1>
           </div>
-          <button
-            onClick={onLogout}
-            className="bg-forest-700 text-gold-400 text-xs px-3 py-2 rounded-xl font-medium border border-forest-600"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowShiftModal(true)}
+              className={`text-xs px-3 py-2 rounded-xl font-medium border ${
+                currentShift
+                  ? "bg-green-700 text-green-100 border-green-600"
+                  : "bg-forest-700 text-gold-400 border-forest-600"
+              }`}
+            >
+              {currentShift ? "On Shift" : "Start Shift"}
+            </button>
+            <button
+              onClick={onLogout}
+              className="bg-forest-700 text-gold-400 text-xs px-3 py-2 rounded-xl font-medium border border-forest-600"
+            >
+              Logout
+            </button>
+          </div>
         </div>
         <p className="text-forest-300 text-xs">
           {branch?.name || "No branch"} · {profile.full_name}
+          {currentShift && (
+            <span className="text-green-400 ml-1">
+              · Shift since {new Date(currentShift.started_at).toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit", hour12: true })}
+            </span>
+          )}
         </p>
       </div>
 
@@ -4520,6 +5313,102 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 Confirm Payment ✓
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Shift Modal */}
+      {showShiftModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-3xl p-5">
+            {currentShift ? (
+              <>
+                <h3 className="font-black text-gray-800 text-base mb-1">Close Shift</h3>
+                <p className="text-xs text-gray-500 mb-1">
+                  Started: {new Date(currentShift.started_at).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}
+                </p>
+                <p className="text-xs text-gray-500 mb-3">
+                  Starting cash: ₱{Number(currentShift.starting_cash).toFixed(2)}
+                </p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+                  Total Cash in Drawer
+                </p>
+                <input
+                  type="number"
+                  value={shiftEndCash}
+                  onChange={(e) => setShiftEndCash(e.target.value)}
+                  placeholder="Enter total cash counted..."
+                  className="w-full border-2 border-forest-300 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-forest-500 mb-3"
+                />
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+                  Notes (optional)
+                </p>
+                <textarea
+                  value={shiftNotes}
+                  onChange={(e) => setShiftNotes(e.target.value)}
+                  placeholder="Any notes about this shift..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm h-16 resize-none focus:outline-none focus:ring-2 focus:ring-forest-400 mb-3"
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setShowShiftModal(false); setShiftEndCash(""); setShiftNotes(""); }}
+                    className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={closeShift}
+                    disabled={shiftLoading || !shiftEndCash}
+                    className="flex-1 bg-red-500 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50"
+                  >
+                    {shiftLoading ? "Closing..." : "Close Shift"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="font-black text-gray-800 text-base mb-1">Start New Shift</h3>
+                <p className="text-xs text-gray-500 mb-4">
+                  Count your starting cash before beginning your shift.
+                </p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+                  Starting Cash in Drawer
+                </p>
+                <input
+                  type="number"
+                  value={shiftStartCash}
+                  onChange={(e) => setShiftStartCash(e.target.value)}
+                  placeholder="Enter starting cash amount..."
+                  className="w-full border-2 border-forest-300 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-forest-500 mb-3"
+                />
+                <div className="flex gap-2 mb-4 flex-wrap">
+                  {[500, 1000, 2000, 5000].map((amt) => (
+                    <button
+                      key={amt}
+                      onClick={() => setShiftStartCash(String(amt))}
+                      className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium"
+                    >
+                      ₱{amt.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setShowShiftModal(false); setShiftStartCash(""); }}
+                    className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={openShift}
+                    disabled={shiftLoading || !shiftStartCash}
+                    className="flex-1 bg-forest-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50"
+                  >
+                    {shiftLoading ? "Starting..." : "Start Shift"}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
