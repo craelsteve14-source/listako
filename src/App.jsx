@@ -1359,7 +1359,7 @@ function PendingProductCard({ product, onActivate, showToast }) {
             value={price}
             onChange={(e) => setPrice(e.target.value)}
             placeholder="0.00"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+            className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100"
           />
         </div>
         <div>
@@ -1371,7 +1371,7 @@ function PendingProductCard({ product, onActivate, showToast }) {
             value={stock}
             onChange={(e) => setStock(e.target.value)}
             placeholder="0"
-            className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+            className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100"
           />
         </div>
       </div>
@@ -1443,7 +1443,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
       <p className="text-xs text-gray-400 mb-4">Full control over how discounts work in your store.</p>
 
       {/* Setting 1 — Enable/Disable */}
-      <div className="flex items-center justify-between mb-4 bg-gray-50 rounded-xl p-3">
+      <div className="flex items-center justify-between mb-4 bg-gray-50 dark:bg-surface-dark rounded-xl p-3">
         <div>
           <p className="text-sm font-bold text-gray-700">Discounts Enabled</p>
           <p className="text-xs text-gray-400">Turn off to block all discounts immediately</p>
@@ -1491,7 +1491,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
               <div className="relative">
                 <input type="number" value={settings.max_discount_percent}
                   onChange={e => set("max_discount_percent", e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 pr-8" />
+                  className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100 pr-8" />
                 <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
               </div>
             </div>
@@ -1500,7 +1500,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
               <div className="relative">
                 <input type="number" value={settings.max_discount_fixed}
                   onChange={e => set("max_discount_fixed", e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 pl-6" />
+                  className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100 pl-6" />
                 <span className="absolute left-3 top-2 text-gray-400 text-sm">₱</span>
               </div>
             </div>
@@ -1535,7 +1535,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Max Discounts Per Cashier Per Day</p>
             <input type="number" value={settings.max_discounts_per_cashier_per_day}
               onChange={e => set("max_discounts_per_cashier_per_day", e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500" />
+              className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100" />
             <p className="text-xs text-gray-400 mt-1">After this limit, cashier cannot give more discounts today</p>
           </div>
 
@@ -1545,7 +1545,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
             <div className="relative">
               <input type="number" value={settings.manager_approval_threshold}
                 onChange={e => set("manager_approval_threshold", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 pr-8" />
+                className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100 pr-8" />
               <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
             </div>
             <p className="text-xs text-gray-400 mt-1">Discounts above this % need owner approval first</p>
@@ -1557,7 +1557,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
             <div className="relative">
               <input type="number" value={settings.suki_discount_percent}
                 onChange={e => set("suki_discount_percent", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 pr-8" />
+                className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100 pr-8" />
               <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
             </div>
             <p className="text-xs text-gray-400 mt-1">Auto-applied for registered suki customers</p>
@@ -1569,7 +1569,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
             <div className="relative">
               <input type="number" value={settings.senior_pwd_discount_percent}
                 onChange={e => set("senior_pwd_discount_percent", e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 pr-8" />
+                className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100 pr-8" />
               <span className="absolute right-3 top-2 text-gray-400 text-sm">%</span>
             </div>
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-3 py-2 mt-1">
@@ -1585,13 +1585,13 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
                 <p className="text-xs text-gray-400 mb-1">Start Time</p>
                 <input type="time" value={settings.discount_start_time}
                   onChange={e => set("discount_start_time", e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500" />
+                  className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100" />
               </div>
               <div>
                 <p className="text-xs text-gray-400 mb-1">End Time</p>
                 <input type="time" value={settings.discount_end_time}
                   onChange={e => set("discount_end_time", e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500" />
+                  className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100" />
               </div>
             </div>
             <p className="text-xs text-gray-400 mt-1">Cashier cannot give discounts outside these hours</p>
@@ -1614,6 +1614,9 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
 const CHART_COLORS = ["#1e5631", "#d4af37", "#3d7249", "#c9a84c", "#6b9a74", "#a8872a", "#a8c5af", "#866a22", "#d4e2d7", "#6b5520"];
 
 function AnalyticsDashboard({ business, branches, showToast }) {
+  const theme = useTheme();
+  const gridStroke = theme.dark ? "#1A3428" : "#e5e7eb";
+  const tickFill = theme.dark ? "#9ca3af" : "#6b7280";
   const [analyticsTab, setAnalyticsTab] = useState("revenue");
   const [timeFilter, setTimeFilter] = useState("week");
   const [branchFilter, setBranchFilter] = useState("all");
@@ -2016,9 +2019,9 @@ function AnalyticsDashboard({ business, branches, showToast }) {
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={revenueData.daily}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="name" tick={{ fontSize: 9 }} />
-                  <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                  <XAxis dataKey="name" tick={{ fontSize: 9, fill: tickFill }} />
+                  <YAxis tick={{ fontSize: 9, fill: tickFill }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
                   <Tooltip content={<CustomTooltip />} />
                   <Line type="monotone" dataKey="revenue" stroke="#1e5631" strokeWidth={2.5} dot={{ r: 4, fill: "#d4af37" }} activeDot={{ r: 6 }} />
                 </LineChart>
@@ -2031,9 +2034,9 @@ function AnalyticsDashboard({ business, branches, showToast }) {
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={revenueData.weekly}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: tickFill }} />
+                  <YAxis tick={{ fontSize: 9, fill: tickFill }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
                     {revenueData.weekly.map((_, i) => (
@@ -2050,9 +2053,9 @@ function AnalyticsDashboard({ business, branches, showToast }) {
             <div className="h-48">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={revenueData.monthly}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
-                  <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: tickFill }} />
+                  <YAxis tick={{ fontSize: 9, fill: tickFill }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
                   <Tooltip content={<CustomTooltip />} />
                   <Bar dataKey="revenue" fill="#3d7249" radius={[6, 6, 0, 0]}>
                     {revenueData.monthly.map((_, i) => (
@@ -2099,9 +2102,9 @@ function AnalyticsDashboard({ business, branches, showToast }) {
               <div className="h-52">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={bestSellers.slice(0, 5)} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis type="number" tick={{ fontSize: 9 }} tickFormatter={(v) => `${v}`} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 9 }} width={80} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                    <XAxis type="number" tick={{ fontSize: 9, fill: tickFill }} tickFormatter={(v) => `${v}`} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: tickFill }} width={80} />
                     <Tooltip formatter={(v) => [`${v} units`, "Qty Sold"]} />
                     <Bar dataKey="qty" radius={[0, 6, 6, 0]}>
                       {bestSellers.slice(0, 5).map((_, i) => (
@@ -2154,7 +2157,7 @@ function AnalyticsDashboard({ business, branches, showToast }) {
             ) : (
               <div className="space-y-3">
                 {cashierStats.map((c, i) => (
-                  <div key={c.id} className="bg-gray-50 rounded-xl p-3">
+                  <div key={c.id} className="bg-gray-50 dark:bg-surface-dark rounded-xl p-3">
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
                         <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
@@ -2182,9 +2185,9 @@ function AnalyticsDashboard({ business, branches, showToast }) {
               <div className="h-48">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={cashierStats}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="name" tick={{ fontSize: 9 }} />
-                    <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                    <XAxis dataKey="name" tick={{ fontSize: 9, fill: tickFill }} />
+                    <YAxis tick={{ fontSize: 9, fill: tickFill }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
                     <Tooltip content={<CustomTooltip />} />
                     <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
                       {cashierStats.map((_, i) => (
@@ -2213,9 +2216,9 @@ function AnalyticsDashboard({ business, branches, showToast }) {
                 <div className="h-48">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={branchStats}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                      <XAxis dataKey="name" tick={{ fontSize: 9 }} />
-                      <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                      <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                      <XAxis dataKey="name" tick={{ fontSize: 9, fill: tickFill }} />
+                      <YAxis tick={{ fontSize: 9, fill: tickFill }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
                       <Tooltip content={<CustomTooltip />} />
                       <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
                         {branchStats.map((_, i) => (
@@ -2231,7 +2234,7 @@ function AnalyticsDashboard({ business, branches, showToast }) {
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Branch Details</p>
                 <div className="space-y-2">
                   {branchStats.map((b, i) => (
-                    <div key={i} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
+                    <div key={i} className="flex items-center justify-between bg-gray-50 dark:bg-surface-dark rounded-xl px-3 py-2.5">
                       <div>
                         <p className="text-sm font-semibold text-gray-800 dark:text-ivory-100">{b.name}</p>
                         <p className="text-xs text-gray-400">{b.txCount} transactions</p>
@@ -2256,7 +2259,7 @@ function AnalyticsDashboard({ business, branches, showToast }) {
             ) : (
               <div className="space-y-2 max-h-96 overflow-y-auto">
                 {shifts.map((s) => (
-                  <div key={s.id} className={`rounded-xl p-3 border ${s.status === "open" ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"}`}>
+                  <div key={s.id} className={`rounded-xl p-3 border ${s.status === "open" ? "bg-green-50 dark:bg-forest-700 border-green-200 dark:border-forest-600" : "bg-gray-50 dark:bg-surface-dark border-gray-200 dark:border-forest-600"}`}>
                     <div className="flex items-center justify-between mb-1">
                       <p className="text-sm font-bold text-gray-800 dark:text-ivory-100">{s.profiles?.full_name}</p>
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
@@ -2855,7 +2858,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                 value={form.barcode}
                 onChange={(e) => setForm((f) => ({ ...f, barcode: e.target.value }))}
                 placeholder="I-type ang barcode"
-                className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+                className="flex-1 border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100"
               />
               <button
                 type="button"
@@ -2918,7 +2921,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Product Image (optional)</label>
             {form.image_url && (
               <div className="relative mb-2">
-                <img src={form.image_url} alt="Preview" className="w-full h-32 object-cover rounded-xl border border-gray-200" />
+                <img src={form.image_url} alt="Preview" className="w-full h-32 object-cover rounded-xl border border-gray-200 dark:border-forest-600" />
                 <button type="button" onClick={() => setForm((f) => ({ ...f, image_url: "" }))}
                   className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full text-xs font-bold">✕</button>
               </div>
@@ -2934,7 +2937,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                     setForm((f) => ({ ...f, image_url: dataUrl }));
                   }} />
               </label>
-              <label className="flex-1 flex items-center justify-center gap-2 bg-gray-50 text-gray-600 font-semibold py-2.5 rounded-xl text-sm cursor-pointer border border-gray-200">
+              <label className="flex-1 flex items-center justify-center gap-2 bg-gray-50 dark:bg-surface-dark text-gray-600 dark:text-gray-400 font-semibold py-2.5 rounded-xl text-sm cursor-pointer border border-gray-200 dark:border-forest-600">
                 <NavIcon name="image" size={16} color="currentColor" /> Gallery
                 <input type="file" accept="image/*" className="hidden"
                   onChange={async (e) => {
@@ -3689,7 +3692,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                             className={`text-xs px-2 py-1.5 rounded-lg font-medium ${
                               p.no_discount
                                 ? "bg-orange-100 text-orange-600"
-                                : "bg-gray-50 text-gray-400"
+                                : "bg-gray-50 dark:bg-surface-dark text-gray-400"
                             }`}
                           >
                             {p.no_discount ? <><NavIcon name="lock" size={14} color="currentColor" /> No Discount</> : "Allow Discount"}
@@ -3895,7 +3898,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                 </div>
                 <input type="text" value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)}
                   placeholder="Search customers..."
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500" />
+                  className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100" />
                 {customers.filter(c => !customerSearch.trim() || c.name.toLowerCase().includes(customerSearch.toLowerCase())).length === 0 ? (
                   <Card className="p-8 text-center">
                     <p className="text-3xl mb-2"><NavIcon name="customers" size={36} color="#6b7280" /></p>
@@ -4265,7 +4268,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
             <span>{transaction?.receipt_number}</span>
             <span>{formatDate(transaction?.created_at || new Date())}</span>
           </div>
-          <div className="border-t border-dashed border-gray-200 mb-3"></div>
+          <div className="border-t border-dashed border-gray-200 dark:border-forest-600 mb-3"></div>
           <div className="space-y-2 mb-3">
             {items.map((item, i) => (
               <div key={i} className="flex justify-between text-sm">
@@ -4281,7 +4284,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
               </div>
             ))}
           </div>
-          <div className="border-t border-dashed border-gray-200 mb-3"></div>
+          <div className="border-t border-dashed border-gray-200 dark:border-forest-600 mb-3"></div>
           <div className="space-y-1.5">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Subtotal</span>
@@ -4314,7 +4317,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
                 : transaction?.payment_method === "maya" ? "bg-forest-50 text-forest-600"
                 : transaction?.payment_method === "card" ? "bg-purple-50 text-purple-600"
                 : transaction?.payment_method === "utang" ? "bg-orange-50 text-orange-600"
-                : "bg-gray-50 text-gray-600"
+                : "bg-gray-50 dark:bg-surface-dark text-gray-600 dark:text-gray-400"
               }`}>
                 {paymentLabel}
               </span>
@@ -4350,7 +4353,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
               </div>
             )}
           </div>
-          <div className="border-t border-dashed border-gray-200 mt-3 mb-3"></div>
+          <div className="border-t border-dashed border-gray-200 dark:border-forest-600 mt-3 mb-3"></div>
           <div className="text-center">
             <p className="text-xs text-gray-400">Cashier: {cashier?.full_name}</p>
             {business?.receipt_footer && (
@@ -5468,7 +5471,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                   key={p.id}
                   onClick={() => addToCart(p)}
                   className={`w-full px-4 py-3 text-left flex items-center justify-between border-b border-gray-50 last:border-0 active:bg-forest-50 ${
-                    p.stock_quantity <= 0 ? "opacity-50" : "hover:bg-gray-50"
+                    p.stock_quantity <= 0 ? "opacity-50" : "hover:bg-gray-50 dark:hover:bg-surface-dark-card"
                   }`}
                 >
                   <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -5616,7 +5619,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       </span>
                     </div>
                   ))}
-                  <div className="border-t border-gray-200 mt-2 pt-2">
+                  <div className="border-t border-gray-200 dark:border-forest-600 mt-2 pt-2">
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-500">Subtotal</span>
                       <span className="font-medium text-gray-800 dark:text-ivory-100">₱{subtotal.toFixed(2)}</span>
@@ -5714,7 +5717,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                         placeholder={discountType === "percent"
                           ? `Max ${business.max_discount_percent || 20}%`
                           : `Max ₱${business.max_discount_fixed || 500}`}
-                        className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-2" />
+                        className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100 mb-2" />
                     </>
                   )}
 
@@ -5796,14 +5799,14 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       value={customerName}
                       onChange={(e) => setCustomerNamePersisted(e.target.value)}
                       placeholder="Enter customer name..."
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-2"
+                      className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100 mb-2"
                     />
                     <input
                       type="tel"
                       value={customerPhone}
                       onChange={(e) => setCustomerPhonePersisted(e.target.value)}
                       placeholder="Phone number (optional)..."
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+                      className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100"
                     />
                     <div className="mt-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
                       <p className="text-xs text-orange-700 font-medium">
@@ -5824,7 +5827,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       value={amountTendered}
                       onChange={(e) => setAmountTenderedPersisted(e.target.value)}
                       placeholder="Enter amount..."
-                      className="w-full border border-gray-200 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-forest-500"
+                      className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100"
                     />
                     {amountTendered && Number(amountTendered) >= total && (
                       <div className="mt-2 bg-forest-50 rounded-xl px-4 py-3 flex justify-between">
@@ -6129,7 +6132,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               <div className="flex gap-3 mb-4">
                 {newProductModal.image && (
                   <img src={newProductModal.image} alt={newProductModal.name}
-                    className="w-16 h-16 object-contain rounded-xl border border-gray-100" />
+                    className="w-16 h-16 object-contain rounded-xl border border-gray-100 dark:border-forest-600" />
                 )}
                 <div className="flex-1">
                   <p className="font-bold text-gray-800 dark:text-ivory-100 text-sm">{newProductModal.name}</p>
@@ -6226,7 +6229,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               value={voidReason}
               onChange={(e) => setVoidReason(e.target.value)}
               placeholder="Explain why this transaction needs to be voided..."
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-yellow-400 mb-3"
+              className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-sm h-20 resize-none focus:outline-none focus:ring-2 focus:ring-yellow-400 dark:bg-surface-dark-card dark:text-ivory-100 mb-3"
             />
             <div className="flex gap-3">
               <button
@@ -6407,7 +6410,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                   value={shiftNotes}
                   onChange={(e) => setShiftNotes(e.target.value)}
                   placeholder="Any notes about this shift..."
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm h-16 resize-none focus:outline-none focus:ring-2 focus:ring-forest-400 mb-3"
+                  className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-sm h-16 resize-none focus:outline-none focus:ring-2 focus:ring-forest-400 dark:bg-surface-dark-card dark:text-ivory-100 mb-3"
                 />
                 <div className="flex gap-3">
                   <button
@@ -6493,7 +6496,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 {returnModal.transaction_items.map((item, i) => {
                   const selected = returnItems.find(r => r.idx === i);
                   return (
-                    <div key={i} className={`rounded-xl p-3 border cursor-pointer transition-colors ${selected ? "bg-blue-50 border-blue-300" : "bg-gray-50 border-gray-200"}`}
+                    <div key={i} className={`rounded-xl p-3 border cursor-pointer transition-colors ${selected ? "bg-blue-50 dark:bg-forest-700 border-blue-300 dark:border-blue-800" : "bg-gray-50 dark:bg-surface-dark border-gray-200 dark:border-forest-600"}`}
                       onClick={() => {
                         setReturnItems(prev => {
                           const exists = prev.find(r => r.idx === i);
@@ -6521,7 +6524,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Reason for Return</p>
             <textarea value={returnReason} onChange={(e) => setReturnReason(e.target.value)}
               placeholder="Why is the customer returning these items?"
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm h-16 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 mb-3" />
+              className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-sm h-16 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 dark:bg-surface-dark-card dark:text-ivory-100 mb-3" />
             {returnItems.length > 0 && (
               <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 mb-3">
                 <p className="text-xs text-blue-700 font-semibold">
@@ -6781,7 +6784,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
   const stockBorder = (p) =>
     p.stock_quantity <= 0 ? "border-red-200" :
     p.stock_quantity <= (p.low_stock_threshold || 10) ? "border-yellow-200" :
-    "border-gray-100";
+    "border-gray-100 dark:border-forest-600";
 
   return (
     <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col max-w-lg mx-auto">
@@ -6826,7 +6829,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
             <input type="text" value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search products..."
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-2" />
+              className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100 mb-2" />
             <div className="flex gap-1.5 overflow-x-auto hide-scrollbar">
               {CATEGORIES.map((cat) => (
                 <button key={cat} onClick={() => setCategoryFilter(cat)}
@@ -6893,7 +6896,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
                               Edit
                             </button>
                             <button onClick={() => loadStockHistory(p)}
-                              className="text-xs bg-gray-50 text-gray-500 font-medium px-2 py-1 rounded-lg">
+                              className="text-xs bg-gray-50 dark:bg-surface-dark text-gray-500 dark:text-gray-400 font-medium px-2 py-1 rounded-lg">
                               Log
                             </button>
                           </div>
@@ -6994,7 +6997,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
               className="w-full border-2 border-blue-300 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2" />
             <input type="text" value={editNotes} onChange={(e) => setEditNotes(e.target.value)}
               placeholder="Reason for change (optional)..."
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-4" />
+              className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100 mb-4" />
             <div className="flex gap-3">
               <button onClick={() => { setEditModal(null); setEditQty(""); setEditNotes(""); }}
                 className="flex-1 bg-gray-100 dark:bg-surface-dark text-gray-600 dark:text-gray-400 font-semibold py-3 rounded-xl text-sm">Cancel</button>
@@ -7018,7 +7021,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Search Product</p>
                 <input type="text" value={restockSearch} onChange={(e) => setRestockSearch(e.target.value)}
                   placeholder="Type product name..."
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-2" />
+                  className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100 mb-2" />
                 {restockSearch.trim() && (
                   <div className="space-y-1 max-h-60 overflow-y-auto">
                     {products.filter(p => p.name.toLowerCase().includes(restockSearch.toLowerCase())).map(p => (
@@ -7050,10 +7053,10 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Supplier (Optional)</p>
                 <input type="text" value={restockSupplier} onChange={(e) => setRestockSupplier(e.target.value)}
                   placeholder="Supplier name..."
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-2" />
+                  className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100 mb-2" />
                 <input type="text" value={restockNotes} onChange={(e) => setRestockNotes(e.target.value)}
                   placeholder="Notes (optional)..."
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-4" />
+                  className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100 mb-4" />
                 {restockQty && Number(restockQty) > 0 && (
                   <div className="bg-blue-50 border border-blue-100 rounded-xl px-3 py-2 mb-3">
                     <p className="text-xs text-blue-700 font-semibold">
@@ -7088,7 +7091,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
             ) : (
               <div className="space-y-2">
                 {stockHistory.map((h) => (
-                  <div key={h.id} className="border border-gray-100 rounded-xl p-3">
+                  <div key={h.id} className="border border-gray-100 dark:border-forest-600 rounded-xl p-3">
                     <div className="flex justify-between items-start">
                       <div>
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
@@ -7349,7 +7352,7 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
               ) : (
                 <div className="space-y-3">
                   {staffPerformance.map((s, i) => (
-                    <div key={s.id} className="bg-gray-50 rounded-xl p-3">
+                    <div key={s.id} className="bg-gray-50 dark:bg-surface-dark rounded-xl p-3">
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2">
                           <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-gold-200 text-gold-800" : "bg-gray-200 text-gray-600"}`}>
@@ -7376,7 +7379,7 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
               ) : (
                 <div className="space-y-2">
                   {branchStaff.map((s) => (
-                    <div key={s.id} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
+                    <div key={s.id} className="flex items-center justify-between bg-gray-50 dark:bg-surface-dark rounded-xl px-3 py-2.5">
                       <div>
                         <p className="text-sm font-semibold text-gray-800 dark:text-ivory-100">{s.full_name}</p>
                         <p className="text-xs text-gray-400">{s.email}</p>
@@ -7413,7 +7416,7 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
                       "bg-blue-50 border-blue-200"
                     }`}>
                       <div className="flex items-center justify-between mb-1">
-                        <p className="text-sm font-bold text-gray-800">{t.products?.name}</p>
+                        <p className="text-sm font-bold text-gray-800 dark:text-ivory-100">{t.products?.name}</p>
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full capitalize ${
                           t.status === "pending" ? "bg-yellow-200 text-yellow-700" :
                           t.status === "completed" ? "bg-green-200 text-green-700" :
@@ -7464,12 +7467,12 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Search Product</p>
                 <input type="text" value={transferSearch} onChange={(e) => setTransferSearch(e.target.value)}
                   placeholder="Search product name..."
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-2" />
+                  className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100 mb-2" />
                 <div className="space-y-1 max-h-48 overflow-y-auto">
                   {transferSearchResults.map((p) => (
                     <button key={p.id} onClick={() => { setTransferProduct(p); setTransferSearch(""); setTransferSearchResults([]); }}
-                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-gray-50 flex justify-between items-center">
-                      <p className="text-sm font-medium text-gray-800">{p.name}</p>
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-surface-dark-card flex justify-between items-center">
+                      <p className="text-sm font-medium text-gray-800 dark:text-ivory-100">{p.name}</p>
                       <p className="text-xs text-gray-400">Stock: {p.stock_quantity}</p>
                     </button>
                   ))}
@@ -7480,7 +7483,7 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
                 <div className="bg-forest-50 border border-forest-200 rounded-xl p-3 mb-3">
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="font-semibold text-gray-800 text-sm">{transferProduct.name}</p>
+                      <p className="font-semibold text-gray-800 dark:text-ivory-100 text-sm">{transferProduct.name}</p>
                       <p className="text-xs text-gray-500">Available: {transferProduct.stock_quantity}</p>
                     </div>
                     <button onClick={() => setTransferProduct(null)} className="text-xs text-red-500 font-semibold">Change</button>
@@ -7502,7 +7505,7 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Notes (Optional)</p>
                 <input type="text" value={transferNotes} onChange={(e) => setTransferNotes(e.target.value)}
                   placeholder="Reason for transfer..."
-                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-4" />
+                  className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100 mb-4" />
 
                 <button onClick={submitTransfer} disabled={transferSaving || !transferToBranch || !transferQty}
                   className="w-full bg-forest-600 text-white font-bold py-3.5 rounded-2xl text-sm disabled:opacity-50">
@@ -7589,15 +7592,15 @@ function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1">Information</p>
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Name</span>
-            <span className="font-semibold text-gray-800">{profile.full_name}</span>
+            <span className="font-semibold text-gray-800 dark:text-ivory-100">{profile.full_name}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Branch</span>
-            <span className="font-semibold text-gray-800">{branch?.name || "—"}</span>
+            <span className="font-semibold text-gray-800 dark:text-ivory-100">{branch?.name || "—"}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Role</span>
-            <span className="font-semibold text-gray-800">{ROLE_LABELS[profile.role]}</span>
+            <span className="font-semibold text-gray-800 dark:text-ivory-100">{ROLE_LABELS[profile.role]}</span>
           </div>
         </div>
         <button
@@ -7695,28 +7698,28 @@ function InstallPrompt() {
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-end justify-center z-[100]">
           <div className="bg-white dark:bg-surface-dark-card w-full max-w-lg rounded-t-3xl p-6 pb-10">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-black text-gray-800 text-lg">I-install ang ListaKo</h3>
+              <h3 className="font-black text-gray-800 dark:text-ivory-100 text-lg">I-install ang ListaKo</h3>
               <button onClick={() => setShowIOSGuide(false)} className="text-gray-400 text-xl">✕</button>
             </div>
             <div className="space-y-4">
               <div className="flex items-start gap-3">
                 <span className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">1</span>
                 <div>
-                  <p className="font-semibold text-gray-800 text-sm">I-tap ang Share button</p>
+                  <p className="font-semibold text-gray-800 dark:text-ivory-100 text-sm">I-tap ang Share button</p>
                   <p className="text-xs text-gray-500 mt-0.5">Ang icon na may arrow pataas sa ibaba ng Safari</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <span className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">2</span>
                 <div>
-                  <p className="font-semibold text-gray-800 text-sm">Hanapin ang "Add to Home Screen"</p>
+                  <p className="font-semibold text-gray-800 dark:text-ivory-100 text-sm">Hanapin ang "Add to Home Screen"</p>
                   <p className="text-xs text-gray-500 mt-0.5">I-scroll pababa sa menu at i-tap ang "Add to Home Screen"</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <span className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">3</span>
                 <div>
-                  <p className="font-semibold text-gray-800 text-sm">I-tap ang "Add"</p>
+                  <p className="font-semibold text-gray-800 dark:text-ivory-100 text-sm">I-tap ang "Add"</p>
                   <p className="text-xs text-gray-500 mt-0.5">Ma-add ang ListaKo icon sa iyong Home Screen — parang downloaded app!</p>
                 </div>
               </div>
