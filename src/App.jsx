@@ -2174,6 +2174,63 @@ function AnalyticsDashboard({ business, branches, showToast }) {
   );
 }
 
+function CustomerModal({ existing, businessId, showToast, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    name: existing?.name || "",
+    phone: existing?.phone || "",
+    email: existing?.email || "",
+    address: existing?.address || "",
+    is_suki: existing?.is_suki || false,
+    notes: existing?.notes || "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!form.name.trim()) return showToast("Enter customer name.", "error");
+    setSaving(true);
+    const payload = { business_id: businessId, name: form.name.trim(), phone: form.phone.trim() || null, email: form.email.trim() || null, address: form.address.trim() || null, is_suki: form.is_suki, notes: form.notes.trim() || null };
+    const { error } = existing
+      ? await supabase.from("customers").update(payload).eq("id", existing.id)
+      : await supabase.from("customers").insert(payload);
+    setSaving(false);
+    if (error) return showToast("Failed to save customer.", "error");
+    showToast(existing ? "Customer updated!" : "Customer added!", "success");
+    onSaved();
+  };
+
+  return (
+    <Modal title={existing ? "Edit Customer" : "Add Customer"} onClose={onClose}>
+      <div className="space-y-4">
+        <Field label="Name" value={form.name} onChange={(v) => setForm(f => ({ ...f, name: v }))} placeholder="Juan dela Cruz" />
+        <Field label="Phone" value={form.phone} onChange={(v) => setForm(f => ({ ...f, phone: v }))} placeholder="09XX XXX XXXX" type="tel" />
+        <Field label="Email (optional)" value={form.email} onChange={(v) => setForm(f => ({ ...f, email: v }))} placeholder="email@example.com" type="email" />
+        <Field label="Address (optional)" value={form.address} onChange={(v) => setForm(f => ({ ...f, address: v }))} placeholder="Brgy, City" />
+        <div className="flex items-center gap-3">
+          <button onClick={() => setForm(f => ({ ...f, is_suki: !f.is_suki }))}
+            className={`w-12 h-7 rounded-full transition-colors relative ${form.is_suki ? "bg-gold-400" : "bg-gray-300"}`}>
+            <span className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${form.is_suki ? "translate-x-5" : "translate-x-0.5"}`} />
+          </button>
+          <span className="text-sm font-medium text-gray-700">Mark as Suki</span>
+        </div>
+        <Field label="Notes (optional)" value={form.notes} onChange={(v) => setForm(f => ({ ...f, notes: v }))} placeholder="Special notes about this customer..." />
+        <button onClick={save} disabled={saving}
+          className="w-full bg-forest-600 text-white font-bold py-3 rounded-xl disabled:opacity-60">
+          {saving ? "Saving..." : existing ? "Update Customer" : "Add Customer"}
+        </button>
+        {existing && (
+          <button onClick={async () => {
+            await supabase.from("customers").delete().eq("id", existing.id);
+            showToast("Customer removed.", "success");
+            onSaved();
+          }} className="w-full bg-red-50 text-red-500 font-semibold py-2.5 rounded-xl text-sm">
+            Remove Customer
+          </button>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 function AuditLogViewer({ businessId }) {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -2283,12 +2340,16 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [pendingTransfers, setPendingTransfers] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [editCustomer, setEditCustomer] = useState(null);
+  const [customerSearch, setCustomerSearch] = useState("");
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const [b, p, s, tx, utang, pending, notifs, xfers] = await Promise.all([
+    const [b, p, s, tx, utang, pending, notifs, xfers, cust] = await Promise.all([
       supabase.from("branches").select("*").eq("business_id", business.id).order("created_at"),
       supabase.from("products").select("*").eq("business_id", business.id).eq("status", "active").order("name"),
       supabase.from("profiles").select("*").eq("business_id", business.id).neq("role", "owner").order("full_name"),
@@ -2298,6 +2359,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
       supabase.from("notifications").select("*").eq("business_id", business.id).eq("is_read", false).is("recipient_id", null).order("created_at", { ascending: false }).limit(20),
       supabase.from("product_transfers").select("*, products(name, stock_quantity), from_branch:branches!product_transfers_from_branch_id_fkey(name), to_branch:branches!product_transfers_to_branch_id_fkey(name), requester:profiles!product_transfers_requested_by_fkey(full_name)")
         .eq("business_id", business.id).eq("status", "pending").order("created_at", { ascending: false }),
+      supabase.from("customers").select("*").eq("business_id", business.id).order("name"),
     ]);
     setBranches(b.data || []);
     setProducts(p.data || []);
@@ -2306,6 +2368,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     setPendingProducts(pending.data || []);
     setNotifications(notifs.data || []);
     setPendingTransfers(xfers.data || []);
+    setCustomers(cust.data || []);
     const revenue = (tx.data || []).reduce((sum, t) => sum + Number(t.total_amount), 0);
     setTodayRevenue(revenue);
     setTodayTxCount((tx.data || []).length);
@@ -2367,9 +2430,12 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
       name: existing?.name || "",
       barcode: existing?.barcode || "",
       price: existing?.price || "",
+      wholesale_price: existing?.wholesale_price || "",
+      wholesale_min_qty: existing?.wholesale_min_qty || "12",
       stock_quantity: existing?.stock_quantity || "",
       low_stock_threshold: existing?.low_stock_threshold || "10",
       category: existing?.category || "Others",
+      image_url: existing?.image_url || "",
     });
     const [saving, setSaving] = useState(false);
     const save = async () => {
@@ -2382,9 +2448,12 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
         name: form.name.trim(),
         barcode: form.barcode.trim() || null,
         price: Number(form.price),
+        wholesale_price: form.wholesale_price ? Number(form.wholesale_price) : null,
+        wholesale_min_qty: Number(form.wholesale_min_qty) || 1,
         stock_quantity: Number(form.stock_quantity) || 0,
         low_stock_threshold: Number(form.low_stock_threshold) || 10,
         category: form.category,
+        image_url: form.image_url.trim() || null,
       };
       const { error } = existing
         ? await supabase.from("products").update(payload).eq("id", existing.id)
@@ -2443,6 +2512,28 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             onChange={(v) => setForm((f) => ({ ...f, low_stock_threshold: v }))}
             placeholder="10"
             type="number"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="Wholesale Price (₱)"
+              value={form.wholesale_price}
+              onChange={(v) => setForm((f) => ({ ...f, wholesale_price: v }))}
+              placeholder="0.00"
+              type="number"
+            />
+            <Field
+              label="Min Qty (Wholesale)"
+              value={form.wholesale_min_qty}
+              onChange={(v) => setForm((f) => ({ ...f, wholesale_min_qty: v }))}
+              placeholder="12"
+              type="number"
+            />
+          </div>
+          <Field
+            label="Image URL (optional)"
+            value={form.image_url}
+            onChange={(v) => setForm((f) => ({ ...f, image_url: v }))}
+            placeholder="https://example.com/image.jpg"
           />
           <button
             onClick={save}
@@ -2582,6 +2673,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     { key: "branches", icon: "🏪", label: "Branch" },
     { key: "staff", icon: "👥", label: "Staff" },
     { key: "pending", icon: (pendingProducts.length + pendingTransfers.length) > 0 ? "🔴" : "⏳", label: "Pending" },
+    { key: "customers", icon: "👤", label: "Suki" },
     { key: "logs", icon: "📋", label: "Logs" },
     ...(isSuperAdmin ? [{ key: "admin", icon: "👑", label: "Admin" }] : []),
   ];
@@ -3247,6 +3339,48 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
               </div>
             )}
 
+            {tab === "customers" && (
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide">
+                    {customers.length} Customer{customers.length !== 1 ? "s" : ""}
+                  </h2>
+                  <button onClick={() => setShowAddCustomer(true)}
+                    className="bg-forest-600 text-white text-xs px-3 py-2 rounded-xl font-bold">+ Add Suki</button>
+                </div>
+                <input type="text" value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)}
+                  placeholder="Search customers..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500" />
+                {customers.filter(c => !customerSearch.trim() || c.name.toLowerCase().includes(customerSearch.toLowerCase())).length === 0 ? (
+                  <Card className="p-8 text-center">
+                    <p className="text-3xl mb-2">👤</p>
+                    <p className="font-semibold text-gray-600 text-sm">No customers yet</p>
+                    <p className="text-xs text-gray-400 mt-1">Add your suki customers to track their purchases.</p>
+                  </Card>
+                ) : (
+                  <div className="space-y-2">
+                    {customers.filter(c => !customerSearch.trim() || c.name.toLowerCase().includes(customerSearch.toLowerCase())).map((c) => (
+                      <Card key={c.id} className="p-4" onClick={() => setEditCustomer(c)}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold text-gray-800 text-sm">{c.name}</p>
+                              {c.is_suki && <span className="text-xs bg-gold-100 text-gold-700 px-2 py-0.5 rounded-full font-bold">Suki</span>}
+                            </div>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {c.phone || "No phone"} · {c.visit_count} visit{c.visit_count !== 1 ? "s" : ""} · ₱{Number(c.total_spent || 0).toFixed(0)} spent
+                            </p>
+                          </div>
+                          <button onClick={(e) => { e.stopPropagation(); setEditCustomer(c); }}
+                            className="text-xs bg-gray-100 text-gray-600 px-2 py-1.5 rounded-lg font-medium">Edit</button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {tab === "logs" && (
               <AuditLogViewer businessId={business.id} />
             )}
@@ -3280,6 +3414,17 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
       {showAddProduct && <ProductModal onClose={() => setShowAddProduct(false)} />}
       {editProduct && <ProductModal existing={editProduct} onClose={() => setEditProduct(null)} />}
       {showAddStaff && <AddStaffModal />}
+
+      {/* Customer Modal */}
+      {(showAddCustomer || editCustomer) && (
+        <CustomerModal
+          existing={editCustomer}
+          businessId={business.id}
+          showToast={showToast}
+          onClose={() => { setShowAddCustomer(false); setEditCustomer(null); }}
+          onSaved={() => { setShowAddCustomer(false); setEditCustomer(null); fetchAll(); }}
+        />
+      )}
     </div>
   );
 }
@@ -3789,6 +3934,9 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   const [utangPayAmount, setUtangPayAmount] = useState("");
   const [reconcileModal, setReconcileModal] = useState(false);
   const [cashCounted, setCashCounted] = useState("");
+  const [returnModal, setReturnModal] = useState(null);
+  const [returnReason, setReturnReason] = useState("");
+  const [returnItems, setReturnItems] = useState([]);
   const [cashierNotifs, setCashierNotifs] = useState([]);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [pinVerified, setPinVerified] = useState(false);
@@ -4002,6 +4150,13 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   };
 
   // Add to cart with stock validation
+  const getEffectivePrice = (product, qty) => {
+    if (product.wholesale_price && product.wholesale_min_qty && qty >= product.wholesale_min_qty) {
+      return Number(product.wholesale_price);
+    }
+    return Number(product.price);
+  };
+
   const addToCart = (product) => {
     setCartPersisted((prev) => {
       const existing = prev.find((i) => i.product_id === product.id);
@@ -4010,9 +4165,11 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           showToast(`Only ${product.stock_quantity} units of ${product.name} in stock.`, "warning");
           return prev;
         }
+        const newQty = existing.quantity + 1;
+        const price = getEffectivePrice(product, newQty);
         return prev.map((i) =>
           i.product_id === product.id
-            ? { ...i, quantity: i.quantity + 1, subtotal: (i.quantity + 1) * i.unit_price }
+            ? { ...i, quantity: newQty, unit_price: price, subtotal: newQty * price, is_wholesale: product.wholesale_price && newQty >= (product.wholesale_min_qty || 1) }
             : i
         );
       }
@@ -4029,6 +4186,8 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           quantity: 1,
           subtotal: Number(product.price),
           stock: product.stock_quantity,
+          wholesale_price: product.wholesale_price ? Number(product.wholesale_price) : null,
+          wholesale_min_qty: product.wholesale_min_qty || 1,
         },
       ];
     });
@@ -5228,18 +5387,22 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     </div>
                   )}
                   {txn.status === "completed" && (
-                    isToday(txn.created_at) ? (
+                    <div className="flex gap-2 mt-1">
+                      {isToday(txn.created_at) && (
+                        <button
+                          onClick={() => setVoidModal(txn)}
+                          className="text-xs text-red-500 font-semibold bg-red-50 px-3 py-1.5 rounded-lg"
+                        >
+                          Request Void
+                        </button>
+                      )}
                       <button
-                        onClick={() => setVoidModal(txn)}
-                        className="text-xs text-red-500 font-semibold bg-red-50 px-3 py-1.5 rounded-lg mt-1"
+                        onClick={() => setReturnModal(txn)}
+                        className="text-xs text-blue-600 font-semibold bg-blue-50 px-3 py-1.5 rounded-lg"
                       >
-                        Request Void
+                        Return/Refund
                       </button>
-                    ) : (
-                      <p className="text-xs text-gray-400 mt-1 bg-gray-50 px-3 py-1.5 rounded-lg">
-                        🔒 Cannot void — older than today
-                      </p>
-                    )
+                    </div>
                   )}
                   {txn.status === "pending_void" && (
                     <div className="mt-1 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-1.5">
@@ -5695,6 +5858,111 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Return/Refund Modal */}
+      {returnModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-black text-gray-800 text-base">Return / Refund</h3>
+              <button onClick={() => { setReturnModal(null); setReturnReason(""); setReturnItems([]); }} className="text-gray-400 text-xl">✕</button>
+            </div>
+            <p className="text-xs text-gray-500 mb-1">
+              {returnModal.receipt_number} · ₱{Number(returnModal.total_amount).toFixed(2)}
+            </p>
+            <p className="text-xs text-gray-400 mb-3">
+              {new Date(returnModal.created_at).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}
+            </p>
+            {returnModal.transaction_items && (
+              <div className="space-y-2 mb-4">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Select items to return</p>
+                {returnModal.transaction_items.map((item, i) => {
+                  const selected = returnItems.find(r => r.idx === i);
+                  return (
+                    <div key={i} className={`rounded-xl p-3 border cursor-pointer transition-colors ${selected ? "bg-blue-50 border-blue-300" : "bg-gray-50 border-gray-200"}`}
+                      onClick={() => {
+                        setReturnItems(prev => {
+                          const exists = prev.find(r => r.idx === i);
+                          if (exists) return prev.filter(r => r.idx !== i);
+                          return [...prev, { idx: i, product_name: item.products?.name || item.product_name, quantity: item.quantity, unit_price: item.unit_price, subtotal: item.subtotal, product_id: item.product_id }];
+                        });
+                      }}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center text-xs ${selected ? "bg-blue-500 border-blue-500 text-white" : "border-gray-300"}`}>
+                            {selected && "✓"}
+                          </span>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">{item.products?.name || item.product_name}</p>
+                            <p className="text-xs text-gray-400">×{item.quantity} @ ₱{Number(item.unit_price).toFixed(2)}</p>
+                          </div>
+                        </div>
+                        <p className="text-sm font-bold text-gray-700">₱{Number(item.subtotal).toFixed(2)}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Reason for Return</p>
+            <textarea value={returnReason} onChange={(e) => setReturnReason(e.target.value)}
+              placeholder="Why is the customer returning these items?"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm h-16 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 mb-3" />
+            {returnItems.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 mb-3">
+                <p className="text-xs text-blue-700 font-semibold">
+                  Refund amount: ₱{returnItems.reduce((s, r) => s + Number(r.subtotal), 0).toFixed(2)} for {returnItems.length} item{returnItems.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button onClick={() => { setReturnModal(null); setReturnReason(""); setReturnItems([]); }}
+                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm">Cancel</button>
+              <button
+                disabled={returnItems.length === 0 || !returnReason.trim()}
+                onClick={async () => {
+                  const refundAmount = returnItems.reduce((s, r) => s + Number(r.subtotal), 0);
+                  const { error } = await supabase.from("returns").insert({
+                    business_id: business.id,
+                    branch_id: branch?.id || null,
+                    transaction_id: returnModal.id,
+                    cashier_id: profile.id,
+                    reason: returnReason.trim(),
+                    refund_amount: refundAmount,
+                    refund_method: returnModal.payment_method,
+                    items: returnItems.map(r => ({ product_name: r.product_name, quantity: r.quantity, unit_price: r.unit_price, subtotal: r.subtotal })),
+                  });
+                  if (error) return showToast("Failed to process return.", "error");
+                  for (const item of returnItems) {
+                    if (item.product_id) {
+                      await supabase.rpc("increment_stock", { p_id: item.product_id, qty: item.quantity }).catch(() => {
+                        supabase.from("products").select("stock_quantity").eq("id", item.product_id).maybeSingle().then(({ data }) => {
+                          if (data) supabase.from("products").update({ stock_quantity: data.stock_quantity + item.quantity }).eq("id", item.product_id);
+                        });
+                      });
+                    }
+                  }
+                  logAudit(business.id, profile.id, profile.full_name, "return_processed", "transaction", returnModal.id, { refund: refundAmount, items: returnItems.length, reason: returnReason.trim() });
+                  await supabase.from("notifications").insert({
+                    business_id: business.id,
+                    type: "return",
+                    title: "🔄 Return Processed",
+                    message: `${profile.full_name} processed a return of ₱${refundAmount.toFixed(2)} on ${returnModal.receipt_number}. Reason: ${returnReason.trim()}`,
+                    is_read: false,
+                  });
+                  showToast(`Return processed! Refund: ₱${refundAmount.toFixed(2)}`, "success");
+                  setReturnModal(null);
+                  setReturnReason("");
+                  setReturnItems([]);
+                  loadHistory();
+                }}
+                className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50">
+                Process Return
+              </button>
+            </div>
           </div>
         </div>
       )}
