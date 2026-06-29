@@ -68,6 +68,35 @@ const getErrorMessage = (error) => {
 };
 
 // ═══════════════════════════════════════════════════════════════
+// BARCODE GENERATOR
+// ═══════════════════════════════════════════════════════════════
+const generateBarcode = () => {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `LK-${timestamp}-${random}`;
+};
+
+function BarcodeDisplay({ code }) {
+  if (!code) return null;
+  const bars = [];
+  for (let i = 0; i < code.length; i++) {
+    const charCode = code.charCodeAt(i);
+    bars.push(charCode % 4 + 1);
+    bars.push((charCode >> 2) % 3 + 1);
+  }
+  return (
+    <div className="flex flex-col items-center py-2">
+      <div className="flex items-end h-10 gap-px">
+        {bars.map((w, i) => (
+          <div key={i} className={`${i % 2 === 0 ? "bg-black" : "bg-transparent"} h-full`} style={{ width: `${w}px` }} />
+        ))}
+      </div>
+      <p className="text-xs font-mono text-gray-600 mt-1 tracking-wider">{code}</p>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // AUDIT LOG HELPER
 // ═══════════════════════════════════════════════════════════════
 const logAudit = async (businessId, userId, userName, action, entityType, entityId, details) => {
@@ -2476,12 +2505,25 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             onChange={(v) => setForm((f) => ({ ...f, name: v }))}
             placeholder="Coca-Cola 1.5L"
           />
-          <Field
-            label="Barcode (opsyonal)"
-            value={form.barcode}
-            onChange={(v) => setForm((f) => ({ ...f, barcode: v }))}
-            placeholder="I-type ang barcode"
-          />
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Barcode (opsyonal)</label>
+            <div className="flex gap-2">
+              <input
+                value={form.barcode}
+                onChange={(e) => setForm((f) => ({ ...f, barcode: e.target.value }))}
+                placeholder="I-type ang barcode"
+                className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+              />
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, barcode: generateBarcode() }))}
+                className="px-3 py-2 bg-gold-500 text-forest-900 text-xs font-bold rounded-xl whitespace-nowrap"
+              >
+                Generate
+              </button>
+            </div>
+            {form.barcode && <BarcodeDisplay code={form.barcode} />}
+          </div>
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Category</label>
             <select value={form.category}
@@ -6999,6 +7041,26 @@ function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
 // ═══════════════════════════════════════════════════════════════
 // ROOT APP
 // ═══════════════════════════════════════════════════════════════
+function OfflineBanner() {
+  const [offline, setOffline] = useState(!navigator.onLine);
+  useEffect(() => {
+    const goOffline = () => setOffline(true);
+    const goOnline = () => setOffline(false);
+    window.addEventListener("offline", goOffline);
+    window.addEventListener("online", goOnline);
+    return () => {
+      window.removeEventListener("offline", goOffline);
+      window.removeEventListener("online", goOnline);
+    };
+  }, []);
+  if (!offline) return null;
+  return (
+    <div className="fixed top-0 left-0 right-0 bg-red-600 text-white text-center py-2 text-xs font-bold z-[100]">
+      Offline — Some features may not work. Data will sync when reconnected.
+    </div>
+  );
+}
+
 export default function App() {
   const [screen, setScreen] = useState("landing");
   const [otpEmail, setOtpEmail] = useState("");
@@ -7162,6 +7224,7 @@ export default function App() {
 
     return (
       <>
+        <OfflineBanner />
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         {profile.role === "owner" ? (
           <OwnerDashboard
