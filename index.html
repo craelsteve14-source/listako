@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
@@ -7,12 +7,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="ListaKo" />
-    <meta name="theme-color" content="#0A2818" />
-    <meta name="description" content="Filipino-First Business Management System — POS, inventory, analytics para sa iyong tindahan." />
+    <meta name="theme-color" content="#0A1B1E" />
+    <meta name="description" content="The Operating System for Every Filipino Business — POS, inventory, staff, reports, and growth." />
     <meta name="format-detection" content="telephone=no" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700&family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700;800;900&family=Lato:wght@300;400;700;900&display=swap" rel="stylesheet" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
@@ -21,24 +21,24 @@
     <link rel="apple-touch-icon" sizes="120x120" href="/icon-192.png" />
     <title>ListaKo</title>
     <style>
-      /* iOS safe area support */
       body {
         margin: 0;
         padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
         -webkit-tap-highlight-color: transparent;
         -webkit-touch-callout: none;
         overscroll-behavior-y: contain;
+        font-family: 'Inter', system-ui, sans-serif;
       }
-      html { background-color: #0d1f17; }
+      html { background-color: #0A1B1E; }
+      html.light { background-color: #F7F5E8; }
       html, body { overflow: hidden; height: 100%; }
       #root { overflow: auto; height: 100%; -webkit-overflow-scrolling: touch; }
-      ::selection { background: #c9a84c33; }
+      ::selection { background: #B9960C33; }
 
-      /* App splash screen — shown while JS loads */
       #splash {
         position: fixed;
         inset: 0;
-        background: linear-gradient(145deg, #1a3a2a 0%, #0d1f17 50%, #0a1810 100%);
+        background: #0A1B1E;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -47,27 +47,38 @@
         transition: opacity 0.4s ease-out;
       }
       #splash.hide { opacity: 0; pointer-events: none; }
-      #splash img { width: 80px; height: 80px; border-radius: 20px; }
+      #splash .logo-mark {
+        width: 72px; height: 72px;
+        background: linear-gradient(135deg, #1A3428 0%, #0F2620 100%);
+        border-radius: 18px;
+        display: flex; align-items: center; justify-content: center;
+        border: 1px solid rgba(185,150,12,0.15);
+      }
+      #splash .logo-mark svg { width: 40px; height: 40px; }
       #splash h1 {
-        font-family: 'Playfair Display', Georgia, serif;
-        font-weight: 700;
+        font-family: 'Inter', sans-serif;
+        font-weight: 800;
+        font-size: 28px;
+        color: #F0EDE5;
+        margin: 20px 0 4px;
+        letter-spacing: -0.5px;
+      }
+      #splash h1 span {
+        font-family: 'Playfair Display', serif;
         font-style: italic;
-        font-size: 32px;
-        color: #c9a84c;
-        margin: 16px 0 4px;
-        letter-spacing: 1px;
+        color: #B9960C;
       }
       #splash p {
-        font-family: Arial, sans-serif;
+        font-family: 'Inter', sans-serif;
         font-size: 11px;
-        color: #f8f5ef99;
-        letter-spacing: 3px;
+        color: rgba(240,237,229,0.4);
+        letter-spacing: 2.5px;
         text-transform: uppercase;
       }
       #splash .loader {
-        width: 32px; height: 32px;
-        border: 3px solid #1a3a2a;
-        border-top-color: #c9a84c;
+        width: 28px; height: 28px;
+        border: 2.5px solid #1A3428;
+        border-top-color: #B9960C;
         border-radius: 50%;
         margin-top: 32px;
         animation: spin 0.8s linear infinite;
@@ -76,24 +87,26 @@
     </style>
   </head>
   <body>
-    <!-- Splash screen — disappears when React mounts -->
     <div id="splash">
-      <img src="/icon-192.png" alt="ListaKo" />
-      <h1>ListaKo</h1>
-      <p>Business Manager</p>
+      <div class="logo-mark">
+        <svg viewBox="0 0 40 40" fill="none">
+          <path d="M10 30V10h4v16h12v4H10z" fill="#B9960C"/>
+          <path d="M18 10l8 8-8 8" stroke="#B9960C" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+        </svg>
+      </div>
+      <h1>Lista<span>Ko</span></h1>
+      <p>Business Operating System</p>
       <div class="loader"></div>
     </div>
 
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
-      // Service worker registration
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", () => {
           navigator.serviceWorker.register("/sw.js").catch(() => {});
         });
       }
-      // Remove splash once app renders
       const observer = new MutationObserver(() => {
         if (document.getElementById("root")?.children.length > 0) {
           const splash = document.getElementById("splash");

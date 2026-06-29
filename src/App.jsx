@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, createContext, useContext } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useZxing } from "react-zxing";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
@@ -31,10 +31,13 @@ const ADMIN_PHONE = "09530897696";
 // PRICING
 // ═══════════════════════════════════════════════════════════════
 const PLANS = {
-  basic: { label: "Basic", price: 199, branches: 1, staff: 5, desc: "Para sa maliliit na tindahan" },
-  pro: { label: "Pro", price: 399, branches: 3, staff: 15, desc: "Para sa lumalaking negosyo" },
-  business: { label: "Business", price: 699, branches: 999, staff: 999, desc: "Para sa maraming branches" },
+  starter: { label: "Starter", price: 199, branches: 1, staff: 5, desc: "Para sa maliliit na tindahan" },
+  growing: { label: "Growing Business", price: 499, branches: 3, staff: 15, desc: "Para sa lumalaking negosyo" },
+  enterprise: { label: "Enterprise", price: 999, branches: 999, staff: 999, desc: "Para sa maraming branches" },
 };
+
+const ThemeContext = createContext({ dark: true, toggle: () => {} });
+const useTheme = () => useContext(ThemeContext);
 
 // ═══════════════════════════════════════════════════════════════
 // ROLE CONFIG
@@ -176,7 +179,7 @@ function Toast({ message, type, onClose }) {
 // ═══════════════════════════════════════════════════════════════
 function Spinner() {
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-forest-800 gap-4">
+    <div className="flex flex-col items-center justify-center h-screen bg-forest-800 dark:bg-forest-800 gap-4">
       <div className="w-12 h-12 border-4 border-gold-400 border-t-transparent rounded-full animate-spin" />
       <p className="text-forest-300 text-sm font-medium tracking-wide">Loading...</p>
     </div>
@@ -189,7 +192,7 @@ function Spinner() {
 function Field({ label, value, onChange, placeholder, type = "text", maxLength }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+      <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
         {label}
       </label>
       <input
@@ -198,7 +201,7 @@ function Field({ label, value, onChange, placeholder, type = "text", maxLength }
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         maxLength={maxLength}
-        className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest-500 focus:border-transparent"
+        className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-sm bg-white dark:bg-surface-dark-card dark:text-ivory-100 focus:outline-none focus:ring-2 focus:ring-forest-500 dark:focus:ring-gold-400 focus:border-transparent"
       />
     </div>
   );
@@ -235,7 +238,7 @@ function OTPInput({ value, onChange }) {
           value={d}
           onChange={(e) => handleChange(i, e.target.value)}
           onKeyDown={(e) => handleKeyDown(i, e)}
-          className="w-11 h-14 text-center text-xl font-black border-2 rounded-xl focus:outline-none focus:border-forest-500 bg-white"
+          className="w-11 h-14 text-center text-xl font-black border-2 rounded-xl focus:outline-none focus:border-forest-500 bg-white dark:bg-surface-dark-card dark:text-ivory-100 dark:border-forest-600"
           style={{ borderColor: d ? "#c9a84c" : "#e5e7eb" }}
         />
       ))}
@@ -308,7 +311,7 @@ function OTPScreen({ email, type, onBack, onSuccess, showToast }) {
         <div className="w-16 h-16 bg-forest-100 rounded-2xl flex items-center justify-center mb-4 text-3xl">
           {type === "forgot" ? <NavIcon name="key" size={24} color="#c9a84c" /> : <NavIcon name="phone" size={24} color="#c9a84c" />}
         </div>
-        <h3 className="text-lg font-black text-gray-800 mb-1 text-center">Ilagay ang OTP Code</h3>
+        <h3 className="text-lg font-black text-gray-800 dark:text-ivory-100 mb-1 text-center">Ilagay ang OTP Code</h3>
         <p className="text-sm text-gray-500 text-center mb-6">
           Nag-send kami ng 6-digit code sa{" "}
           <span className="font-semibold text-forest-700">{email}</span>
@@ -353,31 +356,31 @@ function OTPScreen({ email, type, onBack, onSuccess, showToast }) {
 // ═══════════════════════════════════════════════════════════════
 function PendingScreen({ business, onLogout }) {
   return (
-    <div className="min-h-screen bg-ivory-100 flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm text-center">
-        <div className="w-20 h-20 bg-yellow-100 rounded-3xl flex items-center justify-center mx-auto mb-4 text-4xl">
+        <div className="w-20 h-20 bg-yellow-100 dark:bg-yellow-900/30 rounded-3xl flex items-center justify-center mx-auto mb-4 text-4xl">
           <NavIcon name="clock" size={48} color="#d97706" />
         </div>
-        <h1 className="text-2xl font-black text-gray-800">Nasa Review Pa</h1>
-        <p className="text-gray-500 text-sm mt-2 leading-relaxed">
+        <h1 className="text-2xl font-black text-gray-800 dark:text-ivory-100">Nasa Review Pa</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-2 leading-relaxed">
           Salamat sa pag-sign up,{" "}
           <span className="font-semibold">{business?.name}</span>! Ang iyong account ay
           kasalukuyang sinusuri ng aming team.
         </p>
-        <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-2xl p-4 text-left space-y-2">
-          <p className="text-sm font-bold text-yellow-800 flex items-center gap-1.5"><NavIcon name="logs" size={16} color="currentColor" /> Susunod na Hakbang:</p>
-          <p className="text-xs text-yellow-700">• Aabisuhan ka namin sa loob ng 24 oras</p>
-          <p className="text-xs text-yellow-700">• Tingnan ang iyong email para sa update</p>
-          <p className="text-xs text-yellow-700">• Makipag-ugnayan sa amin kung may katanungan</p>
+        <div className="mt-6 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/30 rounded-2xl p-4 text-left space-y-2">
+          <p className="text-sm font-bold text-yellow-800 dark:text-yellow-400 flex items-center gap-1.5"><NavIcon name="logs" size={16} color="currentColor" /> Susunod na Hakbang:</p>
+          <p className="text-xs text-yellow-700 dark:text-yellow-300">• Aabisuhan ka namin sa loob ng 24 oras</p>
+          <p className="text-xs text-yellow-700 dark:text-yellow-300">• Tingnan ang iyong email para sa update</p>
+          <p className="text-xs text-yellow-700 dark:text-yellow-300">• Makipag-ugnayan sa amin kung may katanungan</p>
         </div>
-        <div className="mt-4 bg-white border border-gray-100 rounded-2xl p-4 text-left space-y-2 shadow-sm">
-          <p className="text-xs font-bold text-gray-500 uppercase">Makipag-ugnayan</p>
-          <p className="text-sm text-gray-700 flex items-center gap-1.5"><NavIcon name="mail" size={16} color="currentColor" /> {SUPER_ADMIN_EMAIL}</p>
-          <p className="text-sm text-gray-700 flex items-center gap-1.5"><NavIcon name="phone" size={16} color="currentColor" /> {ADMIN_PHONE}</p>
+        <div className="mt-4 bg-white dark:bg-surface-dark-card border border-gray-100 dark:border-forest-600 rounded-2xl p-4 text-left space-y-2 shadow-sm">
+          <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase">Makipag-ugnayan</p>
+          <p className="text-sm text-gray-700 dark:text-ivory-200 flex items-center gap-1.5"><NavIcon name="mail" size={16} color="currentColor" /> {SUPER_ADMIN_EMAIL}</p>
+          <p className="text-sm text-gray-700 dark:text-ivory-200 flex items-center gap-1.5"><NavIcon name="phone" size={16} color="currentColor" /> {ADMIN_PHONE}</p>
         </div>
         <button
           onClick={onLogout}
-          className="mt-6 w-full bg-gray-100 text-gray-600 font-semibold py-3 rounded-2xl text-sm"
+          className="mt-6 w-full bg-gray-100 dark:bg-forest-600 text-gray-600 dark:text-ivory-200 font-semibold py-3 rounded-2xl text-sm"
         >
           Mag-logout
         </button>
@@ -391,32 +394,32 @@ function PendingScreen({ business, onLogout }) {
 // ═══════════════════════════════════════════════════════════════
 function RejectedScreen({ business, onLogout }) {
   return (
-    <div className="min-h-screen bg-ivory-100 flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm text-center">
-        <div className="w-20 h-20 bg-red-100 rounded-3xl flex items-center justify-center mx-auto mb-4 text-4xl">
+        <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-3xl flex items-center justify-center mx-auto mb-4 text-4xl">
           <NavIcon name="x" size={48} color="#dc2626" />
         </div>
-        <h1 className="text-2xl font-black text-gray-800">Hindi Na-approve</h1>
-        <p className="text-gray-500 text-sm mt-2">
+        <h1 className="text-2xl font-black text-gray-800 dark:text-ivory-100">Hindi Na-approve</h1>
+        <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
           Hindi na-approve ang account ng{" "}
           <span className="font-semibold">{business?.name}</span>.
         </p>
         {business?.rejection_reason && (
-          <div className="mt-4 bg-red-50 border border-red-200 rounded-2xl p-4">
-            <p className="text-xs font-bold text-red-700 mb-1">Dahilan:</p>
-            <p className="text-sm text-red-600">{business.rejection_reason}</p>
+          <div className="mt-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 rounded-2xl p-4">
+            <p className="text-xs font-bold text-red-700 dark:text-red-400 mb-1">Dahilan:</p>
+            <p className="text-sm text-red-600 dark:text-red-300">{business.rejection_reason}</p>
           </div>
         )}
-        <div className="mt-4 bg-white border border-gray-100 rounded-2xl p-4 text-left shadow-sm">
-          <p className="text-xs font-bold text-gray-500 uppercase mb-2">
+        <div className="mt-4 bg-white dark:bg-surface-dark-card border border-gray-100 dark:border-forest-600 rounded-2xl p-4 text-left shadow-sm">
+          <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase mb-2">
             Makipag-ugnayan para sa tulong
           </p>
-          <p className="text-sm text-gray-700 flex items-center gap-1.5"><NavIcon name="mail" size={16} color="currentColor" /> {SUPER_ADMIN_EMAIL}</p>
-          <p className="text-sm text-gray-700 flex items-center gap-1.5"><NavIcon name="phone" size={16} color="currentColor" /> {ADMIN_PHONE}</p>
+          <p className="text-sm text-gray-700 dark:text-ivory-200 flex items-center gap-1.5"><NavIcon name="mail" size={16} color="currentColor" /> {SUPER_ADMIN_EMAIL}</p>
+          <p className="text-sm text-gray-700 dark:text-ivory-200 flex items-center gap-1.5"><NavIcon name="phone" size={16} color="currentColor" /> {ADMIN_PHONE}</p>
         </div>
         <button
           onClick={onLogout}
-          className="mt-6 w-full bg-gray-100 text-gray-600 font-semibold py-3 rounded-2xl text-sm"
+          className="mt-6 w-full bg-gray-100 dark:bg-forest-600 text-gray-600 dark:text-ivory-200 font-semibold py-3 rounded-2xl text-sm"
         >
           Mag-logout
         </button>
@@ -430,53 +433,53 @@ function RejectedScreen({ business, onLogout }) {
 // ═══════════════════════════════════════════════════════════════
 function TrialExpiredScreen({ business, onLogout }) {
   return (
-    <div className="min-h-screen bg-ivory-100 flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
-          <div className="w-20 h-20 bg-orange-100 rounded-3xl flex items-center justify-center mx-auto mb-4 text-4xl">
+          <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 rounded-3xl flex items-center justify-center mx-auto mb-4 text-4xl">
             <NavIcon name="clock" size={48} color="#d97706" />
           </div>
-          <h1 className="text-2xl font-black text-gray-800">Na-expire na ang Trial</h1>
-          <p className="text-gray-500 text-sm mt-2">
+          <h1 className="text-2xl font-black text-gray-800 dark:text-ivory-100">Na-expire na ang Trial</h1>
+          <p className="text-gray-500 dark:text-gray-400 text-sm mt-2">
             Ang 7-day na libreng trial ng{" "}
             <span className="font-semibold">{business?.name}</span> ay natapos na.
           </p>
         </div>
-        <p className="text-sm font-bold text-gray-700 mb-3 text-center">
+        <p className="text-sm font-bold text-gray-700 dark:text-ivory-200 mb-3 text-center">
           Pumili ng subscription plan:
         </p>
         <div className="space-y-3">
           {Object.entries(PLANS).map(([key, plan]) => (
-            <div key={key} className="bg-white border-2 border-gray-100 rounded-2xl p-4">
+            <div key={key} className="bg-white dark:bg-surface-dark-card border-2 border-gray-100 dark:border-forest-600 rounded-2xl p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-black text-gray-800">{plan.label}</p>
-                  <p className="text-xs text-gray-500">{plan.desc}</p>
-                  <p className="text-xs text-gray-400 mt-1">
+                  <p className="font-black text-gray-800 dark:text-ivory-100">{plan.label}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">{plan.desc}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                     {plan.branches === 999 ? "Unlimited" : plan.branches} branch •{" "}
                     {plan.staff === 999 ? "Unlimited" : plan.staff} staff
                   </p>
                 </div>
-                <p className="text-xl font-black text-forest-700">
+                <p className="text-xl font-black text-forest-700 dark:text-gold-400">
                   ₱{plan.price}
-                  <span className="text-xs font-medium text-gray-400">/buwan</span>
+                  <span className="text-xs font-medium text-gray-400 dark:text-gray-500">/buwan</span>
                 </p>
               </div>
             </div>
           ))}
         </div>
-        <div className="mt-5 bg-forest-50 border border-forest-200 rounded-2xl p-4">
-          <p className="text-sm font-bold text-forest-800 mb-2 flex items-center gap-1.5"><NavIcon name="creditcard" size={16} color="currentColor" /> Paano Mag-subscribe:</p>
-          <p className="text-xs text-forest-700">1. Pumili ng plan sa itaas</p>
-          <p className="text-xs text-forest-700">2. Mag-GCash o Maya sa:</p>
-          <p className="text-sm font-black text-forest-800 mt-1 flex items-center gap-1.5"><NavIcon name="phone" size={16} color="currentColor" /> {ADMIN_GCASH}</p>
-          <p className="text-xs text-forest-700 mt-1">3. I-send ang screenshot ng resibo sa:</p>
-          <p className="text-xs font-semibold text-forest-800">{SUPER_ADMIN_EMAIL}</p>
-          <p className="text-xs text-forest-700 mt-1">4. Ia-activate ang account sa loob ng 24 oras</p>
+        <div className="mt-5 bg-forest-50 dark:bg-surface-dark-card border border-forest-200 dark:border-forest-600 rounded-2xl p-4">
+          <p className="text-sm font-bold text-forest-800 dark:text-gold-400 mb-2 flex items-center gap-1.5"><NavIcon name="creditcard" size={16} color="currentColor" /> Paano Mag-subscribe:</p>
+          <p className="text-xs text-forest-700 dark:text-ivory-200">1. Pumili ng plan sa itaas</p>
+          <p className="text-xs text-forest-700 dark:text-ivory-200">2. Mag-GCash o Maya sa:</p>
+          <p className="text-sm font-black text-forest-800 dark:text-ivory-100 mt-1 flex items-center gap-1.5"><NavIcon name="phone" size={16} color="currentColor" /> {ADMIN_GCASH}</p>
+          <p className="text-xs text-forest-700 dark:text-ivory-200 mt-1">3. I-send ang screenshot ng resibo sa:</p>
+          <p className="text-xs font-semibold text-forest-800 dark:text-ivory-100">{SUPER_ADMIN_EMAIL}</p>
+          <p className="text-xs text-forest-700 dark:text-ivory-200 mt-1">4. Ia-activate ang account sa loob ng 24 oras</p>
         </div>
         <button
           onClick={onLogout}
-          className="mt-4 w-full bg-gray-100 text-gray-600 font-semibold py-3 rounded-2xl text-sm"
+          className="mt-4 w-full bg-gray-100 dark:bg-forest-600 text-gray-600 dark:text-ivory-200 font-semibold py-3 rounded-2xl text-sm"
         >
           Mag-logout
         </button>
@@ -599,31 +602,31 @@ function SuperAdminPanel({ showToast }) {
   const FILTERS = ["all", "pending", "approved", "rejected", "suspended"];
 
   return (
-    <div className="min-h-screen bg-ivory-100 flex flex-col max-w-lg mx-auto">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col max-w-lg mx-auto">
       {/* Header */}
-      <div className="px-4 pt-8 pb-4 relative overflow-hidden" style={{ background: '#0D1B2A' }}>
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 80% 15%, rgba(184,150,12,0.07) 0%, transparent 55%)' }} />
+      <div className="px-4 pt-8 pb-4 relative overflow-hidden bg-surface-dark">
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 80% 15%, rgba(185,150,12,0.07) 0%, transparent 55%)' }} />
         <div className="flex items-center gap-2.5 mb-2.5 relative z-10">
-          <LedgerIcon className="w-5 h-5" color="rgba(245,240,232,0.4)" />
-          <p className="text-[7.5px] font-semibold tracking-[2.5px] uppercase" style={{ color: 'rgba(184,150,12,0.55)' }}>◆ &nbsp;Administrator Access</p>
+          <LedgerIcon className="w-5 h-5" />
+          <p className="text-[7.5px] font-semibold tracking-[2.5px] uppercase" style={{ color: 'rgba(185,150,12,0.55)' }}>Administrator Access</p>
         </div>
         <h1 className="text-ivory-100 font-playfair text-[17px] font-semibold tracking-tight relative z-10">Control Panel</h1>
-        <p className="text-[8.5px] font-light mt-0.5 relative z-10" style={{ color: 'rgba(245,240,232,0.3)' }}>Welcome, Crael · All systems active</p>
+        <p className="text-[8.5px] font-light mt-0.5 relative z-10" style={{ color: 'rgba(245,240,232,0.3)' }}>All systems active</p>
       </div>
 
       {/* Stats */}
       <div className="px-3 py-2.5 grid grid-cols-4 gap-1.5">
         {[
-          { key: "pending", color: "#7A6010" },
-          { key: "approved", color: "#1A3D2B" },
-          { key: "rejected", color: "#7A1515" },
-          { key: "suspended", color: "#4A4640" },
+          { key: "pending", color: "#B9960C" },
+          { key: "approved", color: "#22C55E" },
+          { key: "rejected", color: "#EF4444" },
+          { key: "suspended", color: "#6B7280" },
         ].map((s) => (
-          <div key={s.key} className="bg-white rounded-lg p-2 text-center border border-ivory-300">
+          <div key={s.key} className="bg-white dark:bg-surface-dark-card rounded-lg p-2 text-center border border-ivory-300 dark:border-forest-600">
             <p className="text-[17px] font-black font-lato tracking-tight leading-none" style={{ color: s.color }}>
               {businesses.filter((b) => b.status === s.key).length}
             </p>
-            <p className="text-[7px] font-semibold tracking-wide uppercase text-gray-400 mt-1 capitalize">{s.key}</p>
+            <p className="text-[7px] font-semibold tracking-wide uppercase text-gray-400 dark:text-gray-500 mt-1 capitalize">{s.key}</p>
           </div>
         ))}
       </div>
@@ -636,8 +639,8 @@ function SuperAdminPanel({ showToast }) {
             onClick={() => setFilter(f)}
             className={`text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap ${
               filter === f
-                ? "bg-purple-700 text-white"
-                : "bg-white text-gray-500 border border-gray-200"
+                ? "bg-gold-400 text-forest-900"
+                : "bg-white dark:bg-surface-dark-card text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-forest-600"
             }`}
           >
             {f === "all" ? "Lahat" : f.charAt(0).toUpperCase() + f.slice(1)} (
@@ -650,12 +653,12 @@ function SuperAdminPanel({ showToast }) {
       <div className="flex-1 overflow-y-auto px-4 pb-8 space-y-3">
         {loading ? (
           <div className="flex justify-center py-8">
-            <div className="w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-4 border-gold-400 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : filtered.length === 0 ? (
-          <div className="bg-white rounded-2xl p-8 text-center border border-gray-100">
+          <div className="bg-white dark:bg-surface-dark-card rounded-2xl p-8 text-center border border-gray-100 dark:border-forest-600">
             <p className="text-3xl mb-2"><NavIcon name="branch" size={36} color="#6b7280" /></p>
-            <p className="text-gray-500 text-sm">Walang businesses dito.</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">Walang businesses dito.</p>
           </div>
         ) : (
           filtered.map((biz) => {
@@ -663,13 +666,13 @@ function SuperAdminPanel({ showToast }) {
             return (
               <div
                 key={biz.id}
-                className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4"
+                className="bg-white dark:bg-surface-dark-card rounded-2xl border border-gray-100 dark:border-forest-600 shadow-sm p-4"
               >
                 <div className="flex items-start justify-between mb-2">
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-gray-800 truncate">{biz.name}</p>
-                    <p className="text-xs text-gray-500">{biz.address || "Walang address"}</p>
-                    <p className="text-xs text-gray-400">{biz.phone || "Walang number"}</p>
+                    <p className="font-bold text-gray-800 dark:text-ivory-100 truncate">{biz.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{biz.address || "Walang address"}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{biz.phone || "Walang number"}</p>
                     <p className="text-xs text-gray-400 mt-0.5">
                       Nag-sign up: {new Date(biz.created_at).toLocaleDateString("en-PH")}
                     </p>
@@ -724,15 +727,15 @@ function SuperAdminPanel({ showToast }) {
                       </button>
                       <select
                         onChange={(e) => e.target.value && upgradePlan(biz, e.target.value)}
-                        className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white text-gray-600"
+                        className="text-xs border border-gray-200 dark:border-forest-600 rounded-lg px-2 py-1.5 bg-white dark:bg-surface-dark-card text-gray-600 dark:text-ivory-200"
                         defaultValue=""
                       >
                         <option value="" disabled>
                           Upgrade Plan
                         </option>
-                        <option value="basic">Basic ₱199</option>
-                        <option value="pro">Pro ₱399</option>
-                        <option value="business">Business ₱699</option>
+                        <option value="starter">Starter ₱199</option>
+                        <option value="growing">Growing ₱499</option>
+                        <option value="enterprise">Enterprise ₱999</option>
                       </select>
                       <button
                         onClick={() => suspend(biz)}
@@ -768,21 +771,21 @@ function SuperAdminPanel({ showToast }) {
       {/* Reject Modal */}
       {rejectModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-40">
-          <div className="bg-white w-full rounded-t-3xl p-5">
-            <h3 className="font-bold text-gray-800 mb-1">I-reject si {rejectModal.name}?</h3>
-            <p className="text-xs text-gray-500 mb-3">
+          <div className="bg-white dark:bg-surface-dark-card w-full rounded-t-3xl p-5">
+            <h3 className="font-bold text-gray-800 dark:text-ivory-100 mb-1">I-reject si {rejectModal.name}?</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
               Ilagay ang dahilan para malaman ng owner.
             </p>
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Halimbawa: Incomplete information, suspicious account, etc."
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm h-24 resize-none focus:outline-none focus:ring-2 focus:ring-red-400"
+              className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-sm h-24 resize-none bg-white dark:bg-surface-dark dark:text-ivory-100 focus:outline-none focus:ring-2 focus:ring-red-400"
             />
             <div className="flex gap-2 mt-3">
               <button
                 onClick={() => setRejectModal(null)}
-                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
+                className="flex-1 bg-gray-100 dark:bg-surface-dark text-gray-600 dark:text-gray-400 font-semibold py-3 rounded-xl text-sm"
               >
                 Kanselahin
               </button>
@@ -803,21 +806,29 @@ function SuperAdminPanel({ showToast }) {
 // ═══════════════════════════════════════════════════════════════
 // LANDING SCREEN
 // ═══════════════════════════════════════════════════════════════
-function LedgerIcon({ className = "w-10 h-10", color = "#F5F0E8", accentColor = "#B8960C" }) {
+function LedgerIcon({ className = "w-10 h-10" }) {
   return (
-    <svg className={className} viewBox="0 0 44 44" fill="none">
-      <line x1="8" y1="13" x2="36" y2="13" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
-      <line x1="8" y1="22" x2="28" y2="22" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
-      <line x1="8" y1="31" x2="20" y2="31" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
-      <line x1="26" y1="28" x2="38" y2="16" stroke={accentColor} strokeWidth="2.8" strokeLinecap="round" />
-      <circle cx="38" cy="16" r="2.8" fill={accentColor} />
+    <svg className={className} viewBox="0 0 40 40" fill="none">
+      <path d="M10 30V10h4v16h12v4H10z" fill="#B9960C"/>
+      <path d="M18 10l8 8-8 8" stroke="#B9960C" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.5"/>
     </svg>
+  );
+}
+
+function LogoMark({ size = 40 }) {
+  return (
+    <div className="flex items-center justify-center rounded-[12px] bg-surface-dark-card" style={{ width: size, height: size, border: '1px solid rgba(185,150,12,0.15)' }}>
+      <LedgerIcon className={`w-[${Math.round(size * 0.55)}px] h-[${Math.round(size * 0.55)}px]`} />
+    </div>
   );
 }
 
 const NavIcon = ({ name, size = 22, color = "currentColor" }) => {
   const props = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
   const icons = {
+    home: <svg {...props}><path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1m-2 0h2"/></svg>,
+    receipt: <svg {...props}><path d="M9 5H7a2 2 0 00-2 2v12l3-2 3 2 3-2 3 2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9h6m-6-4h6"/></svg>,
+    inventory: <svg {...props}><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>,
     dashboard: <svg {...props}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
     analytics: <svg {...props}><path d="M3 20h18"/><path d="M6 16V10"/><path d="M10 16V6"/><path d="M14 16v-5"/><path d="M18 16V8"/></svg>,
     products: <svg {...props}><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>,
@@ -872,22 +883,20 @@ function ListaKoLogo({ size = "text-4xl", light = false }) {
 
 function LandingScreen({ onShowSignup, onShowLogin }) {
   return (
-    <div className="min-h-screen bg-forest-800 flex flex-col items-center justify-between px-6 relative overflow-hidden" style={{ padding: '48px 22px 26px' }}>
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 75% 15%, rgba(184,150,12,0.1) 0%, transparent 55%), radial-gradient(ellipse at 25% 85%, rgba(42,95,63,0.12) 0%, transparent 50%)' }} />
+    <div className="min-h-screen bg-surface-dark flex flex-col items-center justify-between px-6 relative overflow-hidden" style={{ padding: '48px 22px 26px' }}>
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 75% 15%, rgba(185,150,12,0.1) 0%, transparent 55%), radial-gradient(ellipse at 25% 85%, rgba(26,52,40,0.25) 0%, transparent 50%)' }} />
       <div className="flex flex-col items-center gap-3 z-10">
         <div className="flex flex-col items-center gap-2.5">
-          <div className="w-[62px] h-[62px] rounded-[17px] flex items-center justify-center" style={{ border: '1px solid rgba(184,150,12,0.35)', background: 'rgba(184,150,12,0.07)', backdropFilter: 'blur(6px)' }}>
-            <LedgerIcon className="w-8 h-8" />
-          </div>
+          <LogoMark size={62} />
           <h1 className="font-playfair text-[30px] font-semibold text-ivory-100 tracking-tight leading-none">
             Lista<em className="italic text-gold-400">Ko</em>
           </h1>
-          <p className="text-[8px] font-medium tracking-[3px] uppercase" style={{ color: 'rgba(232,213,163,0.4)' }}>Business Manager</p>
+          <p className="text-[8px] font-medium tracking-[3px] uppercase" style={{ color: 'rgba(232,213,163,0.4)' }}>Business Operating System</p>
         </div>
-        <p className="text-[11px] text-center leading-relaxed font-light max-w-[172px]" style={{ color: 'rgba(245,240,232,0.5)' }}>
-          Track revenue, inventory, and staff — with precision. Built for every Filipino store.
+        <p className="text-[11px] text-center leading-relaxed font-light max-w-[200px]" style={{ color: 'rgba(245,240,232,0.5)' }}>
+          The Operating System for Every Filipino Business — POS, inventory, staff, reports, and growth.
         </p>
-        <div className="rounded-lg px-4 py-2.5 text-center" style={{ border: '1px solid rgba(184,150,12,0.2)', background: 'rgba(184,150,12,0.06)' }}>
+        <div className="rounded-lg px-4 py-2.5 text-center" style={{ border: '1px solid rgba(185,150,12,0.2)', background: 'rgba(185,150,12,0.06)' }}>
           <p className="text-[7.5px] font-semibold tracking-[2px] uppercase text-gold-400 mb-0.5">Complimentary Access</p>
           <p className="text-[10px] font-light" style={{ color: 'rgba(232,213,163,0.5)' }}>7 Days · No commitment required</p>
         </div>
@@ -985,10 +994,10 @@ function SignupScreen({ onBack, onSuccess, showToast }) {
   };
 
   return (
-    <div className="min-h-screen bg-ivory-100 flex flex-col">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col">
       <div className="bg-forest-800 px-4 py-4 flex items-center gap-2.5">
-        <button onClick={step === 1 ? onBack : () => setStep(1)} className="text-[15px] font-light" style={{ color: 'rgba(184,150,12,0.5)' }}>←</button>
-        <LedgerIcon className="w-[18px] h-[18px]" color="rgba(245,240,232,0.45)" />
+        <button onClick={step === 1 ? onBack : () => setStep(1)} className="text-[15px] font-light" style={{ color: 'rgba(185,150,12,0.5)' }}>←</button>
+        <LedgerIcon className="w-[18px] h-[18px]" />
         <div>
           <h2 className="text-ivory-100 font-playfair text-[15px] font-semibold">Create Account</h2>
           <p className="text-forest-300 text-[10px] font-light">Step {step} of 2 · 7-day complimentary access</p>
@@ -1003,7 +1012,7 @@ function SignupScreen({ onBack, onSuccess, showToast }) {
       <div className="flex-1 px-5 py-6 space-y-4 max-w-md mx-auto w-full">
         {step === 1 ? (
           <>
-            <p className="text-gray-500 text-sm">Impormasyon ng Account</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">Impormasyon ng Account</p>
             <Field
               label="Buong Pangalan"
               value={form.full_name}
@@ -1040,7 +1049,7 @@ function SignupScreen({ onBack, onSuccess, showToast }) {
           </>
         ) : (
           <>
-            <p className="text-gray-500 text-sm">Impormasyon ng Negosyo</p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm">Impormasyon ng Negosyo</p>
             <Field
               label="Pangalan ng Tindahan / Negosyo"
               value={form.business_name}
@@ -1060,8 +1069,8 @@ function SignupScreen({ onBack, onSuccess, showToast }) {
               placeholder="09XXXXXXXXX"
               type="tel"
             />
-            <div className="bg-blue-50 rounded-xl p-3">
-              <p className="text-xs text-blue-700 font-medium">
+            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-3">
+              <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">
                 Ang iyong account ay irereview ng aming team bago ma-activate. Aabisuhan ka sa
                 loob ng 24 oras.
               </p>
@@ -1129,20 +1138,20 @@ function LoginScreen({ onBack, onSuccess, onForgotPassword, showToast }) {
   };
 
   return (
-    <div className="min-h-screen bg-ivory-100 flex flex-col">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col">
       <div className="bg-forest-800 px-4 py-4 flex items-center gap-2.5 flex-shrink-0">
-        <button onClick={onBack} className="text-[15px] font-light" style={{ color: 'rgba(184,150,12,0.5)' }}>
+        <button onClick={onBack} className="text-[15px] font-light" style={{ color: 'rgba(185,150,12,0.5)' }}>
           ←
         </button>
-        <LedgerIcon className="w-[18px] h-[18px]" color="rgba(245,240,232,0.45)" />
+        <LedgerIcon className="w-[18px] h-[18px]" />
         <h2 className="text-ivory-100 font-playfair text-[15px] font-semibold">Sign In</h2>
       </div>
       <div className="flex-1 flex flex-col justify-center px-4 py-5 max-w-md mx-auto w-full">
         <div className="text-center mb-5">
-          <div className="w-12 h-12 bg-forest-50 rounded-xl flex items-center justify-center mx-auto mb-2" style={{ border: '1px solid #B8D4C0' }}>
-            <NavIcon name="lock" size={22} color="#1A3D2B" />
+          <div className="w-12 h-12 bg-forest-50 dark:bg-surface-dark-card rounded-xl flex items-center justify-center mx-auto mb-2" style={{ border: '1px solid rgba(185,150,12,0.15)' }}>
+            <NavIcon name="lock" size={22} color="#B9960C" />
           </div>
-          <p className="text-[9.5px] text-gray-400 font-light">Enter your ListaKo credentials to continue</p>
+          <p className="text-[9.5px] text-gray-400 dark:text-gray-500 font-light">Enter your ListaKo credentials to continue</p>
         </div>
         <Field
           label="Email Address"
@@ -1172,8 +1181,8 @@ function LoginScreen({ onBack, onSuccess, onForgotPassword, showToast }) {
         >
           Forgot your password?
         </button>
-        <div className="w-px h-4 bg-ivory-300 mx-auto my-3" />
-        <p className="text-center text-[8.5px] text-gray-400 font-light leading-relaxed">
+        <div className="w-px h-4 bg-ivory-300 dark:bg-forest-600 mx-auto my-3" />
+        <p className="text-center text-[8.5px] text-gray-400 dark:text-gray-500 font-light leading-relaxed">
           No account? Contact your store owner<br />to receive an invitation.
         </p>
       </div>
@@ -1204,19 +1213,19 @@ function ForgotPasswordScreen({ onBack, onVerifyOTP, showToast }) {
   };
 
   return (
-    <div className="min-h-screen bg-ivory-100 flex flex-col">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col">
       <div className="bg-forest-800 px-4 py-4 flex items-center gap-2.5">
-        <button onClick={onBack} className="text-[15px] font-light" style={{ color: 'rgba(184,150,12,0.5)' }}>←</button>
-        <LedgerIcon className="w-[18px] h-[18px]" color="rgba(245,240,232,0.45)" />
+        <button onClick={onBack} className="text-[15px] font-light" style={{ color: 'rgba(185,150,12,0.5)' }}>←</button>
+        <LedgerIcon className="w-[18px] h-[18px]" />
         <h2 className="text-ivory-100 font-playfair text-[15px] font-semibold">Forgot Password</h2>
       </div>
       <div className="flex-1 flex flex-col justify-center px-5 py-6 max-w-md mx-auto w-full space-y-4">
         <div className="text-center mb-2">
-          <div className="w-12 h-12 bg-forest-50 rounded-xl flex items-center justify-center mx-auto mb-2" style={{ border: '1px solid #B8D4C0' }}>
+          <div className="w-12 h-12 bg-forest-50 dark:bg-surface-dark-card rounded-xl flex items-center justify-center mx-auto mb-2" style={{ border: '1px solid rgba(185,150,12,0.15)' }}>
             <LedgerIcon className="w-8 h-8" />
           </div>
-          <h3 className="font-black text-gray-800 text-lg">Reset Password</h3>
-          <p className="text-sm text-gray-500 mt-1">
+          <h3 className="font-black text-gray-800 dark:text-ivory-100 text-lg">Reset Password</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             We'll send an OTP code to your email.
           </p>
         </div>
@@ -1250,11 +1259,11 @@ function ForgotPasswordScreen({ onBack, onVerifyOTP, showToast }) {
 function Modal({ title, onClose, children }) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end sm:items-center justify-center z-40">
-      <div className="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-          <h3 className="font-bold text-gray-800 text-base">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 text-xl">
-            ✕
+      <div className="bg-white dark:bg-surface-dark-card w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-forest-600">
+          <h3 className="font-bold text-gray-800 dark:text-ivory-100 text-base">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 dark:text-gray-500 text-xl">
+            <NavIcon name="x" size={18} color="currentColor" />
           </button>
         </div>
         <div className="px-5 py-5 max-h-[75vh] overflow-y-auto">{children}</div>
@@ -1265,21 +1274,24 @@ function Modal({ title, onClose, children }) {
 
 function Card({ children, className = "" }) {
   return (
-    <div className={`bg-white rounded-xl border border-ivory-300 ${className}`}>
+    <div className={`bg-white dark:bg-surface-dark-card rounded-xl border border-ivory-300 dark:border-forest-600 ${className}`}>
       {children}
     </div>
   );
 }
 
-function StatCard({ icon, label, value, color = "bg-forest-50 text-forest-700", dotColor = "#1A3D2B", sub = "" }) {
+function StatCard({ icon, label, value, color = "bg-forest-50 text-forest-700", dotColor = "#1A3D2B", sub = "", trend = "" }) {
   return (
     <Card className="p-3">
-      <p className="text-[7.5px] font-semibold tracking-[1.5px] uppercase text-gray-400 mb-1.5">{label}</p>
-      <p className="text-xl font-black text-gray-800 font-lato tracking-tight leading-none">{value}</p>
+      <p className="text-[7.5px] font-semibold tracking-[1.5px] uppercase text-gray-400 dark:text-gray-500 mb-1.5">{label}</p>
+      <div className="flex items-end justify-between">
+        <p className="text-xl font-black text-gray-800 dark:text-ivory-100 font-lato tracking-tight leading-none">{value}</p>
+        {trend && <span className="text-[9px] font-semibold text-green-500">{trend}</span>}
+      </div>
       {sub && (
         <div className="flex items-center gap-1 mt-1">
           <span className="w-[5px] h-[5px] rounded-full flex-shrink-0" style={{ background: dotColor }} />
-          <span className="text-[7.5px] text-gray-400">{sub}</span>
+          <span className="text-[7.5px] text-gray-400 dark:text-gray-500">{sub}</span>
         </div>
       )}
     </Card>
@@ -1329,7 +1341,7 @@ function PendingProductCard({ product, onActivate, showToast }) {
   return (
     <Card className="p-4 border-l-4 border-yellow-400">
       <div className="mb-3">
-        <p className="font-bold text-gray-800 text-sm">{product.name}</p>
+        <p className="font-bold text-gray-800 dark:text-ivory-100 text-sm">{product.name}</p>
         <p className="text-xs text-gray-400 mt-0.5">
           Barcode: <span className="font-mono">{product.barcode || "N/A"}</span>
         </p>
@@ -1464,7 +1476,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
                   className={`flex-1 py-2 rounded-xl text-xs font-semibold border ${
                     settings.discount_types_allowed === t.key
                       ? "bg-forest-600 text-white border-forest-600"
-                      : "bg-white text-gray-600 border-gray-200"
+                      : "bg-white dark:bg-surface-dark-card text-gray-600 dark:text-ivory-200 border-gray-200 dark:border-forest-600"
                   }`}>
                   {t.label}
                 </button>
@@ -1502,7 +1514,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Min Quantity</p>
                 <input type="number" value={settings.discount_min_quantity}
                   onChange={e => set("discount_min_quantity", e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white" />
+                  className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-surface-dark-card dark:text-ivory-100" />
                 <p className="text-xs text-gray-400 mt-1">Same item pieces</p>
               </div>
               <div>
@@ -1510,7 +1522,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
                 <div className="relative">
                   <input type="number" value={settings.discount_min_amount}
                     onChange={e => set("discount_min_amount", e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white pl-6" />
+                    className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-surface-dark-card dark:text-ivory-100 pl-6" />
                   <span className="absolute left-3 top-2 text-gray-400 text-sm">₱</span>
                 </div>
                 <p className="text-xs text-gray-400 mt-1">Cart total minimum</p>
@@ -1927,7 +1939,7 @@ function AnalyticsDashboard({ business, branches, showToast }) {
             key={t.key}
             onClick={() => setAnalyticsTab(t.key)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
-              analyticsTab === t.key ? "bg-forest-600 text-white" : "bg-gray-100 text-gray-500"
+              analyticsTab === t.key ? "bg-forest-600 text-white" : "bg-gray-100 dark:bg-surface-dark text-gray-500 dark:text-gray-400"
             }`}
           >
             {t.label}
@@ -1943,7 +1955,7 @@ function AnalyticsDashboard({ business, branches, showToast }) {
               key={f.key}
               onClick={() => setTimeFilter(f.key)}
               className={`px-3 py-1 rounded-lg text-xs font-medium ${
-                timeFilter === f.key ? "bg-gold-400 text-forest-900" : "bg-gray-100 text-gray-500"
+                timeFilter === f.key ? "bg-gold-400 text-forest-900" : "bg-gray-100 dark:bg-surface-dark text-gray-500 dark:text-gray-400"
               }`}
             >
               {f.label}
@@ -1953,7 +1965,7 @@ function AnalyticsDashboard({ business, branches, showToast }) {
             <select
               value={branchFilter}
               onChange={(e) => setBranchFilter(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
+              className="text-xs border border-gray-200 dark:border-forest-600 rounded-lg px-2 py-1 bg-white dark:bg-surface-dark-card dark:text-ivory-100"
             >
               <option value="all">All Branches</option>
               {branches.map((b) => (
@@ -1970,7 +1982,7 @@ function AnalyticsDashboard({ business, branches, showToast }) {
           <select
             value={branchFilter}
             onChange={(e) => setBranchFilter(e.target.value)}
-            className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
+            className="text-xs border border-gray-200 dark:border-forest-600 rounded-lg px-2 py-1 bg-white dark:bg-surface-dark-card dark:text-ivory-100"
           >
             <option value="all">All Branches</option>
             {branches.map((b) => (
@@ -2066,12 +2078,12 @@ function AnalyticsDashboard({ business, branches, showToast }) {
                 {bestSellers.map((p, i) => (
                   <div key={p.id} className="flex items-center gap-3">
                     <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black ${
-                      i < 3 ? "bg-gold-100 text-gold-700" : "bg-gray-100 text-gray-500"
+                      i < 3 ? "bg-gold-100 text-gold-700" : "bg-gray-100 dark:bg-surface-dark text-gray-500 dark:text-gray-400"
                     }`}>
                       {i + 1}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{p.name}</p>
+                      <p className="text-sm font-semibold text-gray-800 dark:text-ivory-100 truncate">{p.name}</p>
                       <p className="text-xs text-gray-400">{p.qty} sold</p>
                     </div>
                     <p className="text-sm font-black text-forest-700">₱{p.revenue.toFixed(2)}</p>
@@ -2118,7 +2130,7 @@ function AnalyticsDashboard({ business, branches, showToast }) {
                 {slowMovers.map((p) => (
                   <div key={p.id} className="flex items-center justify-between bg-red-50 rounded-xl px-3 py-2">
                     <div>
-                      <p className="text-sm font-semibold text-gray-800">{p.name}</p>
+                      <p className="text-sm font-semibold text-gray-800 dark:text-ivory-100">{p.name}</p>
                       <p className="text-xs text-gray-400">{p.category} · Stock: {p.stock_quantity}</p>
                     </div>
                     <span className="text-xs bg-red-200 text-red-700 px-2 py-0.5 rounded-full font-semibold">
@@ -2150,7 +2162,7 @@ function AnalyticsDashboard({ business, branches, showToast }) {
                         }`}>
                           {i + 1}
                         </span>
-                        <p className="text-sm font-bold text-gray-800">{c.name}</p>
+                        <p className="text-sm font-bold text-gray-800 dark:text-ivory-100">{c.name}</p>
                       </div>
                       <p className="text-sm font-black text-forest-700">₱{c.revenue.toFixed(2)}</p>
                     </div>
@@ -2221,7 +2233,7 @@ function AnalyticsDashboard({ business, branches, showToast }) {
                   {branchStats.map((b, i) => (
                     <div key={i} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
                       <div>
-                        <p className="text-sm font-semibold text-gray-800">{b.name}</p>
+                        <p className="text-sm font-semibold text-gray-800 dark:text-ivory-100">{b.name}</p>
                         <p className="text-xs text-gray-400">{b.txCount} transactions</p>
                       </div>
                       <p className="text-sm font-black text-forest-700">₱{b.revenue.toFixed(2)}</p>
@@ -2246,7 +2258,7 @@ function AnalyticsDashboard({ business, branches, showToast }) {
                 {shifts.map((s) => (
                   <div key={s.id} className={`rounded-xl p-3 border ${s.status === "open" ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"}`}>
                     <div className="flex items-center justify-between mb-1">
-                      <p className="text-sm font-bold text-gray-800">{s.profiles?.full_name}</p>
+                      <p className="text-sm font-bold text-gray-800 dark:text-ivory-100">{s.profiles?.full_name}</p>
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                         s.status === "open" ? "bg-green-200 text-green-700" : "bg-gray-200 text-gray-600"
                       }`}>
@@ -2362,7 +2374,7 @@ function AuditLogViewer({ businessId }) {
     shift_report: { label: "Shift", color: "bg-purple-100 text-purple-700" },
     transfer_approved: { label: "Transfer", color: "bg-yellow-100 text-yellow-700" },
     login: { label: "Login", color: "bg-gray-100 text-gray-700" },
-    logout: { label: "Logout", color: "bg-gray-100 text-gray-500" },
+    logout: { label: "Logout", color: "bg-gray-100 dark:bg-surface-dark text-gray-500 dark:text-gray-400" },
   };
 
   const FILTERS = ["all", "transaction_completed", "void_approved", "stock_update", "login", "logout"];
@@ -2374,7 +2386,7 @@ function AuditLogViewer({ businessId }) {
         {FILTERS.map((f) => (
           <button key={f} onClick={() => setActionFilter(f)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${
-              actionFilter === f ? "bg-forest-600 text-white" : "bg-gray-100 text-gray-500"
+              actionFilter === f ? "bg-forest-600 text-white" : "bg-gray-100 dark:bg-surface-dark text-gray-500 dark:text-gray-400"
             }`}>
             {f === "all" ? "All" : ACTION_LABELS[f]?.label || f}
           </button>
@@ -2396,7 +2408,7 @@ function AuditLogViewer({ businessId }) {
                 <div className="flex items-center justify-between mb-1">
                   <div className="flex items-center gap-2">
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${actionInfo.color}`}>{actionInfo.label}</span>
-                    <p className="text-sm font-semibold text-gray-800">{log.user_name || "System"}</p>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-ivory-100">{log.user_name || "System"}</p>
                   </div>
                   <p className="text-xs text-gray-400">
                     {new Date(log.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}
@@ -2505,12 +2517,29 @@ function SettingsPanel({ business, products, branches, staff, showToast, onLogou
 
   const lowStockProducts = products.filter((p) => p.stock_quantity <= (p.low_stock_threshold || 10));
 
+  const theme = useTheme();
+
   return (
     <div className="p-4 space-y-4">
-      <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide">Settings</h2>
+      <h2 className="font-bold text-gray-700 dark:text-ivory-200 text-sm uppercase tracking-wide">Settings</h2>
 
       <Card className="p-4 space-y-3">
-        <p className="font-bold text-gray-800 text-sm">Business Profile</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="font-bold text-gray-800 dark:text-ivory-100 text-sm">Appearance</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">{theme.dark ? "Dark Mode" : "Light Mode"}</p>
+          </div>
+          <button
+            onClick={theme.toggle}
+            className={`relative w-12 h-6 rounded-full transition-colors ${theme.dark ? "bg-gold-400" : "bg-gray-300"}`}
+          >
+            <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${theme.dark ? "translate-x-6" : "translate-x-0.5"}`} />
+          </button>
+        </div>
+      </Card>
+
+      <Card className="p-4 space-y-3">
+        <p className="font-bold text-gray-800 dark:text-ivory-100 text-sm">Business Profile</p>
         <Field label="Business Name" value={bizForm.name}
           onChange={(v) => setBizForm((f) => ({ ...f, name: v }))} placeholder="My Store" />
         <Field label="Receipt Header (optional)" value={bizForm.receipt_header}
@@ -2545,8 +2574,8 @@ function SettingsPanel({ business, products, branches, staff, showToast, onLogou
       </Card>
 
       <Card className="p-4 space-y-3">
-        <p className="font-bold text-gray-800 text-sm">Export Data (CSV)</p>
-        <p className="text-xs text-gray-400">Download your data as spreadsheet files.</p>
+        <p className="font-bold text-gray-800 dark:text-ivory-100 text-sm">Export Data (CSV)</p>
+        <p className="text-xs text-gray-400 dark:text-gray-500">Download your data as spreadsheet files.</p>
         <div className="grid grid-cols-1 gap-2">
           <button onClick={exportProducts}
             className="flex items-center gap-2 bg-blue-50 text-blue-700 font-semibold py-2.5 px-4 rounded-xl text-sm">
@@ -2581,9 +2610,9 @@ function SettingsPanel({ business, products, branches, staff, showToast, onLogou
       )}
 
       <Card className="p-4 space-y-2">
-        <p className="font-bold text-gray-800 text-sm">App Info</p>
-        <div className="space-y-1 text-xs text-gray-500">
-          <p>ListaKo v1.0 — Filipino-First Business Manager</p>
+        <p className="font-bold text-gray-800 dark:text-ivory-100 text-sm">App Info</p>
+        <div className="space-y-1 text-xs text-gray-500 dark:text-gray-400">
+          <p>ListaKo v2.0 — Filipino-First Business Operating System</p>
           <p>Products: {products.length} · Branches: {branches.length} · Staff: {staff.length}</p>
           <p>Plan: {business.plan ? business.plan.charAt(0).toUpperCase() + business.plan.slice(1) : "Trial"}</p>
         </div>
@@ -2842,7 +2871,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Category</label>
             <select value={form.category}
               onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 bg-white">
+              className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 bg-white dark:bg-surface-dark-card dark:text-ivory-100">
               {PRODUCT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
           </div>
@@ -2996,7 +3025,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             <select
               value={form.role}
               onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest-500"
+              className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-sm bg-white dark:bg-surface-dark-card dark:text-ivory-100 focus:outline-none focus:ring-2 focus:ring-forest-500"
             >
               <option value="cashier">Cashier</option>
               <option value="inventory_staff">Inventory Staff</option>
@@ -3010,7 +3039,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             <select
               value={form.branch_id}
               onChange={(e) => setForm((f) => ({ ...f, branch_id: e.target.value }))}
-              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-forest-500"
+              className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-sm bg-white dark:bg-surface-dark-card dark:text-ivory-100 focus:outline-none focus:ring-2 focus:ring-forest-500"
             >
               <option value="">— Pumili ng Branch —</option>
               {branches.map((b) => (
@@ -3060,14 +3089,15 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
 
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const MAIN_TABS = [
-    { key: "dashboard", icon: "dashboard", label: "Overview" },
-    { key: "products", icon: "products", label: "Products" },
-    { key: "branches", icon: "branch", label: "Branch" },
+    { key: "dashboard", icon: "home", label: "Home" },
+    { key: "sales", icon: "receipt", label: "Sales" },
+    { key: "products", icon: "inventory", label: "Inventory" },
     { key: "staff", icon: "staff", label: "Staff" },
     { key: "more", icon: "more", label: "More" },
   ];
   const MORE_TABS = [
     { key: "analytics", icon: "analytics", label: "Analytics" },
+    { key: "branches", icon: "branch", label: "Branches" },
     { key: "pending", icon: "pending", label: "Pending", badge: (pendingProducts.length + pendingTransfers.length) > 0 },
     { key: "customers", icon: "customers", label: "Suki" },
     { key: "logs", icon: "logs", label: "Logs" },
@@ -3077,16 +3107,16 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
   const ALL_TABS = [...MAIN_TABS.filter(t => t.key !== "more"), ...MORE_TABS];
 
   return (
-    <div className="min-h-screen bg-ivory-100 flex flex-col max-w-lg mx-auto">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col max-w-lg mx-auto">
       <TrialBanner business={business} />
-      <div className="bg-forest-800 px-4 pt-8 pb-4 relative overflow-hidden">
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 85% 10%, rgba(184,150,12,0.09) 0%, transparent 55%)' }} />
+      <div className="bg-forest-800 dark:bg-surface-dark px-4 pt-8 pb-4 relative overflow-hidden">
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 85% 10%, rgba(185,150,12,0.09) 0%, transparent 55%)' }} />
         <div className="flex items-start justify-between mb-3 relative z-10">
-          <div className="flex items-center gap-2">
-            <LedgerIcon className="w-6 h-6" />
+          <div className="flex items-center gap-2.5">
+            <LogoMark size={36} />
             <div>
-              <p className="text-[7.5px] font-medium tracking-[1.5px] uppercase" style={{ color: 'rgba(184,150,12,0.6)' }}>
-                ◆ {isSuperAdmin ? "Super Admin" : "Administrator"}
+              <p className="text-[7.5px] font-medium tracking-[1.5px] uppercase" style={{ color: 'rgba(185,150,12,0.6)' }}>
+                {isSuperAdmin ? "Super Admin" : "Administrator"}
               </p>
               <h1 className="text-ivory-100 font-playfair text-[15px] font-semibold tracking-tight leading-tight">{business.name}</h1>
             </div>
@@ -3096,7 +3126,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
               onClick={() => setShowNotifications(!showNotifications)}
               className="relative text-forest-200 px-2 py-1.5"
             >
-              <NavIcon name="bell" size={18} color="#B8960C" />
+              <NavIcon name="bell" size={18} color="#B9960C" />
               {notifications.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
                   {notifications.length}
@@ -3106,15 +3136,21 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             <button
               onClick={onLogout}
               className="text-[8.5px] px-2.5 py-1.5 rounded-md font-normal tracking-wide"
-              style={{ border: '1px solid rgba(184,150,12,0.2)', color: 'rgba(232,213,163,0.45)' }}
+              style={{ border: '1px solid rgba(185,150,12,0.2)', color: 'rgba(232,213,163,0.45)' }}
             >
               Sign Out
             </button>
           </div>
         </div>
-        <div className="relative z-10 rounded-xl p-3" style={{ background: 'rgba(184,150,12,0.07)', border: '1px solid rgba(184,150,12,0.18)' }}>
+        <div className="relative z-10 mb-2">
+          <p className="text-ivory-100 text-[13px] font-light">
+            {(() => { const h = new Date().getHours(); return h < 12 ? "Good Morning" : h < 17 ? "Good Afternoon" : "Good Evening"; })()},{" "}
+            <span className="font-semibold">{profile.full_name?.split(" ")[0]}</span>
+          </p>
+        </div>
+        <div className="relative z-10 rounded-xl p-3" style={{ background: 'rgba(26,52,40,0.6)', border: '1px solid rgba(185,150,12,0.18)' }}>
           <p className="text-[7.5px] font-semibold tracking-[2px] uppercase" style={{ color: 'rgba(232,213,163,0.38)' }}>
-            Today's Revenue
+            Today's Sales
           </p>
           <p className="text-[26px] font-black text-ivory-100 font-lato tracking-tighter leading-none mt-0.5">
             ₱{todayRevenue.toFixed(2)}
@@ -3127,9 +3163,9 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
 
       {/* Notifications Panel */}
       {showNotifications && (
-        <div className="bg-white border-b border-gray-100 shadow-sm">
+        <div className="bg-white dark:bg-surface-dark-card border-b border-gray-100 dark:border-forest-600 shadow-sm">
           <div className="flex items-center justify-between px-4 py-3">
-            <p className="text-sm font-bold text-gray-800">
+            <p className="text-sm font-bold text-gray-800 dark:text-ivory-100">
               <span className="inline-flex items-center gap-1.5"><NavIcon name="bell" size={16} color="currentColor" /> Notifications {notifications.length > 0 && `(${notifications.length})`}</span>
             </p>
             {notifications.length > 0 && (
@@ -3354,47 +3390,69 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
               <div className="p-3 space-y-3">
                 <div className="grid grid-cols-2 gap-2">
                   <StatCard
+                    label="Revenue"
+                    value={`₱${todayRevenue.toFixed(0)}`}
+                    dotColor="#B9960C"
+                    sub="Today"
+                  />
+                  <StatCard
+                    label="Orders"
+                    value={todayTxCount}
+                    dotColor="#22C55E"
+                    sub="Today"
+                  />
+                  <StatCard
                     label="Products"
                     value={products.length}
-                    dotColor={products.filter(p => p.stock <= (p.low_stock_alert || 5)).length > 0 ? "#7A1515" : "#1A3D2B"}
-                    sub={products.filter(p => p.stock <= (p.low_stock_alert || 5)).length > 0 ? `${products.filter(p => p.stock <= (p.low_stock_alert || 5)).length} Critical` : "All stocked"}
-                  />
-                  <StatCard
-                    label="Branches"
-                    value={branches.length}
-                    dotColor="#1A3D2B"
-                    sub="All Active"
-                  />
-                  <StatCard
-                    label="Staff"
-                    value={staff.length}
-                    dotColor="#1A3D2B"
-                    sub={`${staff.filter(s => s.role).length} Active`}
+                    dotColor={products.filter(p => p.stock_quantity <= (p.low_stock_threshold || 5)).length > 0 ? "#EF4444" : "#22C55E"}
+                    sub={products.filter(p => p.stock_quantity <= (p.low_stock_threshold || 5)).length > 0 ? `${products.filter(p => p.stock_quantity <= (p.low_stock_threshold || 5)).length} Low stock` : "All stocked"}
                   />
                   <StatCard
                     label="Utang"
                     value={`₱${utangTotal.toFixed(0)}`}
-                    dotColor={utangTotal > 0 ? "#B8960C" : "#1A3D2B"}
+                    dotColor={utangTotal > 0 ? "#EAB308" : "#22C55E"}
                     sub={utangTotal > 0 ? "Outstanding" : "Clear"}
                   />
                 </div>
 
+                {(() => {
+                  const lowStock = products.filter(p => p.stock_quantity > 0 && p.stock_quantity <= (p.low_stock_threshold || 10));
+                  const outOfStock = products.filter(p => p.stock_quantity <= 0);
+                  const inStock = products.filter(p => p.stock_quantity > (p.low_stock_threshold || 10));
+                  if (products.length === 0) return null;
+                  return (
+                    <Card className="p-3">
+                      <p className="text-[7.5px] font-semibold tracking-[1.5px] uppercase text-gray-400 dark:text-gray-500 mb-2">Inventory Health</p>
+                      <div className="flex gap-1 h-2 rounded-full overflow-hidden mb-2">
+                        {inStock.length > 0 && <div className="bg-green-500 rounded-full" style={{ flex: inStock.length }} />}
+                        {lowStock.length > 0 && <div className="bg-yellow-500 rounded-full" style={{ flex: lowStock.length }} />}
+                        {outOfStock.length > 0 && <div className="bg-red-500 rounded-full" style={{ flex: outOfStock.length }} />}
+                      </div>
+                      <div className="flex justify-between text-[9px]">
+                        <span className="text-green-600 dark:text-green-400 font-medium">{inStock.length} In Stock</span>
+                        <span className="text-yellow-600 dark:text-yellow-400 font-medium">{lowStock.length} Low</span>
+                        <span className="text-red-600 dark:text-red-400 font-medium">{outOfStock.length} Out</span>
+                      </div>
+                    </Card>
+                  );
+                })()}
+
                 {branches.length === 0 && (
-                  <Card className="p-4 border-l-4 border-yellow-400">
-                    <p className="text-sm font-semibold text-gray-700">Start Setup</p>
-                    <p className="text-xs text-gray-500 mt-1">
+                  <Card className="p-4 border-l-4 border-gold-400">
+                    <p className="text-sm font-semibold text-gray-700 dark:text-ivory-100">Start Setup</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Create a branch, add products, and invite staff to get started.
                     </p>
                     <div className="flex gap-2 mt-3">
                       <button
                         onClick={() => setTabPersisted("branches")}
-                        className="text-xs bg-forest-600 text-white px-3 py-1.5 rounded-lg font-medium"
+                        className="text-xs bg-gold-400 text-forest-900 px-3 py-1.5 rounded-lg font-bold"
                       >
                         Add Branch
                       </button>
                       <button
                         onClick={() => setTabPersisted("products")}
-                        className="text-xs bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg font-medium"
+                        className="text-xs bg-gray-100 dark:bg-forest-600 text-gray-700 dark:text-ivory-200 px-3 py-1.5 rounded-lg font-medium"
                       >
                         Add Products
                       </button>
@@ -3404,25 +3462,30 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
 
                 {recentTx.length > 0 && (
                   <div>
-                    <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide mb-2">
-                      Recent Transactions
+                    <h2 className="font-bold text-gray-700 dark:text-ivory-200 text-sm uppercase tracking-wide mb-2">
+                      Recent Activity
                     </h2>
                     <div className="space-y-2">
                       {recentTx.map((tx) => (
                         <Card key={tx.id} className="p-3 flex items-center justify-between">
-                          <div>
-                            <p className="text-xs font-mono text-gray-400">{tx.receipt_number}</p>
-                            <p className="text-xs text-gray-500 mt-0.5 capitalize">
-                              {tx.payment_method}
-                              {tx.customer_name ? ` · ${tx.customer_name}` : ""} ·{" "}
-                              {new Date(tx.created_at).toLocaleTimeString("en-PH", {
-                                hour: "numeric",
-                                minute: "2-digit",
-                                hour12: true,
-                              })}
-                            </p>
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-forest-50 dark:bg-surface-dark-elevated flex items-center justify-center flex-shrink-0">
+                              <NavIcon name={tx.payment_method === "cash" ? "cash" : tx.payment_method === "utang" ? "pending" : "creditcard"} size={14} color="#B9960C" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-mono text-gray-400 dark:text-gray-500">{tx.receipt_number}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 capitalize">
+                                {tx.payment_method}
+                                {tx.customer_name ? ` · ${tx.customer_name}` : ""} ·{" "}
+                                {new Date(tx.created_at).toLocaleTimeString("en-PH", {
+                                  hour: "numeric",
+                                  minute: "2-digit",
+                                  hour12: true,
+                                })}
+                              </p>
+                            </div>
                           </div>
-                          <p className="font-black text-forest-700">
+                          <p className="font-black text-forest-700 dark:text-gold-400">
                             ₱{Number(tx.total_amount).toFixed(2)}
                           </p>
                         </Card>
@@ -3433,17 +3496,17 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
 
                 {branches.length > 0 && (
                   <div>
-                    <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide mb-2">
+                    <h2 className="font-bold text-gray-700 dark:text-ivory-200 text-sm uppercase tracking-wide mb-2">
                       Branches
                     </h2>
                     <div className="space-y-2">
                       {branches.map((b) => (
                         <Card key={b.id} className="p-4 flex items-center justify-between">
                           <div>
-                            <p className="font-semibold text-gray-800 text-sm">{b.name}</p>
-                            <p className="text-xs text-gray-400">{b.address || "No address"}</p>
+                            <p className="font-semibold text-gray-800 dark:text-ivory-100 text-sm">{b.name}</p>
+                            <p className="text-xs text-gray-400 dark:text-gray-500">{b.address || "No address"}</p>
                           </div>
-                          <span className="text-xs bg-forest-100 text-forest-700 px-2 py-1 rounded-lg font-medium">
+                          <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 px-2 py-1 rounded-lg font-medium">
                             Active
                           </span>
                         </Card>
@@ -3451,7 +3514,6 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                     </div>
                   </div>
                 )}
-                {/* Discount Settings Card */}
                 <DiscountSettingsCard business={business} showToast={showToast} onSaved={fetchAll} />
               </div>
             )}
@@ -3460,11 +3522,94 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
               <AnalyticsDashboard business={business} branches={branches} showToast={showToast} />
             )}
 
+            {tab === "sales" && (
+              <div className="p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-bold text-gray-700 dark:text-ivory-200 text-sm uppercase tracking-wide">
+                    Sales Overview
+                  </h2>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">Today</span>
+                </div>
+                <Card className="p-3">
+                  <div className="flex items-end justify-between mb-2">
+                    <div>
+                      <p className="text-[7.5px] font-semibold tracking-[1.5px] uppercase text-gray-400 dark:text-gray-500">Today's Sales</p>
+                      <p className="text-2xl font-black text-gray-800 dark:text-ivory-100 font-lato tracking-tight">₱{todayRevenue.toFixed(2)}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-semibold text-green-500">{todayTxCount} orders</p>
+                    </div>
+                  </div>
+                  {recentTx.length > 0 && (
+                    <div className="h-16">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={recentTx.map((t, i) => ({ name: i, amt: Number(t.total_amount) }))}>
+                          <Bar dataKey="amt" fill="#B9960C" radius={[3, 3, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </Card>
+                {(() => {
+                  const sorted = [...products].sort((a, b) => (b.total_sold || 0) - (a.total_sold || 0)).slice(0, 5);
+                  if (sorted.length === 0) return null;
+                  return (
+                    <div>
+                      <h2 className="font-bold text-gray-700 dark:text-ivory-200 text-sm uppercase tracking-wide mb-2">
+                        Top Products
+                      </h2>
+                      <div className="space-y-2">
+                        {sorted.map((p, i) => (
+                          <Card key={p.id} className="p-3 flex items-center gap-3">
+                            <span className="w-6 h-6 rounded-full bg-gold-50 dark:bg-gold-400/10 text-gold-600 dark:text-gold-400 text-xs font-black flex items-center justify-center flex-shrink-0">
+                              {i + 1}
+                            </span>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-semibold text-gray-800 dark:text-ivory-100 truncate">{p.name}</p>
+                              <p className="text-xs text-gray-400 dark:text-gray-500">{p.total_sold || 0} sold</p>
+                            </div>
+                            <p className="font-black text-forest-700 dark:text-gold-400 text-sm">₱{Number(p.price).toFixed(0)}</p>
+                          </Card>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+                {recentTx.length > 0 && (
+                  <div>
+                    <h2 className="font-bold text-gray-700 dark:text-ivory-200 text-sm uppercase tracking-wide mb-2">
+                      Recent Transactions
+                    </h2>
+                    <div className="space-y-2">
+                      {recentTx.map((tx) => (
+                        <Card key={tx.id} className="p-3 flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-forest-50 dark:bg-surface-dark-elevated flex items-center justify-center flex-shrink-0">
+                              <NavIcon name={tx.payment_method === "cash" ? "cash" : tx.payment_method === "utang" ? "pending" : "creditcard"} size={14} color="#B9960C" />
+                            </div>
+                            <div>
+                              <p className="text-xs font-mono text-gray-400 dark:text-gray-500">{tx.receipt_number}</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 capitalize">
+                                {tx.payment_method}
+                                {tx.customer_name ? ` · ${tx.customer_name}` : ""} ·{" "}
+                                {new Date(tx.created_at).toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit", hour12: true })}
+                              </p>
+                            </div>
+                          </div>
+                          <p className="font-black text-forest-700 dark:text-gold-400">₱{Number(tx.total_amount).toFixed(2)}</p>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {tab === "products" && (
               <div className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide">
-                    {products.length} Produkto
+                  <h2 className="font-bold text-gray-700 dark:text-ivory-200 text-sm uppercase tracking-wide">
+                    {products.length} Inventory
                   </h2>
                   <button
                     onClick={() => setShowAddProduct(true)}
@@ -3475,35 +3620,35 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                 </div>
                 {products.length === 0 ? (
                   <Card className="p-8 text-center">
-                    <p className="text-3xl mb-2"><NavIcon name="products" size={36} color="#6b7280" /></p>
-                    <p className="font-semibold text-gray-600 text-sm">Wala pang produkto</p>
+                    <p className="text-3xl mb-2"><NavIcon name="inventory" size={36} color="#6b7280" /></p>
+                    <p className="font-semibold text-gray-600 dark:text-gray-400 text-sm">Wala pang produkto</p>
                   </Card>
                 ) : (
                   products.map((p) => (
                     <Card key={p.id} className="p-4">
                       <div className="flex items-start justify-between gap-3">
                         {p.image_url && (
-                          <img src={p.image_url} alt={p.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-gray-200" />
+                          <img src={p.image_url} alt={p.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-gray-200 dark:border-forest-600" />
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-gray-800 text-sm truncate">{p.name}</p>
-                          <p className="text-xs text-gray-400">
+                          <p className="font-semibold text-gray-800 dark:text-ivory-100 text-sm truncate">{p.name}</p>
+                          <p className="text-xs text-gray-400 dark:text-gray-500">
                             {p.barcode ? `Barcode: ${p.barcode}` : "Walang barcode"}
                           </p>
                           <div className="flex items-center gap-2 mt-2 flex-wrap">
-                            <span className="text-sm font-black text-forest-700">
+                            <span className="text-sm font-black text-forest-700 dark:text-gold-400">
                               ₱{Number(p.price).toFixed(2)}
                             </span>
                             <span
                               className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                 p.stock_quantity <= 0
-                                  ? "bg-red-100 text-red-600"
+                                  ? "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"
                                   : p.stock_quantity <= (p.low_stock_threshold || 10)
-                                  ? "bg-yellow-100 text-yellow-600"
-                                  : "bg-gray-100 text-gray-500"
+                                  ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-600 dark:text-yellow-400"
+                                  : "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
                               }`}
                             >
-                              {p.stock_quantity <= (p.low_stock_threshold || 10) ? "" : ""}Stock:{" "}
+                              {p.stock_quantity <= 0 ? "Out of Stock" : p.stock_quantity <= (p.low_stock_threshold || 10) ? "Low Stock" : "In Stock"}:{" "}
                               {p.stock_quantity}
                             </span>
                             {p.category && p.category !== "Others" && (
@@ -3580,7 +3725,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                     <Card key={b.id} className="p-4">
                       <div className="flex items-start justify-between">
                         <div>
-                          <p className="font-bold text-gray-800">{b.name}</p>
+                          <p className="font-bold text-gray-800 dark:text-ivory-100">{b.name}</p>
                           <p className="text-xs text-gray-400">{b.address || "Walang address"}</p>
                           <p className="text-xs text-gray-400">
                             {staff.filter((s) => s.branch_id === b.id).length} staff
@@ -3625,7 +3770,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                       <Card key={s.id} className="p-4">
                         <div className="flex items-start justify-between">
                           <div>
-                            <p className="font-semibold text-gray-800 text-sm">{s.full_name}</p>
+                            <p className="font-semibold text-gray-800 dark:text-ivory-100 text-sm">{s.full_name}</p>
                             <p className="text-xs text-gray-400">{branchName}</p>
                             <span
                               className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium mt-1.5 ${
@@ -3696,7 +3841,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                       {pendingTransfers.map((t) => (
                         <Card key={t.id} className="p-4">
                           <div className="flex items-center justify-between mb-2">
-                            <p className="text-sm font-bold text-gray-800">{t.products?.name}</p>
+                            <p className="text-sm font-bold text-gray-800 dark:text-ivory-100">{t.products?.name}</p>
                             <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">Pending</span>
                           </div>
                           <p className="text-xs text-gray-500 mb-1">
@@ -3764,7 +3909,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="flex items-center gap-2">
-                              <p className="font-bold text-gray-800 text-sm">{c.name}</p>
+                              <p className="font-bold text-gray-800 dark:text-ivory-100 text-sm">{c.name}</p>
                               {c.is_suki && <span className="text-xs bg-gold-100 text-gold-700 px-2 py-0.5 rounded-full font-bold">Suki</span>}
                             </div>
                             <p className="text-xs text-gray-400 mt-0.5">
@@ -3804,13 +3949,13 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
       {showMoreMenu && (
         <div className="fixed inset-0 z-40" onClick={() => setShowMoreMenu(false)}>
           <div className="absolute bottom-16 left-1/2 -translate-x-1/2 w-full max-w-lg px-3">
-            <div className="bg-white rounded-xl border border-ivory-300 shadow-lg p-2 grid grid-cols-3 gap-1" onClick={e => e.stopPropagation()}>
+            <div className="bg-white dark:bg-surface-dark-card rounded-xl border border-ivory-300 dark:border-forest-600 shadow-lg p-2 grid grid-cols-3 gap-1" onClick={e => e.stopPropagation()}>
               {MORE_TABS.map((item) => (
                 <button
                   key={item.key}
                   onClick={() => { setTabPersisted(item.key); setShowMoreMenu(false); }}
                   className={`flex flex-col items-center gap-1 py-3 px-2 rounded-lg transition-colors ${
-                    tab === item.key ? "bg-forest-50 text-forest-500" : "text-gray-400"
+                    tab === item.key ? "bg-forest-50 dark:bg-surface-dark-elevated text-forest-500 dark:text-gold-400" : "text-gray-400 dark:text-gray-500"
                   }`}
                 >
                   <span className="relative">
@@ -3826,7 +3971,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
       )}
 
       {/* Bottom Nav */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-white flex z-30" style={{ borderTop: '1px solid #DDD8CE', padding: '7px 3px 11px' }}>
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-white dark:bg-surface-dark-card border-t border-ivory-300 dark:border-forest-600 flex z-30" style={{ padding: '7px 3px 11px' }}>
         {MAIN_TABS.map((item) => {
           const isActive = item.key === "more"
             ? MORE_TABS.some(t => t.key === tab)
@@ -3840,8 +3985,8 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
               }}
               className="flex-1 flex flex-col items-center gap-[3px] py-[3px]"
             >
-              <NavIcon name={item.icon} size={18} color={isActive ? "#1A3D2B" : "#9CA3AF"} />
-              <span className={`text-[7.5px] font-semibold tracking-wide ${isActive ? "text-forest-500" : "text-gray-400"}`}>
+              <NavIcon name={item.icon} size={18} color={isActive ? "#B9960C" : "#6B7280"} />
+              <span className={`text-[7.5px] font-semibold tracking-wide ${isActive ? "text-gold-400" : "text-gray-400 dark:text-gray-500"}`}>
                 {item.key === "more" && MORE_TABS.some(t => t.key === tab) ? MORE_TABS.find(t => t.key === tab)?.label : item.label}
               </span>
               {isActive && item.key !== "more" && <span className="w-[3px] h-[3px] rounded-full bg-gold-400" />}
@@ -4104,7 +4249,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 px-4">
-      <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
+      <div className="bg-white dark:bg-surface-dark-card w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
         <div className="bg-forest-800 px-5 py-5 text-center flex-shrink-0">
           {business?.receipt_header && (
             <p className="text-forest-300 text-xs mb-1">{business.receipt_header}</p>
@@ -4125,12 +4270,12 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
             {items.map((item, i) => (
               <div key={i} className="flex justify-between text-sm">
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-800 truncate">{item.product_name}</p>
+                  <p className="font-medium text-gray-800 dark:text-ivory-100 truncate">{item.product_name}</p>
                   <p className="text-xs text-gray-400">
                     ₱{Number(item.unit_price).toFixed(2)} × {item.quantity}
                   </p>
                 </div>
-                <p className="font-semibold text-gray-800 ml-2">
+                <p className="font-semibold text-gray-800 dark:text-ivory-100 ml-2">
                   ₱{Number(item.subtotal).toFixed(2)}
                 </p>
               </div>
@@ -4140,7 +4285,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
           <div className="space-y-1.5">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Subtotal</span>
-              <span className="font-medium text-gray-800">
+              <span className="font-medium text-gray-800 dark:text-ivory-100">
                 ₱{Number(transaction?.original_amount || transaction?.total_amount).toFixed(2)}
               </span>
             </div>
@@ -4158,7 +4303,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
             )}
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Total</span>
-              <span className="font-medium text-gray-800">
+              <span className="font-medium text-gray-800 dark:text-ivory-100">
                 ₱{Number(transaction?.total_amount).toFixed(2)}
               </span>
             </div>
@@ -4178,12 +4323,12 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
               <>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-500">Cash Tendered</span>
-                  <span className="font-medium text-gray-800">
+                  <span className="font-medium text-gray-800 dark:text-ivory-100">
                     ₱{Number(transaction?.amount_tendered).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between text-base font-black">
-                  <span className="text-gray-800">Change</span>
+                  <span className="text-gray-800 dark:text-ivory-100">Change</span>
                   <span className="text-forest-700">
                     ₱{Number(transaction?.change_amount).toFixed(2)}
                   </span>
@@ -4193,7 +4338,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
             {transaction?.reference_number && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Ref #</span>
-                <span className="font-mono font-semibold text-gray-800">
+                <span className="font-mono font-semibold text-gray-800 dark:text-ivory-100">
                   {transaction.reference_number}
                 </span>
               </div>
@@ -4201,7 +4346,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
             {transaction?.customer_name && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500">Customer</span>
-                <span className="font-medium text-gray-800">{transaction.customer_name}</span>
+                <span className="font-medium text-gray-800 dark:text-ivory-100">{transaction.customer_name}</span>
               </div>
             )}
           </div>
@@ -4232,7 +4377,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
+              className="flex-1 bg-gray-100 dark:bg-surface-dark text-gray-600 dark:text-gray-400 font-semibold py-3 rounded-xl text-sm"
             >
               Close
             </button>
@@ -5158,9 +5303,9 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   ];
 
   return (
-    <div className="min-h-screen bg-ivory-100 flex flex-col max-w-lg mx-auto">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col max-w-lg mx-auto">
       {/* Header */}
-      <div className="bg-forest-800 px-4 pt-5 pb-4 flex-shrink-0">
+      <div className="bg-forest-800 dark:bg-surface-dark px-4 pt-5 pb-4 flex-shrink-0">
         <div className="flex items-center justify-between mb-1">
           <div>
             <p className="text-gold-400 text-xs font-medium uppercase tracking-widest">Cashier</p>
@@ -5277,14 +5422,14 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           )}
 
           {/* Search bar */}
-          <div className="px-4 py-3 bg-white border-b border-gray-100 flex gap-2 flex-shrink-0">
+          <div className="px-4 py-3 bg-white dark:bg-surface-dark-card border-b border-gray-100 dark:border-forest-600 flex gap-2 flex-shrink-0">
             <div className="flex-1 relative">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search product by name..."
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 pr-8"
+                className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 pr-8 dark:bg-surface-dark dark:text-ivory-100"
               />
               {searching && (
                 <div className="absolute right-3 top-3 w-4 h-4 border-2 border-forest-500 border-t-transparent rounded-full animate-spin"></div>
@@ -5307,7 +5452,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
                   categoryFilter === cat
                     ? "bg-forest-600 text-white border-forest-600"
-                    : "bg-white text-gray-500 border-gray-200"
+                    : "bg-white dark:bg-surface-dark-card text-gray-500 dark:text-gray-400 border-gray-200 dark:border-forest-600"
                 }`}
               >
                 {cat}
@@ -5317,7 +5462,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
 
           {/* Search results */}
           {searchResults.length > 0 && (
-            <div className="mx-4 mt-1 bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden z-10 flex-shrink-0">
+            <div className="mx-4 mt-1 bg-white dark:bg-surface-dark-card rounded-xl shadow-lg border border-gray-100 dark:border-forest-600 overflow-hidden z-10 flex-shrink-0">
               {searchResults.map((p) => (
                 <button
                   key={p.id}
@@ -5331,7 +5476,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       <img src={p.image_url} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
                     )}
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-800 truncate">{p.name}</p>
+                      <p className="text-sm font-semibold text-gray-800 dark:text-ivory-100 truncate">{p.name}</p>
                       <p
                         className={`text-xs mt-0.5 ${
                           p.stock_quantity <= 0
@@ -5345,7 +5490,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       </p>
                     </div>
                   </div>
-                  <span className="text-sm font-black text-forest-700 flex-shrink-0">
+                  <span className="text-sm font-black text-forest-700 dark:text-gold-400 flex-shrink-0">
                     ₱{Number(p.price).toFixed(2)}
                   </span>
                 </button>
@@ -5384,10 +5529,10 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 {cart.map((item) => (
                   <div
                     key={item.product_id}
-                    className="bg-white rounded-xl p-3 flex items-center gap-3 border border-gray-100 shadow-sm"
+                    className="bg-white dark:bg-surface-dark-card rounded-xl p-3 flex items-center gap-3 border border-gray-100 dark:border-forest-600 shadow-sm"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-800 text-sm truncate">
+                      <p className="font-semibold text-gray-800 dark:text-ivory-100 text-sm truncate">
                         {item.product_name}
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
@@ -5398,11 +5543,11 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => updateQty(item.product_id, -1)}
-                        className="w-7 h-7 rounded-lg bg-gray-100 text-gray-600 font-bold text-base flex items-center justify-center active:bg-gray-200"
+                        className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-surface-dark text-gray-600 dark:text-gray-400 font-bold text-base flex items-center justify-center active:bg-gray-200"
                       >
                         −
                       </button>
-                      <span className="text-sm font-black text-gray-800 w-5 text-center">
+                      <span className="text-sm font-black text-gray-800 dark:text-ivory-100 w-5 text-center">
                         {item.quantity}
                       </span>
                       <button
@@ -5412,7 +5557,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                         +
                       </button>
                     </div>
-                    <p className="text-sm font-black text-forest-700 w-16 text-right">
+                    <p className="text-sm font-black text-forest-700 dark:text-gold-400 w-16 text-right">
                       ₱{item.subtotal.toFixed(2)}
                     </p>
                   </div>
@@ -5423,12 +5568,12 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
 
           {/* Checkout bar */}
           {cart.length > 0 && !checkoutMode && (
-            <div className="px-4 py-3 bg-white border-t border-gray-100 flex-shrink-0">
+            <div className="px-4 py-3 bg-white dark:bg-surface-dark-card border-t border-gray-100 dark:border-forest-600 flex-shrink-0">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-500 dark:text-gray-400">
                   {itemCount} item{itemCount !== 1 ? "s" : ""}
                 </p>
-                <p className="text-xl font-black text-gray-800">₱{total.toFixed(2)}</p>
+                <p className="text-xl font-black text-gray-800 dark:text-ivory-100">₱{total.toFixed(2)}</p>
               </div>
               <button
                 onClick={() => setCheckoutModePersisted(true)}
@@ -5442,7 +5587,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           {/* Checkout modal */}
           {checkoutMode && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-40">
-              <div className={`bg-white w-full rounded-t-3xl p-5 overflow-y-auto pb-6 transition-all duration-300 ${
+              <div className={`bg-white dark:bg-surface-dark-card w-full rounded-t-3xl p-5 overflow-y-auto pb-6 transition-all duration-300 ${
                 paymentMethod === "gcash" || paymentMethod === "maya"
                   ? "max-h-[82vh]"
                   : paymentMethod === "utang"
@@ -5450,23 +5595,23 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                   : "max-h-[55vh]"
               }`}>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-black text-gray-800 text-lg">Checkout</h3>
-                  <button onClick={() => setCheckoutModePersisted(false)} className="text-gray-400 text-xl">
+                  <h3 className="font-black text-gray-800 dark:text-ivory-100 text-lg">Checkout</h3>
+                  <button onClick={() => setCheckoutModePersisted(false)} className="text-gray-400 dark:text-gray-500 text-xl">
                     ✕
                   </button>
                 </div>
 
                 {/* Order summary */}
-                <div className="bg-gray-50 rounded-2xl p-4 mb-4">
+                <div className="bg-gray-50 dark:bg-surface-dark rounded-2xl p-4 mb-4">
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
                     Order Summary
                   </p>
                   {cart.map((item) => (
                     <div key={item.product_id} className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-600">
+                      <span className="text-gray-600 dark:text-gray-400">
                         {item.product_name} × {item.quantity}
                       </span>
-                      <span className="font-semibold text-gray-800">
+                      <span className="font-semibold text-gray-800 dark:text-ivory-100">
                         ₱{item.subtotal.toFixed(2)}
                       </span>
                     </div>
@@ -5474,7 +5619,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                   <div className="border-t border-gray-200 mt-2 pt-2">
                     <div className="flex justify-between text-sm mb-1">
                       <span className="text-gray-500">Subtotal</span>
-                      <span className="font-medium text-gray-800">₱{subtotal.toFixed(2)}</span>
+                      <span className="font-medium text-gray-800 dark:text-ivory-100">₱{subtotal.toFixed(2)}</span>
                     </div>
                     {discountAmount > 0 && (
                       <div className="flex justify-between text-sm mb-1">
@@ -5485,8 +5630,8 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       </div>
                     )}
                     <div className="flex justify-between mt-1">
-                      <span className="font-black text-gray-800">Total</span>
-                      <span className="font-black text-forest-700 text-lg">₱{total.toFixed(2)}</span>
+                      <span className="font-black text-gray-800 dark:text-ivory-100">Total</span>
+                      <span className="font-black text-forest-700 dark:text-gold-400 text-lg">₱{total.toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
@@ -5540,7 +5685,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                         className={`px-3 py-1.5 rounded-xl text-xs font-semibold border ${
                           customerType === t.key
                             ? "bg-forest-600 text-white border-forest-600"
-                            : "bg-white text-gray-600 border-gray-200"
+                            : "bg-white dark:bg-surface-dark text-gray-600 dark:text-ivory-200 border-gray-200 dark:border-forest-600"
                         }`}>
                         {t.label}
                       </button>
@@ -5554,13 +5699,13 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                         {(business.discount_types_allowed === "both" || business.discount_types_allowed === "percent" || !business.discount_types_allowed) && (
                           <button onClick={() => { setDiscountTypePersisted("percent"); setDiscountValuePersisted(""); }}
                             className={`flex-1 py-2 rounded-xl text-sm font-semibold border ${
-                              discountType === "percent" ? "bg-forest-600 text-white border-forest-600" : "bg-white text-gray-600 border-gray-200"
+                              discountType === "percent" ? "bg-forest-600 text-white border-forest-600" : "bg-white dark:bg-surface-dark text-gray-600 dark:text-ivory-200 border-gray-200 dark:border-forest-600"
                             }`}>% Percent</button>
                         )}
                         {(business.discount_types_allowed === "both" || business.discount_types_allowed === "fixed" || !business.discount_types_allowed) && (
                           <button onClick={() => { setDiscountTypePersisted("fixed"); setDiscountValuePersisted(""); }}
                             className={`flex-1 py-2 rounded-xl text-sm font-semibold border ${
-                              discountType === "fixed" ? "bg-forest-600 text-white border-forest-600" : "bg-white text-gray-600 border-gray-200"
+                              discountType === "fixed" ? "bg-forest-600 text-white border-forest-600" : "bg-white dark:bg-surface-dark text-gray-600 dark:text-ivory-200 border-gray-200 dark:border-forest-600"
                             }`}>₱ Fixed</button>
                         )}
                       </div>
@@ -5602,7 +5747,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       className={`px-4 py-2 rounded-xl text-sm font-semibold border transition-colors ${
                         paymentMethod === m.key
                           ? "bg-forest-600 text-white border-forest-600"
-                          : "bg-white text-gray-600 border-gray-200"
+                          : "bg-white dark:bg-surface-dark text-gray-600 dark:text-ivory-200 border-gray-200 dark:border-forest-600"
                       }`}
                     >
                       {m.label}
@@ -5627,7 +5772,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       value={gcashRef}
                       onChange={(e) => setGcashRefPersisted(e.target.value)}
                       placeholder="e.g. 1234567890"
-                      className="w-full border-2 border-red-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 bg-white font-mono font-bold"
+                      className="w-full border-2 border-red-300 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 bg-white dark:bg-surface-dark dark:text-ivory-100 font-mono font-bold"
                     />
                     <p className="text-xs text-red-500 mt-1">Check your {paymentMethod === "gcash" ? "GCash" : "Maya"} SMS for the reference number.</p>
                     <input
@@ -5635,7 +5780,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       value={customerName}
                       onChange={(e) => setCustomerNamePersisted(e.target.value)}
                       placeholder="Customer name (optional)..."
-                      className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 bg-white mt-2"
+                      className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 bg-white dark:bg-surface-dark dark:text-ivory-100 mt-2"
                     />
                   </div>
                 )}
@@ -5704,7 +5849,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       <button
                         key={amt}
                         onClick={() => setAmountTenderedPersisted(String(amt))}
-                        className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium"
+                        className="px-3 py-1.5 bg-gray-100 dark:bg-surface-dark text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium"
                       >
                         ₱{amt}
                       </button>
@@ -5805,8 +5950,8 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               {history.map((txn) => (
                 <div
                   key={txn.id}
-                  className={`bg-white rounded-xl p-4 border shadow-sm ${
-                    txn.status === "voided" ? "border-red-200 opacity-60" : "border-gray-100"
+                  className={`bg-white dark:bg-surface-dark-card rounded-xl p-4 border shadow-sm ${
+                    txn.status === "voided" ? "border-red-200 opacity-60" : "border-gray-100 dark:border-forest-600"
                   }`}
                 >
                   <div className="flex items-start justify-between mb-2">
@@ -5913,11 +6058,11 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               {utangList.map((u) => (
                 <div
                   key={u.id}
-                  className="bg-white rounded-xl p-4 border border-orange-100 shadow-sm"
+                  className="bg-white dark:bg-surface-dark-card rounded-xl p-4 border border-orange-100 dark:border-forest-600 shadow-sm"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <p className="font-semibold text-gray-800 text-sm">{u.customer_name}</p>
+                      <p className="font-semibold text-gray-800 dark:text-ivory-100 text-sm">{u.customer_name}</p>
                       {u.customer_phone && (
                         <p className="text-xs text-gray-400">{u.customer_phone}</p>
                       )}
@@ -5966,9 +6111,9 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       {/* New Product Found Modal */}
       {newProductModal && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-end z-50">
-          <div className="bg-white w-full rounded-t-3xl p-5">
+          <div className="bg-white dark:bg-surface-dark-card w-full rounded-t-3xl p-5">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-black text-gray-800 text-base">
+              <h3 className="font-black text-gray-800 dark:text-ivory-100 text-base">
                 {newProductModal.notFound ? "Unknown Product" : "New Product Found!"}
               </h3>
               <button onClick={() => setNewProductModal(null)} className="text-gray-400 text-xl">✕</button>
@@ -5987,7 +6132,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     className="w-16 h-16 object-contain rounded-xl border border-gray-100" />
                 )}
                 <div className="flex-1">
-                  <p className="font-bold text-gray-800 text-sm">{newProductModal.name}</p>
+                  <p className="font-bold text-gray-800 dark:text-ivory-100 text-sm">{newProductModal.name}</p>
                   <p className="text-xs font-mono text-gray-400 mt-0.5">{newProductModal.barcode}</p>
                   <div className="mt-2 bg-blue-50 rounded-xl px-3 py-2">
                     <p className="text-xs text-blue-700 font-medium">
@@ -6038,7 +6183,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               Send to Owner for Review
             </button>
             <button onClick={() => setNewProductModal(null)}
-              className="w-full bg-gray-100 text-gray-600 font-semibold py-3 rounded-2xl text-sm mt-2">
+              className="w-full bg-gray-100 dark:bg-surface-dark text-gray-600 dark:text-gray-400 font-semibold py-3 rounded-2xl text-sm mt-2">
               Cancel
             </button>
           </div>
@@ -6064,8 +6209,8 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       {/* Void Request Modal */}
       {voidModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
-          <div className="bg-white w-full rounded-t-3xl p-5">
-            <h3 className="font-black text-gray-800 text-base mb-1">Request Void Approval</h3>
+          <div className="bg-white dark:bg-surface-dark-card w-full rounded-t-3xl p-5">
+            <h3 className="font-black text-gray-800 dark:text-ivory-100 text-base mb-1">Request Void Approval</h3>
             <p className="text-xs text-gray-500 mb-1">
               {voidModal.receipt_number} · ₱{Number(voidModal.total_amount).toFixed(2)}
             </p>
@@ -6086,7 +6231,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             <div className="flex gap-3">
               <button
                 onClick={() => { setVoidModal(null); setVoidReason(""); }}
-                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
+                className="flex-1 bg-gray-100 dark:bg-surface-dark text-gray-600 dark:text-gray-400 font-semibold py-3 rounded-xl text-sm"
               >
                 Cancel
               </button>
@@ -6105,10 +6250,10 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       {/* Utang Payment Confirmation Modal */}
       {utangPayModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
-          <div className="bg-white w-full rounded-t-3xl p-5">
-            <h3 className="font-black text-gray-800 text-base mb-1">Record Payment</h3>
-            <p className="text-xs text-gray-500 mb-1">
-              Customer: <span className="font-bold text-gray-800">{utangPayModal.customer_name}</span>
+          <div className="bg-white dark:bg-surface-dark-card w-full rounded-t-3xl p-5">
+            <h3 className="font-black text-gray-800 dark:text-ivory-100 text-base mb-1">Record Payment</h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+              Customer: <span className="font-bold text-gray-800 dark:text-ivory-100">{utangPayModal.customer_name}</span>
             </p>
             <p className="text-xs text-gray-500 mb-3">
               Outstanding balance:{" "}
@@ -6134,7 +6279,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 <button
                   key={amt}
                   onClick={() => setUtangPayAmount(String(amt))}
-                  className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium"
+                  className="px-3 py-1.5 bg-gray-100 dark:bg-surface-dark text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium"
                 >
                   ₱{amt}
                 </button>
@@ -6160,7 +6305,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             <div className="flex gap-3">
               <button
                 onClick={() => { setUtangPayModal(null); setUtangPayAmount(""); }}
-                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
+                className="flex-1 bg-gray-100 dark:bg-surface-dark text-gray-600 dark:text-gray-400 font-semibold py-3 rounded-xl text-sm"
               >
                 Cancel
               </button>
@@ -6179,11 +6324,11 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       {/* PIN Verification Modal */}
       {showPinModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-3xl p-6 w-72 text-center">
-            <div className="w-14 h-14 bg-forest-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+          <div className="bg-white dark:bg-surface-dark-card rounded-3xl p-6 w-72 text-center">
+            <div className="w-14 h-14 bg-forest-100 dark:bg-surface-dark-elevated rounded-2xl flex items-center justify-center mx-auto mb-3">
               <span className="text-2xl"><NavIcon name="lock" size={24} color="#d97706" /></span>
             </div>
-            <h3 className="font-black text-gray-800 text-base mb-1">Enter PIN</h3>
+            <h3 className="font-black text-gray-800 dark:text-ivory-100 text-base mb-1">Enter PIN</h3>
             <p className="text-xs text-gray-500 mb-4">Enter your 4-digit PIN to confirm this transaction.</p>
             <input
               type="password"
@@ -6197,7 +6342,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             />
             <div className="flex gap-3">
               <button onClick={() => { setShowPinModal(false); setPinInput(""); }}
-                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm">Cancel</button>
+                className="flex-1 bg-gray-100 dark:bg-surface-dark text-gray-600 dark:text-gray-400 font-semibold py-3 rounded-xl text-sm">Cancel</button>
               <button onClick={async () => { if (await verifyPin(pinInput)) processCheckout(); }}
                 disabled={pinInput.length !== 4}
                 className="flex-1 bg-forest-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50">Verify</button>
@@ -6209,8 +6354,8 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       {/* PIN Setup Modal */}
       {showPinSetup && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-3xl p-6 w-72 text-center">
-            <h3 className="font-black text-gray-800 text-base mb-1">Set Your PIN</h3>
+          <div className="bg-white dark:bg-surface-dark-card rounded-3xl p-6 w-72 text-center">
+            <h3 className="font-black text-gray-800 dark:text-ivory-100 text-base mb-1">Set Your PIN</h3>
             <p className="text-xs text-gray-500 mb-4">Create a 4-digit PIN for transaction security.</p>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1 text-left">New PIN</p>
             <input type="password" inputMode="numeric" maxLength={4} value={pinSetupValue}
@@ -6224,7 +6369,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               className="w-full border-2 border-forest-300 rounded-xl px-4 py-3 text-xl font-bold text-center tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-forest-500 mb-4" />
             <div className="flex gap-3">
               <button onClick={() => { setShowPinSetup(false); setPinSetupValue(""); setPinSetupConfirm(""); }}
-                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm">Cancel</button>
+                className="flex-1 bg-gray-100 dark:bg-surface-dark text-gray-600 dark:text-gray-400 font-semibold py-3 rounded-xl text-sm">Cancel</button>
               <button onClick={setupPin} disabled={pinSetupValue.length !== 4 || pinSetupConfirm.length !== 4}
                 className="flex-1 bg-forest-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50">Save PIN</button>
             </div>
@@ -6235,10 +6380,10 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       {/* Shift Modal */}
       {showShiftModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
-          <div className="bg-white w-full rounded-t-3xl p-5">
+          <div className="bg-white dark:bg-surface-dark-card w-full rounded-t-3xl p-5">
             {currentShift ? (
               <>
-                <h3 className="font-black text-gray-800 text-base mb-1">Close Shift</h3>
+                <h3 className="font-black text-gray-800 dark:text-ivory-100 text-base mb-1">Close Shift</h3>
                 <p className="text-xs text-gray-500 mb-1">
                   Started: {new Date(currentShift.started_at).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}
                 </p>
@@ -6267,7 +6412,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 <div className="flex gap-3">
                   <button
                     onClick={() => { setShowShiftModal(false); setShiftEndCash(""); setShiftNotes(""); }}
-                    className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
+                    className="flex-1 bg-gray-100 dark:bg-surface-dark text-gray-600 dark:text-gray-400 font-semibold py-3 rounded-xl text-sm"
                   >
                     Cancel
                   </button>
@@ -6282,7 +6427,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               </>
             ) : (
               <>
-                <h3 className="font-black text-gray-800 text-base mb-1">Start New Shift</h3>
+                <h3 className="font-black text-gray-800 dark:text-ivory-100 text-base mb-1">Start New Shift</h3>
                 <p className="text-xs text-gray-500 mb-4">
                   Count your starting cash before beginning your shift.
                 </p>
@@ -6301,7 +6446,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     <button
                       key={amt}
                       onClick={() => setShiftStartCash(String(amt))}
-                      className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium"
+                      className="px-3 py-1.5 bg-gray-100 dark:bg-surface-dark text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium"
                     >
                       ₱{amt.toLocaleString()}
                     </button>
@@ -6310,7 +6455,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 <div className="flex gap-3">
                   <button
                     onClick={() => { setShowShiftModal(false); setShiftStartCash(""); }}
-                    className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
+                    className="flex-1 bg-gray-100 dark:bg-surface-dark text-gray-600 dark:text-gray-400 font-semibold py-3 rounded-xl text-sm"
                   >
                     Cancel
                   </button>
@@ -6331,9 +6476,9 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       {/* Return/Refund Modal */}
       {returnModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
-          <div className="bg-white w-full rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto">
+          <div className="bg-white dark:bg-surface-dark-card w-full rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-black text-gray-800 text-base">Return / Refund</h3>
+              <h3 className="font-black text-gray-800 dark:text-ivory-100 text-base">Return / Refund</h3>
               <button onClick={() => { setReturnModal(null); setReturnReason(""); setReturnItems([]); }} className="text-gray-400 text-xl">✕</button>
             </div>
             <p className="text-xs text-gray-500 mb-1">
@@ -6362,7 +6507,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                             {selected && "✓"}
                           </span>
                           <div>
-                            <p className="text-sm font-medium text-gray-800">{item.products?.name || item.product_name}</p>
+                            <p className="text-sm font-medium text-gray-800 dark:text-ivory-100">{item.products?.name || item.product_name}</p>
                             <p className="text-xs text-gray-400">×{item.quantity} @ ₱{Number(item.unit_price).toFixed(2)}</p>
                           </div>
                         </div>
@@ -6386,7 +6531,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             )}
             <div className="flex gap-3">
               <button onClick={() => { setReturnModal(null); setReturnReason(""); setReturnItems([]); }}
-                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm">Cancel</button>
+                className="flex-1 bg-gray-100 dark:bg-surface-dark text-gray-600 dark:text-gray-400 font-semibold py-3 rounded-xl text-sm">Cancel</button>
               <button
                 disabled={returnItems.length === 0 || !returnReason.trim()}
                 onClick={async () => {
@@ -6436,8 +6581,8 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       {/* Cash Reconciliation Modal */}
       {reconcileModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
-          <div className="bg-white w-full rounded-t-3xl p-5">
-            <h3 className="font-black text-gray-800 text-base mb-1 flex items-center gap-1.5"><NavIcon name="cash" size={16} color="currentColor" /> Cash Count</h3>
+          <div className="bg-white dark:bg-surface-dark-card w-full rounded-t-3xl p-5">
+            <h3 className="font-black text-gray-800 dark:text-ivory-100 text-base mb-1 flex items-center gap-1.5"><NavIcon name="cash" size={16} color="currentColor" /> Cash Count</h3>
             <p className="text-xs text-gray-500 mb-4">
               Count all cash in the drawer and enter the total below.
             </p>
@@ -6459,7 +6604,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             <div className="flex gap-3">
               <button
                 onClick={() => { setReconcileModal(false); setCashCounted(""); }}
-                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
+                className="flex-1 bg-gray-100 dark:bg-surface-dark text-gray-600 dark:text-gray-400 font-semibold py-3 rounded-xl text-sm"
               >
                 Cancel
               </button>
@@ -6639,8 +6784,8 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
     "border-gray-100";
 
   return (
-    <div className="min-h-screen bg-ivory-100 flex flex-col max-w-lg mx-auto">
-      <div className="bg-forest-800 px-4 pt-5 pb-4 flex-shrink-0">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col max-w-lg mx-auto">
+      <div className="bg-forest-800 dark:bg-surface-dark px-4 pt-5 pb-4 flex-shrink-0">
         <div className="flex items-center justify-between mb-1">
           <div>
             <p className="text-gold-400 text-xs font-medium uppercase tracking-widest">Inventory</p>
@@ -6652,7 +6797,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
                 {notifications.length}
               </span>
             )}
-            <button onClick={onLogout} className="bg-forest-700 text-gold-400 text-xs px-3 py-2 rounded-xl font-medium border border-forest-600">
+            <button onClick={onLogout} className="bg-forest-700 dark:bg-surface-dark-card text-gold-400 text-xs px-3 py-2 rounded-xl font-medium border border-forest-600">
               Logout
             </button>
           </div>
@@ -6660,7 +6805,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
         <p className="text-forest-300 text-xs">{branch?.name || "No branch"} · {profile.full_name}</p>
       </div>
 
-      <div className="bg-forest-900 flex px-2 gap-1 flex-shrink-0">
+      <div className="bg-forest-900 dark:bg-surface-dark-card flex px-2 gap-1 flex-shrink-0">
         {[
           { key: "products", label: "Products" },
           { key: "alerts", label: `Alerts${notifications.length > 0 ? ` (${notifications.length})` : ""}` },
@@ -6677,7 +6822,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
 
       {invTab === "products" && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-4 pt-3 pb-2 bg-white border-b border-gray-100 flex-shrink-0">
+          <div className="px-4 pt-3 pb-2 bg-white dark:bg-surface-dark-card border-b border-gray-100 dark:border-forest-600 flex-shrink-0">
             <input type="text" value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search products..."
@@ -6686,7 +6831,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
               {CATEGORIES.map((cat) => (
                 <button key={cat} onClick={() => setCategoryFilter(cat)}
                   className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-semibold border ${
-                    categoryFilter === cat ? "bg-forest-600 text-white border-forest-600" : "bg-white text-gray-500 border-gray-200"
+                    categoryFilter === cat ? "bg-forest-600 text-white border-forest-600" : "bg-white dark:bg-surface-dark-card text-gray-500 dark:text-gray-400 border-gray-200 dark:border-forest-600"
                   }`}>
                   {cat}
                 </button>
@@ -6712,7 +6857,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
             ) : (
               <div className="space-y-2">
                 {products.map((p) => (
-                  <div key={p.id} className={`bg-white rounded-xl p-3 border shadow-sm ${stockBorder(p)}`}>
+                  <div key={p.id} className={`bg-white dark:bg-surface-dark-card rounded-xl p-3 border shadow-sm ${stockBorder(p)}`}>
                     <div className="flex items-center gap-3">
                       {batchMode && (
                         <input type="checkbox" checked={!!batchSelected[p.id]}
@@ -6723,7 +6868,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
                           className="w-5 h-5 rounded accent-forest-600 flex-shrink-0" />
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-800 text-sm truncate">{p.name}</p>
+                        <p className="font-semibold text-gray-800 dark:text-ivory-100 text-sm truncate">{p.name}</p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-xs text-gray-400">₱{Number(p.price).toFixed(2)}</span>
                           {p.category && p.category !== "Others" && (
@@ -6762,7 +6907,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
           </div>
 
           {batchMode && Object.values(batchSelected).some(v => v) && (
-            <div className="px-4 py-3 bg-white border-t border-gray-100 flex-shrink-0">
+            <div className="px-4 py-3 bg-white dark:bg-surface-dark-card border-t border-gray-100 dark:border-forest-600 flex-shrink-0">
               <button onClick={saveBatchUpdate} disabled={savingBatch}
                 className="w-full bg-forest-600 text-white font-bold py-3.5 rounded-2xl text-sm disabled:opacity-50 active:scale-95 transition-transform">
                 {savingBatch ? "Saving..." : `Save All (${Object.values(batchSelected).filter(v => v).length} products)`}
@@ -6784,7 +6929,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
             <div className="space-y-2">
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Low Stock Alerts</p>
               {notifications.map((n) => (
-                <div key={n.id} className="bg-white rounded-xl p-3 border border-red-200 shadow-sm">
+                <div key={n.id} className="bg-white dark:bg-surface-dark-card rounded-xl p-3 border border-red-200 dark:border-red-900 shadow-sm">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <p className="text-xs font-bold text-red-700">{n.title}</p>
@@ -6817,10 +6962,10 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
           ) : (
             <div className="space-y-2">
               {products.filter(p => p.stock_quantity <= (p.low_stock_threshold || 10)).sort((a, b) => a.stock_quantity - b.stock_quantity).map((p) => (
-                <div key={p.id} className={`bg-white rounded-xl p-3 border shadow-sm ${stockBorder(p)}`}>
+                <div key={p.id} className={`bg-white dark:bg-surface-dark-card rounded-xl p-3 border shadow-sm ${stockBorder(p)}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-gray-800 text-sm truncate">{p.name}</p>
+                      <p className="font-semibold text-gray-800 dark:text-ivory-100 text-sm truncate">{p.name}</p>
                       <p className="text-xs text-gray-400 mt-0.5">Threshold: {p.low_stock_threshold || 10}</p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -6840,8 +6985,8 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
 
       {editModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
-          <div className="bg-white w-full rounded-t-3xl p-5">
-            <h3 className="font-black text-gray-800 text-base mb-1">Edit Stock</h3>
+          <div className="bg-white dark:bg-surface-dark-card w-full rounded-t-3xl p-5">
+            <h3 className="font-black text-gray-800 dark:text-ivory-100 text-base mb-1">Edit Stock</h3>
             <p className="text-sm text-gray-600 mb-1">{editModal.name}</p>
             <p className="text-xs text-gray-400 mb-3">Current stock: {editModal.stock_quantity}</p>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">New Quantity</p>
@@ -6852,7 +6997,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-4" />
             <div className="flex gap-3">
               <button onClick={() => { setEditModal(null); setEditQty(""); setEditNotes(""); }}
-                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm">Cancel</button>
+                className="flex-1 bg-gray-100 dark:bg-surface-dark text-gray-600 dark:text-gray-400 font-semibold py-3 rounded-xl text-sm">Cancel</button>
               <button onClick={updateStock}
                 className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl text-sm">Update Stock</button>
             </div>
@@ -6862,9 +7007,9 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
 
       {restockModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
-          <div className="bg-white w-full rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto">
+          <div className="bg-white dark:bg-surface-dark-card w-full rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-black text-gray-800 text-base">Receive Delivery</h3>
+              <h3 className="font-black text-gray-800 dark:text-ivory-100 text-base">Receive Delivery</h3>
               <button onClick={() => { setRestockModal(false); setRestockProduct(null); setRestockSearch(""); setRestockQty(""); setRestockSupplier(""); setRestockNotes(""); }}
                 className="text-gray-400 text-xl">✕</button>
             </div>
@@ -6879,7 +7024,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
                     {products.filter(p => p.name.toLowerCase().includes(restockSearch.toLowerCase())).map(p => (
                       <button key={p.id} onClick={() => { setRestockProduct(p); setRestockSearch(p.name); }}
                         className="w-full text-left px-3 py-2 rounded-xl hover:bg-forest-50 active:bg-forest-100 flex justify-between items-center">
-                        <span className="text-sm font-medium text-gray-800">{p.name}</span>
+                        <span className="text-sm font-medium text-gray-800 dark:text-ivory-100">{p.name}</span>
                         <span className={`text-xs font-bold px-2 py-0.5 rounded ${stockColor(p)}`}>{p.stock_quantity}</span>
                       </button>
                     ))}
@@ -6891,7 +7036,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
                 <div className="bg-forest-50 border border-forest-200 rounded-xl p-3 mb-3">
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="font-semibold text-gray-800 text-sm">{restockProduct.name}</p>
+                      <p className="font-semibold text-gray-800 dark:text-ivory-100 text-sm">{restockProduct.name}</p>
                       <p className="text-xs text-gray-500">Current stock: {restockProduct.stock_quantity}</p>
                     </div>
                     <button onClick={() => { setRestockProduct(null); setRestockSearch(""); }}
@@ -6928,10 +7073,10 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
 
       {historyModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
-          <div className="bg-white w-full rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto">
+          <div className="bg-white dark:bg-surface-dark-card w-full rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className="font-black text-gray-800 text-base">Stock History</h3>
+                <h3 className="font-black text-gray-800 dark:text-ivory-100 text-base">Stock History</h3>
                 <p className="text-xs text-gray-500">{historyModal.name}</p>
               </div>
               <button onClick={() => { setHistoryModal(null); setStockHistory([]); }} className="text-gray-400 text-xl">✕</button>
@@ -7110,17 +7255,17 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
     { key: "transfers", icon: "transfers", label: "Transfers" },
   ];
 
-  if (loading) return <div className="min-h-screen bg-ivory-100 flex items-center justify-center"><Spinner /></div>;
+  if (loading) return <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex items-center justify-center"><Spinner /></div>;
 
   return (
-    <div className="min-h-screen bg-ivory-100 flex flex-col max-w-lg mx-auto">
-      <div className="bg-forest-800 px-4 pt-8 pb-4 relative overflow-hidden">
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 85% 10%, rgba(184,150,12,0.09) 0%, transparent 55%)' }} />
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col max-w-lg mx-auto">
+      <div className="bg-forest-800 dark:bg-surface-dark px-4 pt-8 pb-4 relative overflow-hidden">
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 85% 10%, rgba(185,150,12,0.09) 0%, transparent 55%)' }} />
         <div className="flex items-start justify-between mb-1 relative z-10">
-          <div className="flex items-center gap-2">
-            <LedgerIcon className="w-5 h-5" />
+          <div className="flex items-center gap-2.5">
+            <LogoMark size={32} />
             <div>
-              <p className="text-[7.5px] font-medium tracking-[1.5px] uppercase" style={{ color: 'rgba(184,150,12,0.6)' }}>◆ Branch Manager</p>
+              <p className="text-[7.5px] font-medium tracking-[1.5px] uppercase" style={{ color: 'rgba(185,150,12,0.6)' }}>Branch Manager</p>
               <h1 className="text-ivory-100 font-playfair text-[15px] font-semibold tracking-tight leading-tight">{branch?.name || business.name}</h1>
             </div>
           </div>
@@ -7135,7 +7280,7 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
         <div className="p-4 flex gap-2 mb-1">
           {[{ key: "today", label: "Today" }, { key: "week", label: "This Week" }, { key: "month", label: "This Month" }].map((f) => (
             <button key={f.key} onClick={() => setTimeFilter(f.key)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium ${timeFilter === f.key ? "bg-gold-400 text-forest-900" : "bg-gray-100 text-gray-500"}`}>
+              className={`px-3 py-1 rounded-lg text-xs font-medium ${timeFilter === f.key ? "bg-gold-400 text-forest-900" : "bg-gray-100 dark:bg-surface-dark text-gray-500 dark:text-gray-400"}`}>
               {f.label}
             </button>
           ))}
@@ -7145,7 +7290,7 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
           <div className="p-3 pt-0 space-y-3">
             <Card className="p-3">
               <p className="text-[7.5px] font-semibold tracking-[2px] uppercase text-gray-400 mb-1">Branch Revenue</p>
-              <p className="text-[26px] font-black text-gray-800 font-lato tracking-tighter leading-none">₱{branchRevenue.toFixed(2)}</p>
+              <p className="text-[26px] font-black text-gray-800 dark:text-ivory-100 font-lato tracking-tighter leading-none">₱{branchRevenue.toFixed(2)}</p>
               <p className="text-[8.5px] mt-1 font-light text-gray-400">{branchTxCount} transaction{branchTxCount !== 1 ? "s" : ""}</p>
             </Card>
 
@@ -7183,7 +7328,7 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
                   {branchProducts.filter(p => p.stock_quantity <= p.low_stock_threshold).map((p) => (
                     <Card key={p.id} className="p-3 flex items-center justify-between border-l-4 border-red-400">
                       <div>
-                        <p className="text-sm font-semibold text-gray-800">{p.name}</p>
+                        <p className="text-sm font-semibold text-gray-800 dark:text-ivory-100">{p.name}</p>
                         <p className="text-xs text-gray-400">{p.category}</p>
                       </div>
                       <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-lg">{p.stock_quantity} left</span>
@@ -7210,7 +7355,7 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
                           <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-gold-200 text-gold-800" : "bg-gray-200 text-gray-600"}`}>
                             {i + 1}
                           </span>
-                          <p className="text-sm font-bold text-gray-800">{s.name}</p>
+                          <p className="text-sm font-bold text-gray-800 dark:text-ivory-100">{s.name}</p>
                         </div>
                         <p className="text-sm font-black text-forest-700">₱{s.revenue.toFixed(2)}</p>
                       </div>
@@ -7233,7 +7378,7 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
                   {branchStaff.map((s) => (
                     <div key={s.id} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
                       <div>
-                        <p className="text-sm font-semibold text-gray-800">{s.full_name}</p>
+                        <p className="text-sm font-semibold text-gray-800 dark:text-ivory-100">{s.full_name}</p>
                         <p className="text-xs text-gray-400">{s.email}</p>
                       </div>
                       <span className={`text-xs px-2 py-1 rounded-full font-semibold ${ROLE_COLORS[s.role]}`}>
@@ -7295,7 +7440,7 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
       </div>
 
       {/* Bottom Nav */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-white border-t border-gray-100 flex items-center justify-around px-2 py-2 z-30">
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-white dark:bg-surface-dark-card border-t border-gray-100 dark:border-forest-600 flex items-center justify-around px-2 py-2 z-30">
         {BM_TABS.map((item) => (
           <button key={item.key} onClick={() => setBmTab(item.key)}
             className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors ${bmTab === item.key ? "bg-forest-50 text-forest-700" : "text-gray-400"}`}>
@@ -7308,9 +7453,9 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
       {/* Transfer Request Modal */}
       {showTransferModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
-          <div className="bg-white w-full rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto">
+          <div className="bg-white dark:bg-surface-dark-card w-full rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-black text-gray-800 text-base">Request Product Transfer</h3>
+              <h3 className="font-black text-gray-800 dark:text-ivory-100 text-base">Request Product Transfer</h3>
               <button onClick={() => { setShowTransferModal(false); setTransferProduct(null); setTransferSearch(""); }} className="text-gray-400 text-xl">✕</button>
             </div>
 
@@ -7344,7 +7489,7 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
 
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Transfer To</p>
                 <select value={transferToBranch} onChange={(e) => setTransferToBranch(e.target.value)}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 bg-white mb-3">
+                  className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 bg-white dark:bg-surface-dark dark:text-ivory-100 mb-3">
                   <option value="">Select destination branch...</option>
                   {allBranches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
                 </select>
@@ -7431,7 +7576,7 @@ function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
             />
           </svg>
         </div>
-        <h1 className="text-2xl font-black text-gray-800">{business.name}</h1>
+        <h1 className="text-2xl font-black text-gray-800 dark:text-ivory-100">{business.name}</h1>
         <p className="text-gray-500 text-sm mt-1">{branch?.name || "No branch"}</p>
         <span
           className={`inline-block mt-2 text-xs px-3 py-1 rounded-full font-semibold ${
@@ -7440,7 +7585,7 @@ function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
         >
           {ROLE_LABELS[profile.role]}
         </span>
-        <div className="mt-8 bg-white rounded-2xl border border-gray-100 p-5 text-left space-y-3 shadow-sm">
+        <div className="mt-8 bg-white dark:bg-surface-dark-card rounded-2xl border border-gray-100 dark:border-forest-600 p-5 text-left space-y-3 shadow-sm">
           <p className="text-xs font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1">Information</p>
           <div className="flex justify-between text-sm">
             <span className="text-gray-500">Name</span>
@@ -7457,7 +7602,7 @@ function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
         </div>
         <button
           onClick={onLogout}
-          className="mt-6 w-full bg-gray-100 text-gray-600 font-semibold py-3 rounded-2xl text-sm"
+          className="mt-6 w-full bg-gray-100 dark:bg-surface-dark text-gray-600 dark:text-gray-400 font-semibold py-3 rounded-2xl text-sm"
         >
           Sign Out
         </button>
@@ -7548,7 +7693,7 @@ function InstallPrompt() {
 
       {showIOSGuide && (
         <div className="fixed inset-0 bg-black bg-opacity-70 flex items-end justify-center z-[100]">
-          <div className="bg-white w-full max-w-lg rounded-t-3xl p-6 pb-10">
+          <div className="bg-white dark:bg-surface-dark-card w-full max-w-lg rounded-t-3xl p-6 pb-10">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-black text-gray-800 text-lg">I-install ang ListaKo</h3>
               <button onClick={() => setShowIOSGuide(false)} className="text-gray-400 text-xl">✕</button>
@@ -7619,6 +7764,36 @@ export default function App() {
   const [appLoading, setAppLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const loadingRef = useRef(false);
+  const [isDark, setIsDark] = useState(() => localStorage.getItem("listako_theme") !== "light");
+
+  const toggleTheme = useCallback(() => {
+    setIsDark(prev => {
+      const next = !prev;
+      localStorage.setItem("listako_theme", next ? "dark" : "light");
+      if (next) {
+        document.documentElement.classList.add("dark");
+        document.documentElement.classList.remove("light");
+      } else {
+        document.documentElement.classList.remove("dark");
+        document.documentElement.classList.add("light");
+      }
+      document.documentElement.style.backgroundColor = next ? "#0A1B1E" : "#F7F5E8";
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add("dark");
+      document.documentElement.classList.remove("light");
+    } else {
+      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.add("light");
+    }
+    document.documentElement.style.backgroundColor = isDark ? "#0A1B1E" : "#F7F5E8";
+  }, []);
+
+  const themeValue = useMemo(() => ({ dark: isDark, toggle: toggleTheme }), [isDark, toggleTheme]);
 
   const showToast = (message, type = "success") => setToast({ message, type });
 
@@ -7740,28 +7915,28 @@ export default function App() {
     setScreen("otp");
   };
 
-  if (appLoading) return <Spinner />;
+  if (appLoading) return <ThemeContext.Provider value={themeValue}><Spinner /></ThemeContext.Provider>;
 
   // Logged in
   if (session && profile && business) {
     if (!isSuperAdmin) {
       if (business.status === "pending")
         return (
-          <>
+          <ThemeContext.Provider value={themeValue}>
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
             <PendingScreen business={business} onLogout={handleLogout} />
-          </>
+          </ThemeContext.Provider>
         );
       if (business.status === "rejected")
         return (
-          <>
+          <ThemeContext.Provider value={themeValue}>
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
             <RejectedScreen business={business} onLogout={handleLogout} />
-          </>
+          </ThemeContext.Provider>
         );
       if (business.status === "suspended")
         return (
-          <>
+          <ThemeContext.Provider value={themeValue}>
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
             <RejectedScreen
               business={{
@@ -7771,19 +7946,19 @@ export default function App() {
               }}
               onLogout={handleLogout}
             />
-          </>
+          </ThemeContext.Provider>
         );
       if (isTrialExpired(business))
         return (
-          <>
+          <ThemeContext.Provider value={themeValue}>
             {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
             <TrialExpiredScreen business={business} onLogout={handleLogout} />
-          </>
+          </ThemeContext.Provider>
         );
     }
 
     return (
-      <>
+      <ThemeContext.Provider value={themeValue}>
         <OfflineBanner />
         <InstallPrompt />
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
@@ -7804,13 +7979,13 @@ export default function App() {
             showToast={showToast}
           />
         )}
-      </>
+      </ThemeContext.Provider>
     );
   }
 
   // Not logged in
   return (
-    <>
+    <ThemeContext.Provider value={themeValue}>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       {screen === "landing" && (
         <LandingScreen
@@ -7849,6 +8024,6 @@ export default function App() {
           showToast={showToast}
         />
       )}
-    </>
+    </ThemeContext.Provider>
   );
 }
