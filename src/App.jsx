@@ -143,7 +143,7 @@ const getTrialDaysLeft = (trialEndsAt) => {
 };
 
 const isTrialExpired = (business) => {
-  if (business?.status === "approved" || business?.plan === "business") return false;
+  if (business?.plan && business.plan !== "trial") return false;
   if (!business?.trial_ends_at) return false;
   return new Date() > new Date(business.trial_ends_at);
 };
