@@ -2668,6 +2668,10 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     const [saving, setSaving] = useState(false);
     const save = async () => {
       if (!form.name.trim()) return showToast("Ilagay ang pangalan ng branch.", "error");
+      const plan = PLANS[business.plan] || PLANS.basic;
+      if (branches.length >= plan.branches) {
+        return showToast(`Naabot na ang limit ng ${plan.label} plan (${plan.branches} branch). Mag-upgrade para makapag-add pa.`, "error");
+      }
       setSaving(true);
       const { error } = await supabase
         .from("branches")
@@ -2875,6 +2879,10 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
       if (!form.full_name.trim()) return showToast("Ilagay ang pangalan ng staff.", "error");
       if (!form.email.trim()) return showToast("Ilagay ang email ng staff.", "error");
       if (!form.branch_id) return showToast("Pumili ng branch.", "error");
+      const plan = PLANS[business.plan] || PLANS.basic;
+      if (staff.length >= plan.staff) {
+        return showToast(`Naabot na ang limit ng ${plan.label} plan (${plan.staff} staff). Mag-upgrade para makapag-add pa.`, "error");
+      }
       setSaving(true);
       try {
         const tempPassword = "ListaKo" + Math.random().toString(36).slice(2, 8) + "!";
@@ -3904,6 +3912,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
 
   const buildReceiptText = () => {
     const lines = [];
+    if (business?.receipt_header) lines.push(business.receipt_header);
     lines.push(business?.name || "Store");
     if (branch?.name) lines.push(branch.name);
     lines.push("─".repeat(28));
@@ -3934,6 +3943,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
     }
     lines.push("─".repeat(28));
     lines.push(`Cashier: ${cashier?.full_name}`);
+    if (business?.receipt_footer) lines.push(business.receipt_footer);
     lines.push("Powered by ListaKo");
     return lines.join("\n");
   };
@@ -3971,6 +3981,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
       ? `<div class="receipt-row"><span>Ref #</span><span>${transaction.reference_number}</span></div>` : "";
     printDiv.innerHTML = `
       <div class="receipt-header">
+        ${business?.receipt_header ? `<p>${business.receipt_header}</p>` : ""}
         <h2>${business?.name || "Store"}</h2>
         <p>${branch?.name || ""}</p>
         <p>${transaction?.receipt_number} | ${formatDate(transaction?.created_at || new Date())}</p>
@@ -3987,6 +3998,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
       <div class="receipt-divider"></div>
       <div class="receipt-footer">
         <p>Cashier: ${cashier?.full_name || ""}</p>
+        ${business?.receipt_footer ? `<p>${business.receipt_footer}</p>` : ""}
         <p>Powered by ListaKo</p>
       </div>
     `;
@@ -3999,6 +4011,9 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 px-4">
       <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
         <div className="bg-forest-800 px-5 py-5 text-center flex-shrink-0">
+          {business?.receipt_header && (
+            <p className="text-forest-300 text-xs mb-1">{business.receipt_header}</p>
+          )}
           <p className="text-gold-400 text-xs font-medium uppercase tracking-widest mb-1">
             Official Receipt
           </p>
@@ -4098,6 +4113,9 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
           <div className="border-t border-dashed border-gray-200 mt-3 mb-3"></div>
           <div className="text-center">
             <p className="text-xs text-gray-400">Cashier: {cashier?.full_name}</p>
+            {business?.receipt_footer && (
+              <p className="text-xs text-gray-400 mt-1">{business.receipt_footer}</p>
+            )}
             <p className="text-xs text-gray-300 mt-1">Powered by ListaKo</p>
           </div>
         </div>
@@ -4520,6 +4538,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           product_id: product.id,
           product_name: product.name,
           unit_price: Number(product.price),
+          retail_price: Number(product.price),
           quantity: 1,
           subtotal: Number(product.price),
           stock: product.stock_quantity,
@@ -4543,7 +4562,10 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             return i;
           }
           const newQty = i.quantity + delta;
-          return { ...i, quantity: newQty, subtotal: newQty * i.unit_price };
+          const retailPrice = i.retail_price || i.unit_price;
+          const isWholesale = i.wholesale_price && newQty >= (i.wholesale_min_qty || 1);
+          const effectivePrice = isWholesale ? i.wholesale_price : retailPrice;
+          return { ...i, quantity: newQty, unit_price: effectivePrice, subtotal: newQty * effectivePrice, is_wholesale: !!isWholesale };
         })
         .filter((i) => i.quantity > 0)
     );
@@ -5209,21 +5231,26 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     p.stock_quantity <= 0 ? "opacity-50" : "hover:bg-gray-50"
                   }`}
                 >
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">{p.name}</p>
-                    <p
-                      className={`text-xs mt-0.5 ${
-                        p.stock_quantity <= 0
-                          ? "text-red-400 font-semibold"
-                          : p.stock_quantity <= p.low_stock_threshold
-                          ? "text-yellow-500"
-                          : "text-gray-400"
-                      }`}
-                    >
-                      {p.stock_quantity <= 0 ? "Out of stock" : `Stock: ${p.stock_quantity}`}
-                    </p>
+                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    {p.image_url && (
+                      <img src={p.image_url} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{p.name}</p>
+                      <p
+                        className={`text-xs mt-0.5 ${
+                          p.stock_quantity <= 0
+                            ? "text-red-400 font-semibold"
+                            : p.stock_quantity <= p.low_stock_threshold
+                            ? "text-yellow-500"
+                            : "text-gray-400"
+                        }`}
+                      >
+                        {p.stock_quantity <= 0 ? "Out of stock" : `Stock: ${p.stock_quantity}`}
+                      </p>
+                    </div>
                   </div>
-                  <span className="text-sm font-black text-forest-700">
+                  <span className="text-sm font-black text-forest-700 flex-shrink-0">
                     ₱{Number(p.price).toFixed(2)}
                   </span>
                 </button>
@@ -5270,6 +5297,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
                         ₱{item.unit_price.toFixed(2)} each
+                        {item.is_wholesale && <span className="ml-1 text-gold-600 font-bold">(Wholesale)</span>}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
