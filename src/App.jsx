@@ -7525,21 +7525,18 @@ export default function App() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [appLoading, setAppLoading] = useState(true);
   const [toast, setToast] = useState(null);
+  const loadingRef = useRef(false);
 
   const showToast = (message, type = "success") => setToast({ message, type });
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) loadUserData(session.user.id);
-      else setAppLoading(false);
-    });
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session) loadUserData(session.user.id);
       else {
+        loadingRef.current = false;
         setProfile(null);
         setBusiness(null);
         setBranch(null);
@@ -7548,33 +7545,49 @@ export default function App() {
         setAppLoading(false);
       }
     });
-    return () => subscription.unsubscribe();
+    const timer = setTimeout(() => {
+      if (loadingRef.current) return;
+      setAppLoading((v) => {
+        if (v) {
+          supabase.auth.getSession().then(({ data: { session: s } }) => {
+            if (!s) setAppLoading(false);
+          });
+        }
+        return v;
+      });
+    }, 3000);
+    return () => { subscription.unsubscribe(); clearTimeout(timer); };
   }, []);
 
   const loadUserData = async (userId) => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setAppLoading(true);
     try {
       let prof = null;
       for (let i = 0; i < 3; i++) {
-        const { data } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
-        if (data) {
-          prof = data;
-          break;
-        }
-        await new Promise((r) => setTimeout(r, 1000));
+        const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+        if (data) { prof = data; break; }
+        if (error) break;
+        if (i < 2) await new Promise((r) => setTimeout(r, 1000));
       }
       if (!prof) {
         showToast("Hindi mahanap ang profile. Subukan muli.", "error");
-        setAppLoading(false);
+        await supabase.auth.signOut();
         return;
       }
       setProfile(prof);
 
-      const { data: biz } = await supabase
+      const { data: biz, error: bizErr } = await supabase
         .from("businesses")
         .select("*")
         .eq("id", prof.business_id)
         .maybeSingle();
+      if (!biz) {
+        showToast(bizErr ? "Error sa pag-load ng business." : "Hindi mahanap ang business data.", "error");
+        await supabase.auth.signOut();
+        return;
+      }
       setBusiness(biz);
 
       if (prof.branch_id) {
@@ -7586,7 +7599,6 @@ export default function App() {
         setBranch(br);
       }
 
-      // Check super admin — use maybeSingle() to avoid errors
       const { data: sa } = await supabase
         .from("super_admins")
         .select("id")
@@ -7595,7 +7607,9 @@ export default function App() {
       setIsSuperAdmin(!!sa);
     } catch (err) {
       showToast("May error sa pag-load. Subukan muli.", "error");
+      await supabase.auth.signOut();
     } finally {
+      loadingRef.current = false;
       setAppLoading(false);
     }
   };
