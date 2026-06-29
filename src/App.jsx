@@ -70,6 +70,24 @@ const getErrorMessage = (error) => {
 // ═══════════════════════════════════════════════════════════════
 // BARCODE GENERATOR
 // ═══════════════════════════════════════════════════════════════
+const compressImage = (file, maxWidth = 400, quality = 0.7) =>
+  new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const scale = Math.min(1, maxWidth / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
 const generateBarcode = () => {
   const timestamp = Date.now().toString(36).toUpperCase();
   const random = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -2363,6 +2381,7 @@ function SettingsPanel({ business, products, branches, staff, showToast, onLogou
     name: business.name || "",
     receipt_header: business.receipt_header || "",
     receipt_footer: business.receipt_footer || "",
+    gcash_qr: business.gcash_qr || "",
   });
   const [saving, setSaving] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -2375,6 +2394,7 @@ function SettingsPanel({ business, products, branches, staff, showToast, onLogou
       name: bizForm.name.trim(),
       receipt_header: bizForm.receipt_header.trim() || null,
       receipt_footer: bizForm.receipt_footer.trim() || null,
+      gcash_qr: bizForm.gcash_qr || null,
     }).eq("id", business.id);
     setSaving(false);
     if (error) return showToast("Failed to save. Try again.", "error");
@@ -2440,6 +2460,27 @@ function SettingsPanel({ business, products, branches, staff, showToast, onLogou
           onChange={(v) => setBizForm((f) => ({ ...f, receipt_header: v }))} placeholder="Thank you for shopping!" />
         <Field label="Receipt Footer (optional)" value={bizForm.receipt_footer}
           onChange={(v) => setBizForm((f) => ({ ...f, receipt_footer: v }))} placeholder="Visit us again!" />
+        <div>
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">GCash QR Code (optional)</label>
+          <p className="text-xs text-gray-400 mb-2">Upload your GCash QR — cashiers will show it to customers during GCash payment.</p>
+          {bizForm.gcash_qr && (
+            <div className="relative mb-2">
+              <img src={bizForm.gcash_qr} alt="GCash QR" className="w-40 h-40 object-contain mx-auto rounded-xl border border-blue-200 bg-white p-1" />
+              <button type="button" onClick={() => setBizForm((f) => ({ ...f, gcash_qr: "" }))}
+                className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full text-xs font-bold">✕</button>
+            </div>
+          )}
+          <label className="flex items-center justify-center gap-2 bg-blue-50 text-blue-700 font-semibold py-2.5 rounded-xl text-sm cursor-pointer border border-blue-200">
+            📱 {bizForm.gcash_qr ? "Change QR" : "Upload GCash QR"}
+            <input type="file" accept="image/*" className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const dataUrl = await compressImage(file, 500, 0.85);
+                setBizForm((f) => ({ ...f, gcash_qr: dataUrl }));
+              }} />
+          </label>
+        </div>
         <button onClick={saveBusiness} disabled={saving}
           className="w-full bg-forest-600 text-white font-bold py-3 rounded-xl disabled:opacity-60 text-sm">
           {saving ? "Saving..." : "Save Business Info"}
@@ -2783,12 +2824,38 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
               type="number"
             />
           </div>
-          <Field
-            label="Image URL (optional)"
-            value={form.image_url}
-            onChange={(v) => setForm((f) => ({ ...f, image_url: v }))}
-            placeholder="https://example.com/image.jpg"
-          />
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Product Image (optional)</label>
+            {form.image_url && (
+              <div className="relative mb-2">
+                <img src={form.image_url} alt="Preview" className="w-full h-32 object-cover rounded-xl border border-gray-200" />
+                <button type="button" onClick={() => setForm((f) => ({ ...f, image_url: "" }))}
+                  className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full text-xs font-bold">✕</button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <label className="flex-1 flex items-center justify-center gap-2 bg-forest-50 text-forest-700 font-semibold py-2.5 rounded-xl text-sm cursor-pointer border border-forest-200">
+                📷 Take Photo
+                <input type="file" accept="image/*" capture="environment" className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const dataUrl = await compressImage(file);
+                    setForm((f) => ({ ...f, image_url: dataUrl }));
+                  }} />
+              </label>
+              <label className="flex-1 flex items-center justify-center gap-2 bg-gray-50 text-gray-600 font-semibold py-2.5 rounded-xl text-sm cursor-pointer border border-gray-200">
+                🖼️ Gallery
+                <input type="file" accept="image/*" className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const dataUrl = await compressImage(file);
+                    setForm((f) => ({ ...f, image_url: dataUrl }));
+                  }} />
+              </label>
+            </div>
+          </div>
           <button
             onClick={save}
             disabled={saving}
@@ -3339,7 +3406,10 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                 ) : (
                   products.map((p) => (
                     <Card key={p.id} className="p-4">
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between gap-3">
+                        {p.image_url && (
+                          <img src={p.image_url} alt={p.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-gray-200" />
+                        )}
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-gray-800 text-sm truncate">{p.name}</p>
                           <p className="text-xs text-gray-400">
@@ -5420,6 +5490,12 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 {/* GCash / Maya Reference Number — REQUIRED — shown first so it's always visible */}
                 {(paymentMethod === "gcash" || paymentMethod === "maya") && (
                   <div className="border-2 border-red-300 rounded-2xl p-3 bg-red-50">
+                    {paymentMethod === "gcash" && business.gcash_qr && (
+                      <div className="mb-3 text-center">
+                        <p className="text-xs font-bold text-blue-700 mb-1">📱 Show this QR to customer</p>
+                        <img src={business.gcash_qr} alt="GCash QR" className="w-48 h-48 object-contain mx-auto rounded-xl border border-blue-200 bg-white p-1" />
+                      </div>
+                    )}
                     <p className="text-xs font-black text-red-600 uppercase mb-1">
                       ⚠️ {paymentMethod === "gcash" ? "GCash" : "Maya"} Reference No. — REQUIRED
                     </p>
