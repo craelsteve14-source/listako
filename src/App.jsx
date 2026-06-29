@@ -7524,56 +7524,50 @@ export default function App() {
   const [branch, setBranch] = useState(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [appLoading, setAppLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [toast, setToast] = useState(null);
   const loadingRef = useRef(false);
 
   const showToast = (message, type = "success") => setToast({ message, type });
 
   useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      if (s) loadUserData(s.user.id);
+      else setAppLoading(false);
+    });
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session) loadUserData(session.user.id);
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+      if (newSession) loadUserData(newSession.user.id);
       else {
         loadingRef.current = false;
         setProfile(null);
         setBusiness(null);
         setBranch(null);
         setIsSuperAdmin(false);
+        setLoadError(null);
         setScreen("landing");
         setAppLoading(false);
       }
     });
-    const timer = setTimeout(() => {
-      if (loadingRef.current) return;
-      setAppLoading((v) => {
-        if (v) {
-          supabase.auth.getSession().then(({ data: { session: s } }) => {
-            if (!s) setAppLoading(false);
-          });
-        }
-        return v;
-      });
-    }, 3000);
-    return () => { subscription.unsubscribe(); clearTimeout(timer); };
+    return () => subscription.unsubscribe();
   }, []);
 
   const loadUserData = async (userId) => {
     if (loadingRef.current) return;
     loadingRef.current = true;
     setAppLoading(true);
+    setLoadError(null);
     try {
-      let prof = null;
-      for (let i = 0; i < 3; i++) {
-        const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
-        if (data) { prof = data; break; }
-        if (error) break;
-        if (i < 2) await new Promise((r) => setTimeout(r, 1000));
-      }
-      if (!prof) {
-        showToast("Hindi mahanap ang profile. Subukan muli.", "error");
-        await supabase.auth.signOut();
+      const { data: prof, error: profErr } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .maybeSingle();
+      if (profErr || !prof) {
+        setLoadError("Profile: " + (profErr?.message || "not found") + " [uid:" + userId.slice(0, 8) + "]");
         return;
       }
       setProfile(prof);
@@ -7583,9 +7577,8 @@ export default function App() {
         .select("*")
         .eq("id", prof.business_id)
         .maybeSingle();
-      if (!biz) {
-        showToast(bizErr ? "Error sa pag-load ng business." : "Hindi mahanap ang business data.", "error");
-        await supabase.auth.signOut();
+      if (bizErr || !biz) {
+        setLoadError("Business: " + (bizErr?.message || "not found") + " [bid:" + prof.business_id.slice(0, 8) + "]");
         return;
       }
       setBusiness(biz);
@@ -7606,8 +7599,7 @@ export default function App() {
         .maybeSingle();
       setIsSuperAdmin(!!sa);
     } catch (err) {
-      showToast("May error sa pag-load. Subukan muli.", "error");
-      await supabase.auth.signOut();
+      setLoadError("Error: " + (err?.message || "Unknown error"));
     } finally {
       loadingRef.current = false;
       setAppLoading(false);
@@ -7648,6 +7640,28 @@ export default function App() {
   };
 
   if (appLoading) return <Spinner />;
+
+  if (session && loadError) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen bg-forest-800 gap-4 px-6 text-center">
+        <div className="text-red-400 text-4xl mb-2">!</div>
+        <p className="text-ivory-200 font-bold text-lg">Hindi ma-load ang data</p>
+        <p className="text-forest-300 text-xs break-all">{loadError}</p>
+        <button
+          onClick={() => { loadingRef.current = false; loadUserData(session.user.id); }}
+          className="mt-4 bg-gold-400 text-forest-900 font-bold py-3 px-8 rounded-2xl active:scale-95"
+        >
+          Subukan Muli
+        </button>
+        <button
+          onClick={handleLogout}
+          className="text-forest-400 text-sm underline mt-2"
+        >
+          Logout
+        </button>
+      </div>
+    );
+  }
 
   // Logged in
   if (session && profile && business) {
