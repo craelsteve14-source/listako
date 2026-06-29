@@ -8,6 +8,7 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: #0d1f17;
 }
 
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
