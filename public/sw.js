@@ -1,4 +1,4 @@
-const CACHE_NAME = "listako-v2";
+const CACHE_NAME = "listako-v3";
 const OFFLINE_URL = "/";
 
 const PRECACHE_URLS = [
@@ -30,6 +30,21 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(event.request.url);
 
+  if (url.pathname === "/" || url.pathname === "/index.html") {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(OFFLINE_URL))
+    );
+    return;
+  }
+
   if (url.pathname.startsWith("/assets/")) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
@@ -48,18 +63,15 @@ self.addEventListener("fetch", (event) => {
 
   if (url.origin === location.origin) {
     event.respondWith(
-      caches.match(event.request).then((cached) => {
-        const fetchPromise = fetch(event.request)
-          .then((response) => {
-            if (response.ok) {
-              const clone = response.clone();
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-            }
-            return response;
-          })
-          .catch(() => cached || caches.match(OFFLINE_URL));
-        return cached || fetchPromise;
-      })
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request) || caches.match(OFFLINE_URL))
     );
   }
 });
