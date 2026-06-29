@@ -68,6 +68,23 @@ const getErrorMessage = (error) => {
 };
 
 // ═══════════════════════════════════════════════════════════════
+// AUDIT LOG HELPER
+// ═══════════════════════════════════════════════════════════════
+const logAudit = async (businessId, userId, userName, action, entityType, entityId, details) => {
+  await supabase.from("audit_logs").insert({
+    business_id: businessId,
+    user_id: userId,
+    user_name: userName,
+    action,
+    entity_type: entityType || null,
+    entity_id: entityId || null,
+    details: details || null,
+  });
+};
+
+const SESSION_TIMEOUT_MS = 15 * 60 * 1000;
+
+// ═══════════════════════════════════════════════════════════════
 // TRIAL HELPERS
 // ═══════════════════════════════════════════════════════════════
 const getTrialDaysLeft = (trialEndsAt) => {
@@ -968,9 +985,18 @@ function SignupScreen({ onBack, onSuccess, showToast }) {
 function LoginScreen({ onBack, onSuccess, onForgotPassword, showToast }) {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
+  const [attempts, setAttempts] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState(null);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
+  const MAX_ATTEMPTS = 5;
+  const LOCKOUT_MS = 5 * 60 * 1000;
+
   const handleLogin = async () => {
+    if (lockedUntil && new Date() < lockedUntil) {
+      const mins = Math.ceil((lockedUntil - new Date()) / 60000);
+      return showToast(`Account locked. Try again in ${mins} minute${mins !== 1 ? "s" : ""}.`, "error");
+    }
     if (!form.email.trim()) return showToast("Ilagay ang iyong email address.", "error");
     if (!form.password) return showToast("Ilagay ang iyong password.", "error");
     setLoading(true);
@@ -979,7 +1005,20 @@ function LoginScreen({ onBack, onSuccess, onForgotPassword, showToast }) {
         email: form.email.trim(),
         password: form.password,
       });
-      if (error) throw error;
+      if (error) {
+        const newAttempts = attempts + 1;
+        setAttempts(newAttempts);
+        if (newAttempts >= MAX_ATTEMPTS) {
+          const lockTime = new Date(Date.now() + LOCKOUT_MS);
+          setLockedUntil(lockTime);
+          setAttempts(0);
+          showToast(`Too many failed attempts. Locked for 5 minutes.`, "error");
+          return;
+        }
+        throw error;
+      }
+      setAttempts(0);
+      setLockedUntil(null);
       onSuccess();
     } catch (err) {
       showToast(getErrorMessage(err), "error");
@@ -2135,6 +2174,90 @@ function AnalyticsDashboard({ business, branches, showToast }) {
   );
 }
 
+function AuditLogViewer({ businessId }) {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [actionFilter, setActionFilter] = useState("all");
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      let query = supabase.from("audit_logs").select("*")
+        .eq("business_id", businessId)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (actionFilter !== "all") query = query.eq("action", actionFilter);
+      const { data } = await query;
+      setLogs(data || []);
+      setLoading(false);
+    };
+    load();
+  }, [businessId, actionFilter]);
+
+  const ACTION_LABELS = {
+    transaction_completed: { label: "Sale", color: "bg-green-100 text-green-700" },
+    void_approved: { label: "Void", color: "bg-red-100 text-red-700" },
+    stock_update: { label: "Stock", color: "bg-blue-100 text-blue-700" },
+    shift_report: { label: "Shift", color: "bg-purple-100 text-purple-700" },
+    transfer_approved: { label: "Transfer", color: "bg-yellow-100 text-yellow-700" },
+    login: { label: "Login", color: "bg-gray-100 text-gray-700" },
+    logout: { label: "Logout", color: "bg-gray-100 text-gray-500" },
+  };
+
+  const FILTERS = ["all", "transaction_completed", "void_approved", "stock_update", "login", "logout"];
+
+  return (
+    <div className="p-4 space-y-4">
+      <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide">Audit Log</h2>
+      <div className="flex gap-1 overflow-x-auto hide-scrollbar -mx-1 px-1">
+        {FILTERS.map((f) => (
+          <button key={f} onClick={() => setActionFilter(f)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${
+              actionFilter === f ? "bg-forest-600 text-white" : "bg-gray-100 text-gray-500"
+            }`}>
+            {f === "all" ? "All" : ACTION_LABELS[f]?.label || f}
+          </button>
+        ))}
+      </div>
+      {loading ? (
+        <div className="py-8 text-center"><Spinner /></div>
+      ) : logs.length === 0 ? (
+        <Card className="p-8 text-center">
+          <p className="text-2xl mb-2">📋</p>
+          <p className="text-xs text-gray-400">No activity logs found.</p>
+        </Card>
+      ) : (
+        <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+          {logs.map((log) => {
+            const actionInfo = ACTION_LABELS[log.action] || { label: log.action, color: "bg-gray-100 text-gray-600" };
+            return (
+              <Card key={log.id} className="p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${actionInfo.color}`}>{actionInfo.label}</span>
+                    <p className="text-sm font-semibold text-gray-800">{log.user_name || "System"}</p>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    {new Date(log.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}
+                  </p>
+                </div>
+                {log.details && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {log.details.receipt && <span>Receipt: {log.details.receipt} </span>}
+                    {log.details.amount != null && <span>· ₱{Number(log.details.amount).toFixed(2)} </span>}
+                    {log.details.method && <span>· {log.details.method} </span>}
+                    {log.details.items && <span>· {log.details.items} items</span>}
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }) {
   const [tab, setTab] = useState(() => {
     return localStorage.getItem("owner_tab") || "dashboard";
@@ -2459,6 +2582,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     { key: "branches", icon: "🏪", label: "Branch" },
     { key: "staff", icon: "👥", label: "Staff" },
     { key: "pending", icon: (pendingProducts.length + pendingTransfers.length) > 0 ? "🔴" : "⏳", label: "Pending" },
+    { key: "logs", icon: "📋", label: "Logs" },
     ...(isSuperAdmin ? [{ key: "admin", icon: "👑", label: "Admin" }] : []),
   ];
 
@@ -3122,6 +3246,10 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                 </div>
               </div>
             )}
+
+            {tab === "logs" && (
+              <AuditLogViewer businessId={business.id} />
+            )}
           </>
         )}
       </div>
@@ -3663,6 +3791,12 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   const [cashCounted, setCashCounted] = useState("");
   const [cashierNotifs, setCashierNotifs] = useState([]);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [pinVerified, setPinVerified] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [pinSetupValue, setPinSetupValue] = useState("");
+  const [pinSetupConfirm, setPinSetupConfirm] = useState("");
   const [currentShift, setCurrentShift] = useState(null);
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [shiftStartCash, setShiftStartCash] = useState("");
@@ -4040,9 +4174,36 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
     setCashCounted("");
   };
 
-  // Process checkout — THIS IS WHERE THE BUG WAS (missing closing brace)
+  const verifyPin = async (pin) => {
+    if (pin === profile.pin_code) {
+      setPinVerified(true);
+      setShowPinModal(false);
+      setPinInput("");
+      return true;
+    }
+    showToast("Incorrect PIN. Try again.", "error");
+    setPinInput("");
+    return false;
+  };
+
+  const setupPin = async () => {
+    if (pinSetupValue.length !== 4 || !/^\d{4}$/.test(pinSetupValue)) return showToast("PIN must be exactly 4 digits.", "error");
+    if (pinSetupValue !== pinSetupConfirm) return showToast("PINs don't match.", "error");
+    const { error } = await supabase.from("profiles").update({ pin_code: pinSetupValue }).eq("id", profile.id);
+    if (error) return showToast("Failed to save PIN.", "error");
+    profile.pin_code = pinSetupValue;
+    setShowPinSetup(false);
+    setPinSetupValue("");
+    setPinSetupConfirm("");
+    showToast("PIN set successfully!", "success");
+  };
+
   const processCheckout = async () => {
     if (cart.length === 0) return showToast("Cart is empty.", "error");
+    if (profile.pin_code && !pinVerified) {
+      setShowPinModal(true);
+      return;
+    }
     if (paymentMethod === "cash" && (!amountTendered || Number(amountTendered) < total)) {
       return showToast("Amount tendered is less than the total.", "error");
     }
@@ -4279,7 +4440,9 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
         }
       }
 
-      // Show receipt and clear all persisted state
+      logAudit(business.id, profile.id, profile.full_name, "transaction_completed", "transaction", txn.id, { receipt: txn.receipt_number, amount: total, method: paymentMethod, items: cart.length });
+      setPinVerified(false);
+
       setReceiptItems(cart.map((i) => ({ ...i })));
       setReceipt(txn);
       setCartPersisted([]);
@@ -4391,6 +4554,13 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             <h1 className="text-ivory-50 font-black text-lg leading-tight">{business.name}</h1>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => profile.pin_code ? setShowPinSetup(true) : setShowPinSetup(true)}
+              className="text-xs px-2 py-2 rounded-xl font-medium border bg-forest-700 text-forest-200 border-forest-600"
+              title={profile.pin_code ? "Change PIN" : "Set PIN"}
+            >
+              {profile.pin_code ? "🔒" : "🔓"}
+            </button>
             <button
               onClick={() => setShowShiftModal(true)}
               className={`text-xs px-3 py-2 rounded-xl font-medium border ${
@@ -5372,6 +5542,62 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
               >
                 Confirm Payment ✓
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PIN Verification Modal */}
+      {showPinModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-6 w-72 text-center">
+            <div className="w-14 h-14 bg-forest-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <span className="text-2xl">🔒</span>
+            </div>
+            <h3 className="font-black text-gray-800 text-base mb-1">Enter PIN</h3>
+            <p className="text-xs text-gray-500 mb-4">Enter your 4-digit PIN to confirm this transaction.</p>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={pinInput}
+              onChange={(e) => setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="● ● ● ●"
+              className="w-full border-2 border-forest-300 rounded-xl px-4 py-3 text-2xl font-bold text-center tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-forest-500 mb-4"
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button onClick={() => { setShowPinModal(false); setPinInput(""); }}
+                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm">Cancel</button>
+              <button onClick={async () => { if (await verifyPin(pinInput)) processCheckout(); }}
+                disabled={pinInput.length !== 4}
+                className="flex-1 bg-forest-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50">Verify</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PIN Setup Modal */}
+      {showPinSetup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-6 w-72 text-center">
+            <h3 className="font-black text-gray-800 text-base mb-1">Set Your PIN</h3>
+            <p className="text-xs text-gray-500 mb-4">Create a 4-digit PIN for transaction security.</p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1 text-left">New PIN</p>
+            <input type="password" inputMode="numeric" maxLength={4} value={pinSetupValue}
+              onChange={(e) => setPinSetupValue(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="● ● ● ●"
+              className="w-full border-2 border-forest-300 rounded-xl px-4 py-3 text-xl font-bold text-center tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-forest-500 mb-3" />
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1 text-left">Confirm PIN</p>
+            <input type="password" inputMode="numeric" maxLength={4} value={pinSetupConfirm}
+              onChange={(e) => setPinSetupConfirm(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="● ● ● ●"
+              className="w-full border-2 border-forest-300 rounded-xl px-4 py-3 text-xl font-bold text-center tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-forest-500 mb-4" />
+            <div className="flex gap-3">
+              <button onClick={() => { setShowPinSetup(false); setPinSetupValue(""); setPinSetupConfirm(""); }}
+                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm">Cancel</button>
+              <button onClick={setupPin} disabled={pinSetupValue.length !== 4 || pinSetupConfirm.length !== 4}
+                className="flex-1 bg-forest-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50">Save PIN</button>
             </div>
           </div>
         </div>
@@ -6592,9 +6818,31 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    if (session && profile && business) {
+      logAudit(business.id, profile.id, profile.full_name, "logout", "session", null, null);
+    }
     await supabase.auth.signOut();
     setScreen("landing");
   };
+
+  useEffect(() => {
+    if (!session) return;
+    let timer;
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        showToast("Session expired due to inactivity. Please log in again.", "warning");
+        handleLogout();
+      }, SESSION_TIMEOUT_MS);
+    };
+    const events = ["mousedown", "keydown", "touchstart", "scroll"];
+    events.forEach((e) => window.addEventListener(e, resetTimer));
+    resetTimer();
+    return () => {
+      clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, resetTimer));
+    };
+  }, [session]);
 
   const goToOTP = (email, type) => {
     setOtpEmail(email);
