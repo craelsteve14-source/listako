@@ -296,12 +296,11 @@ function OTPScreen({ email, type, onBack, onSuccess, showToast }) {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      <div className="bg-forest-700 px-4 py-5 flex items-center gap-3">
-        <button onClick={onBack} className="text-white text-xl">
-          ←
-        </button>
-        <h2 className="text-white font-bold text-lg">
+    <div className="min-h-screen bg-ivory-100 flex flex-col">
+      <div className="bg-forest-800 px-4 py-4 flex items-center gap-2.5">
+        <button onClick={onBack} className="text-[15px] font-light" style={{ color: 'rgba(184,150,12,0.5)' }}>←</button>
+        <LedgerIcon className="w-[18px] h-[18px]" color="rgba(245,240,232,0.45)" />
+        <h2 className="text-ivory-100 font-playfair text-[15px] font-semibold">
           {type === "forgot" ? "I-reset ang Password" : "OTP Verification"}
         </h2>
       </div>
@@ -354,7 +353,7 @@ function OTPScreen({ email, type, onBack, onSuccess, showToast }) {
 // ═══════════════════════════════════════════════════════════════
 function PendingScreen({ business, onLogout }) {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-ivory-100 flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm text-center">
         <div className="w-20 h-20 bg-yellow-100 rounded-3xl flex items-center justify-center mx-auto mb-4 text-4xl">
           <NavIcon name="clock" size={48} color="#d97706" />
@@ -392,7 +391,7 @@ function PendingScreen({ business, onLogout }) {
 // ═══════════════════════════════════════════════════════════════
 function RejectedScreen({ business, onLogout }) {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-ivory-100 flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm text-center">
         <div className="w-20 h-20 bg-red-100 rounded-3xl flex items-center justify-center mx-auto mb-4 text-4xl">
           <NavIcon name="x" size={48} color="#dc2626" />
@@ -431,7 +430,7 @@ function RejectedScreen({ business, onLogout }) {
 // ═══════════════════════════════════════════════════════════════
 function TrialExpiredScreen({ business, onLogout }) {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-ivory-100 flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
           <div className="w-20 h-20 bg-orange-100 rounded-3xl flex items-center justify-center mx-auto mb-4 text-4xl">
@@ -600,25 +599,31 @@ function SuperAdminPanel({ showToast }) {
   const FILTERS = ["all", "pending", "approved", "rejected", "suspended"];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col max-w-lg mx-auto">
+    <div className="min-h-screen bg-ivory-100 flex flex-col max-w-lg mx-auto">
       {/* Header */}
-      <div className="bg-purple-700 px-4 pt-6 pb-4">
-        <p className="text-purple-200 text-xs font-medium uppercase tracking-widest">Super Admin</p>
-        <h1 className="text-white font-black text-xl">ListaKo Admin Panel</h1>
-        <p className="text-purple-300 text-xs mt-1">Maligayang pagdating, Crael!</p>
+      <div className="px-4 pt-8 pb-4 relative overflow-hidden" style={{ background: '#0D1B2A' }}>
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 80% 15%, rgba(184,150,12,0.07) 0%, transparent 55%)' }} />
+        <div className="flex items-center gap-2.5 mb-2.5 relative z-10">
+          <LedgerIcon className="w-5 h-5" color="rgba(245,240,232,0.4)" />
+          <p className="text-[7.5px] font-semibold tracking-[2.5px] uppercase" style={{ color: 'rgba(184,150,12,0.55)' }}>◆ &nbsp;Administrator Access</p>
+        </div>
+        <h1 className="text-ivory-100 font-playfair text-[17px] font-semibold tracking-tight relative z-10">Control Panel</h1>
+        <p className="text-[8.5px] font-light mt-0.5 relative z-10" style={{ color: 'rgba(245,240,232,0.3)' }}>Welcome, Crael · All systems active</p>
       </div>
 
       {/* Stats */}
-      <div className="px-4 py-3 grid grid-cols-4 gap-2">
-        {["pending", "approved", "rejected", "suspended"].map((s) => (
-          <div
-            key={s}
-            className="bg-white rounded-xl p-2 text-center shadow-sm border border-gray-100"
-          >
-            <p className="text-lg font-black text-gray-800">
-              {businesses.filter((b) => b.status === s).length}
+      <div className="px-3 py-2.5 grid grid-cols-4 gap-1.5">
+        {[
+          { key: "pending", color: "#7A6010" },
+          { key: "approved", color: "#1A3D2B" },
+          { key: "rejected", color: "#7A1515" },
+          { key: "suspended", color: "#4A4640" },
+        ].map((s) => (
+          <div key={s.key} className="bg-white rounded-lg p-2 text-center border border-ivory-300">
+            <p className="text-[17px] font-black font-lato tracking-tight leading-none" style={{ color: s.color }}>
+              {businesses.filter((b) => b.status === s.key).length}
             </p>
-            <p className="text-xs text-gray-400 capitalize">{s}</p>
+            <p className="text-[7px] font-semibold tracking-wide uppercase text-gray-400 mt-1 capitalize">{s.key}</p>
           </div>
         ))}
       </div>
@@ -798,11 +803,14 @@ function SuperAdminPanel({ showToast }) {
 // ═══════════════════════════════════════════════════════════════
 // LANDING SCREEN
 // ═══════════════════════════════════════════════════════════════
-function LedgerIcon({ className = "w-10 h-10", color = "#c9a84c" }) {
+function LedgerIcon({ className = "w-10 h-10", color = "#F5F0E8", accentColor = "#B8960C" }) {
   return (
-    <svg className={className} viewBox="0 0 48 48" fill="none">
-      <path d="M12 14h18M12 22h14M12 30h10" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M30 22l6 6-6 6" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    <svg className={className} viewBox="0 0 44 44" fill="none">
+      <line x1="8" y1="13" x2="36" y2="13" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
+      <line x1="8" y1="22" x2="28" y2="22" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
+      <line x1="8" y1="31" x2="20" y2="31" stroke={color} strokeWidth="2.2" strokeLinecap="round" />
+      <line x1="26" y1="28" x2="38" y2="16" stroke={accentColor} strokeWidth="2.8" strokeLinecap="round" />
+      <circle cx="38" cy="16" r="2.8" fill={accentColor} />
     </svg>
   );
 }
@@ -864,41 +872,41 @@ function ListaKoLogo({ size = "text-4xl", light = false }) {
 
 function LandingScreen({ onShowSignup, onShowLogin }) {
   return (
-    <div className="min-h-screen bg-forest-800 flex flex-col items-center justify-between px-6 py-12">
-      <div className="flex-1 flex flex-col items-center justify-center text-center">
-        <div className="w-20 h-20 bg-forest-700 rounded-3xl flex items-center justify-center shadow-xl mb-6 border border-forest-600">
-          <LedgerIcon className="w-10 h-10" />
+    <div className="min-h-screen bg-forest-800 flex flex-col items-center justify-between px-6 relative overflow-hidden" style={{ padding: '48px 22px 26px' }}>
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 75% 15%, rgba(184,150,12,0.1) 0%, transparent 55%), radial-gradient(ellipse at 25% 85%, rgba(42,95,63,0.12) 0%, transparent 50%)' }} />
+      <div className="flex flex-col items-center gap-3 z-10">
+        <div className="flex flex-col items-center gap-2.5">
+          <div className="w-[62px] h-[62px] rounded-[17px] flex items-center justify-center" style={{ border: '1px solid rgba(184,150,12,0.35)', background: 'rgba(184,150,12,0.07)', backdropFilter: 'blur(6px)' }}>
+            <LedgerIcon className="w-8 h-8" />
+          </div>
+          <h1 className="font-playfair text-[30px] font-semibold text-ivory-100 tracking-tight leading-none">
+            Lista<em className="italic text-gold-400">Ko</em>
+          </h1>
+          <p className="text-[8px] font-medium tracking-[3px] uppercase" style={{ color: 'rgba(232,213,163,0.4)' }}>Business Manager</p>
         </div>
-        <ListaKoLogo size="text-4xl" />
-        <p className="text-gold-400 text-xs font-medium mb-2 tracking-[0.25em] uppercase mt-1">
-          Business Manager
-        </p>
-        <p className="text-forest-200 text-sm mt-6 max-w-xs leading-relaxed">
+        <p className="text-[11px] text-center leading-relaxed font-light max-w-[172px]" style={{ color: 'rgba(245,240,232,0.5)' }}>
           Track revenue, inventory, and staff — with precision. Built for every Filipino store.
         </p>
-        <div className="mt-4 bg-forest-700 bg-opacity-60 rounded-2xl px-5 py-2.5 border border-forest-600">
-          <p className="text-gold-400 text-xs font-semibold tracking-wider uppercase">
-            Complimentary Access
-          </p>
-          <p className="text-forest-300 text-xs mt-0.5">
-            7 Days · No commitment required
-          </p>
+        <div className="rounded-lg px-4 py-2.5 text-center" style={{ border: '1px solid rgba(184,150,12,0.2)', background: 'rgba(184,150,12,0.06)' }}>
+          <p className="text-[7.5px] font-semibold tracking-[2px] uppercase text-gold-400 mb-0.5">Complimentary Access</p>
+          <p className="text-[10px] font-light" style={{ color: 'rgba(232,213,163,0.5)' }}>7 Days · No commitment required</p>
         </div>
       </div>
-      <div className="w-full max-w-sm space-y-3">
+      <div className="w-full space-y-2 z-10">
         <button
           onClick={onShowSignup}
-          className="w-full bg-gold-400 text-forest-900 font-bold py-4 rounded-2xl text-sm tracking-wider uppercase shadow-lg active:scale-95 transition-transform"
+          className="w-full bg-gold-400 text-forest-800 font-bold py-3.5 rounded-lg text-[10px] tracking-[2px] uppercase active:scale-95 transition-transform"
         >
           Create Account
         </button>
         <button
           onClick={onShowLogin}
-          className="w-full bg-transparent text-ivory-200 font-semibold py-4 rounded-2xl text-sm border border-forest-500 active:scale-95 transition-transform tracking-wider uppercase"
+          className="w-full py-3 rounded-lg text-[10px] font-normal tracking-[1.5px] uppercase active:scale-95 transition-transform"
+          style={{ border: '1px solid rgba(184,150,12,0.25)', color: 'rgba(232,213,163,0.6)' }}
         >
           Sign In
         </button>
-        <p className="text-forest-400 text-xs text-center pt-2">
+        <p className="text-[8.5px] text-center tracking-wide z-10" style={{ color: 'rgba(245,240,232,0.18)' }}>
           ListaKo · For every business in the Philippines
         </p>
       </div>
@@ -978,13 +986,12 @@ function SignupScreen({ onBack, onSuccess, showToast }) {
 
   return (
     <div className="min-h-screen bg-ivory-100 flex flex-col">
-      <div className="bg-forest-800 px-4 py-5 flex items-center gap-3">
-        <button onClick={step === 1 ? onBack : () => setStep(1)} className="text-gold-400 text-xl">
-          ←
-        </button>
+      <div className="bg-forest-800 px-4 py-4 flex items-center gap-2.5">
+        <button onClick={step === 1 ? onBack : () => setStep(1)} className="text-[15px] font-light" style={{ color: 'rgba(184,150,12,0.5)' }}>←</button>
+        <LedgerIcon className="w-[18px] h-[18px]" color="rgba(245,240,232,0.45)" />
         <div>
-          <h2 className="text-ivory-50 font-bold text-lg">Create Account</h2>
-          <p className="text-forest-300 text-xs">Step {step} of 2 · 7-day complimentary access</p>
+          <h2 className="text-ivory-100 font-playfair text-[15px] font-semibold">Create Account</h2>
+          <p className="text-forest-300 text-[10px] font-light">Step {step} of 2 · 7-day complimentary access</p>
         </div>
       </div>
       <div className="h-1 bg-forest-200">
@@ -1123,18 +1130,19 @@ function LoginScreen({ onBack, onSuccess, onForgotPassword, showToast }) {
 
   return (
     <div className="min-h-screen bg-ivory-100 flex flex-col">
-      <div className="bg-forest-800 px-4 py-5 flex items-center gap-3">
-        <button onClick={onBack} className="text-gold-400 text-xl">
+      <div className="bg-forest-800 px-4 py-4 flex items-center gap-2.5 flex-shrink-0">
+        <button onClick={onBack} className="text-[15px] font-light" style={{ color: 'rgba(184,150,12,0.5)' }}>
           ←
         </button>
-        <h2 className="text-ivory-50 font-bold text-lg">Sign In</h2>
+        <LedgerIcon className="w-[18px] h-[18px]" color="rgba(245,240,232,0.45)" />
+        <h2 className="text-ivory-100 font-playfair text-[15px] font-semibold">Sign In</h2>
       </div>
-      <div className="flex-1 flex flex-col justify-center px-5 py-6 space-y-4 max-w-md mx-auto w-full">
-        <div className="text-center mb-2">
-          <div className="w-16 h-16 bg-forest-700 rounded-2xl flex items-center justify-center mx-auto mb-3">
-            <LedgerIcon className="w-8 h-8" />
+      <div className="flex-1 flex flex-col justify-center px-4 py-5 max-w-md mx-auto w-full">
+        <div className="text-center mb-5">
+          <div className="w-12 h-12 bg-forest-50 rounded-xl flex items-center justify-center mx-auto mb-2" style={{ border: '1px solid #B8D4C0' }}>
+            <NavIcon name="lock" size={22} color="#1A3D2B" />
           </div>
-          <p className="text-gray-500 text-sm">Enter your ListaKo credentials</p>
+          <p className="text-[9.5px] text-gray-400 font-light">Enter your ListaKo credentials to continue</p>
         </div>
         <Field
           label="Email Address"
@@ -1153,18 +1161,20 @@ function LoginScreen({ onBack, onSuccess, onForgotPassword, showToast }) {
         <button
           onClick={handleLogin}
           disabled={loading}
-          className="w-full bg-gold-400 text-forest-900 font-bold py-4 rounded-2xl disabled:opacity-60 active:scale-95 transition-transform tracking-wide"
+          className="w-full bg-forest-500 text-ivory-100 font-semibold py-3 rounded-lg disabled:opacity-60 active:scale-95 transition-transform text-[9.5px] tracking-[2px] uppercase mt-1"
         >
-          {loading ? "Signing in..." : "Sign In →"}
+          {loading ? "Signing in..." : "Sign In"}
         </button>
         <button
           onClick={onForgotPassword}
-          className="text-center text-sm text-forest-600 font-medium py-2"
+          className="text-center text-[9.5px] text-gold-400 font-normal py-3 self-center"
+          style={{ borderBottom: '1px solid rgba(184,150,12,0.18)', paddingBottom: '1px' }}
         >
-          Forgot password?
+          Forgot your password?
         </button>
-        <p className="text-center text-xs text-gray-400">
-          No account yet? Contact your store owner.
+        <div className="w-px h-4 bg-ivory-300 mx-auto my-3" />
+        <p className="text-center text-[8.5px] text-gray-400 font-light leading-relaxed">
+          No account? Contact your store owner<br />to receive an invitation.
         </p>
       </div>
     </div>
@@ -1195,15 +1205,14 @@ function ForgotPasswordScreen({ onBack, onVerifyOTP, showToast }) {
 
   return (
     <div className="min-h-screen bg-ivory-100 flex flex-col">
-      <div className="bg-forest-800 px-4 py-5 flex items-center gap-3">
-        <button onClick={onBack} className="text-gold-400 text-xl">
-          ←
-        </button>
-        <h2 className="text-ivory-50 font-bold text-lg">Forgot Password</h2>
+      <div className="bg-forest-800 px-4 py-4 flex items-center gap-2.5">
+        <button onClick={onBack} className="text-[15px] font-light" style={{ color: 'rgba(184,150,12,0.5)' }}>←</button>
+        <LedgerIcon className="w-[18px] h-[18px]" color="rgba(245,240,232,0.45)" />
+        <h2 className="text-ivory-100 font-playfair text-[15px] font-semibold">Forgot Password</h2>
       </div>
       <div className="flex-1 flex flex-col justify-center px-5 py-6 max-w-md mx-auto w-full space-y-4">
         <div className="text-center mb-2">
-          <div className="w-16 h-16 bg-forest-700 rounded-2xl flex items-center justify-center mx-auto mb-3">
+          <div className="w-12 h-12 bg-forest-50 rounded-xl flex items-center justify-center mx-auto mb-2" style={{ border: '1px solid #B8D4C0' }}>
             <LedgerIcon className="w-8 h-8" />
           </div>
           <h3 className="font-black text-gray-800 text-lg">Reset Password</h3>
@@ -1256,22 +1265,23 @@ function Modal({ title, onClose, children }) {
 
 function Card({ children, className = "" }) {
   return (
-    <div className={`bg-white rounded-2xl shadow-sm border border-gray-100 ${className}`}>
+    <div className={`bg-white rounded-xl border border-ivory-300 ${className}`}>
       {children}
     </div>
   );
 }
 
-function StatCard({ icon, label, value, color = "bg-forest-50 text-forest-700" }) {
+function StatCard({ icon, label, value, color = "bg-forest-50 text-forest-700", dotColor = "#1A3D2B", sub = "" }) {
   return (
-    <Card className="p-4 flex items-center gap-3">
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${color}`}>
-        {icon}
-      </div>
-      <div>
-        <p className="text-xs text-gray-400 font-medium">{label}</p>
-        <p className="text-lg font-black text-gray-800">{value}</p>
-      </div>
+    <Card className="p-3">
+      <p className="text-[7.5px] font-semibold tracking-[1.5px] uppercase text-gray-400 mb-1.5">{label}</p>
+      <p className="text-xl font-black text-gray-800 font-lato tracking-tight leading-none">{value}</p>
+      {sub && (
+        <div className="flex items-center gap-1 mt-1">
+          <span className="w-[5px] h-[5px] rounded-full flex-shrink-0" style={{ background: dotColor }} />
+          <span className="text-[7.5px] text-gray-400">{sub}</span>
+        </div>
+      )}
     </Card>
   );
 }
@@ -3048,54 +3058,71 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     fetchAll();
   };
 
-  const TABS = [
-    { key: "dashboard", icon: "dashboard", label: "Dashboard" },
-    { key: "analytics", icon: "analytics", label: "Analytics" },
-    { key: "products", icon: "products", label: "Produkto" },
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const MAIN_TABS = [
+    { key: "dashboard", icon: "dashboard", label: "Overview" },
+    { key: "products", icon: "products", label: "Products" },
     { key: "branches", icon: "branch", label: "Branch" },
     { key: "staff", icon: "staff", label: "Staff" },
+    { key: "more", icon: "more", label: "More" },
+  ];
+  const MORE_TABS = [
+    { key: "analytics", icon: "analytics", label: "Analytics" },
     { key: "pending", icon: "pending", label: "Pending", badge: (pendingProducts.length + pendingTransfers.length) > 0 },
     { key: "customers", icon: "customers", label: "Suki" },
     { key: "logs", icon: "logs", label: "Logs" },
     { key: "settings", icon: "settings", label: "Settings" },
     ...(isSuperAdmin ? [{ key: "admin", icon: "admin", label: "Admin" }] : []),
   ];
+  const ALL_TABS = [...MAIN_TABS.filter(t => t.key !== "more"), ...MORE_TABS];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col max-w-lg mx-auto">
+    <div className="min-h-screen bg-ivory-100 flex flex-col max-w-lg mx-auto">
       <TrialBanner business={business} />
-      <div className="bg-forest-800 px-4 pt-5 pb-4">
-        <div className="flex items-center justify-between mb-1">
-          <div>
-            <p className="text-gold-400 text-xs font-medium uppercase tracking-widest">
-              {isSuperAdmin ? "Super Admin" : "Administrator"}
-            </p>
-            <h1 className="text-ivory-50 font-black text-xl leading-tight">{business.name}</h1>
+      <div className="bg-forest-800 px-4 pt-8 pb-4 relative overflow-hidden">
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 85% 10%, rgba(184,150,12,0.09) 0%, transparent 55%)' }} />
+        <div className="flex items-start justify-between mb-3 relative z-10">
+          <div className="flex items-center gap-2">
+            <LedgerIcon className="w-6 h-6" />
+            <div>
+              <p className="text-[7.5px] font-medium tracking-[1.5px] uppercase" style={{ color: 'rgba(184,150,12,0.6)' }}>
+                ◆ {isSuperAdmin ? "Super Admin" : "Administrator"}
+              </p>
+              <h1 className="text-ivory-100 font-playfair text-[15px] font-semibold tracking-tight leading-tight">{business.name}</h1>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            {/* Notification Bell */}
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative bg-forest-800 bg-opacity-50 text-forest-200 px-3 py-2 rounded-xl"
+              className="relative text-forest-200 px-2 py-1.5"
             >
-              <NavIcon name="bell" size={20} color="currentColor" />
+              <NavIcon name="bell" size={18} color="#B8960C" />
               {notifications.length > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-black w-5 h-5 rounded-full flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
                   {notifications.length}
                 </span>
               )}
             </button>
             <button
               onClick={onLogout}
-              className="bg-forest-700 text-gold-400 text-xs px-3 py-2 rounded-xl font-medium border border-forest-600"
+              className="text-[8.5px] px-2.5 py-1.5 rounded-md font-normal tracking-wide"
+              style={{ border: '1px solid rgba(184,150,12,0.2)', color: 'rgba(232,213,163,0.45)' }}
             >
-              Logout
+              Sign Out
             </button>
           </div>
         </div>
-        <p className="text-forest-300 text-xs">
-          Welcome, {profile.full_name.split(" ")[0]}
-        </p>
+        <div className="relative z-10 rounded-xl p-3" style={{ background: 'rgba(184,150,12,0.07)', border: '1px solid rgba(184,150,12,0.18)' }}>
+          <p className="text-[7.5px] font-semibold tracking-[2px] uppercase" style={{ color: 'rgba(232,213,163,0.38)' }}>
+            Today's Revenue
+          </p>
+          <p className="text-[26px] font-black text-ivory-100 font-lato tracking-tighter leading-none mt-0.5">
+            ₱{todayRevenue.toFixed(2)}
+          </p>
+          <p className="text-[8.5px] mt-1 font-light" style={{ color: 'rgba(245,240,232,0.3)' }}>
+            {todayTxCount} transaction{todayTxCount !== 1 ? "s" : ""} completed today
+          </p>
+        </div>
       </div>
 
       {/* Notifications Panel */}
@@ -3324,44 +3351,31 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             {tab === "admin" && isSuperAdmin && <SuperAdminPanel showToast={showToast} />}
 
             {tab === "dashboard" && (
-              <div className="p-4 space-y-4">
-                {/* Revenue card */}
-                <div className="bg-forest-700 rounded-2xl p-4">
-                  <p className="text-gold-300 text-xs font-semibold uppercase tracking-widest mb-1">
-                    Today's Revenue
-                  </p>
-                  <p className="text-3xl font-black text-white tracking-tight">
-                    ₱{todayRevenue.toFixed(2)}
-                  </p>
-                  <p className="text-forest-300 text-xs mt-1">
-                    {todayTxCount} transaction{todayTxCount !== 1 ? "s" : ""} completed today
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
+              <div className="p-3 space-y-3">
+                <div className="grid grid-cols-2 gap-2">
                   <StatCard
-                    icon={<NavIcon name="products" size={20} color="currentColor" />}
                     label="Products"
                     value={products.length}
-                    color="bg-blue-50 text-blue-700"
+                    dotColor={products.filter(p => p.stock <= (p.low_stock_alert || 5)).length > 0 ? "#7A1515" : "#1A3D2B"}
+                    sub={products.filter(p => p.stock <= (p.low_stock_alert || 5)).length > 0 ? `${products.filter(p => p.stock <= (p.low_stock_alert || 5)).length} Critical` : "All stocked"}
                   />
                   <StatCard
-                    icon={<NavIcon name="branch" size={20} color="currentColor" />}
                     label="Branches"
                     value={branches.length}
-                    color="bg-purple-50 text-purple-700"
+                    dotColor="#1A3D2B"
+                    sub="All Active"
                   />
                   <StatCard
-                    icon={<NavIcon name="staff" size={20} color="currentColor" />}
                     label="Staff"
                     value={staff.length}
-                    color="bg-yellow-50 text-yellow-700"
+                    dotColor="#1A3D2B"
+                    sub={`${staff.filter(s => s.role).length} Active`}
                   />
                   <StatCard
-                    icon={<NavIcon name="money" size={20} color="currentColor" />}
-                    label="Utang Balance"
+                    label="Utang"
                     value={`₱${utangTotal.toFixed(0)}`}
-                    color="bg-red-50 text-red-600"
+                    dotColor={utangTotal > 0 ? "#B8960C" : "#1A3D2B"}
+                    sub={utangTotal > 0 ? "Outstanding" : "Clear"}
                   />
                 </div>
 
@@ -3786,29 +3800,54 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
         )}
       </div>
 
+      {/* More Menu Overlay */}
+      {showMoreMenu && (
+        <div className="fixed inset-0 z-40" onClick={() => setShowMoreMenu(false)}>
+          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 w-full max-w-lg px-3">
+            <div className="bg-white rounded-xl border border-ivory-300 shadow-lg p-2 grid grid-cols-3 gap-1" onClick={e => e.stopPropagation()}>
+              {MORE_TABS.map((item) => (
+                <button
+                  key={item.key}
+                  onClick={() => { setTabPersisted(item.key); setShowMoreMenu(false); }}
+                  className={`flex flex-col items-center gap-1 py-3 px-2 rounded-lg transition-colors ${
+                    tab === item.key ? "bg-forest-50 text-forest-500" : "text-gray-400"
+                  }`}
+                >
+                  <span className="relative">
+                    <NavIcon name={item.icon} size={18} color="currentColor" />
+                    {item.badge && <span className="absolute -top-1 -right-1.5 w-2 h-2 bg-red-500 rounded-full" />}
+                  </span>
+                  <span className="text-[7.5px] font-semibold tracking-wide">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Bottom Nav */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-white border-t border-gray-100 flex items-center justify-around px-2 py-2 z-30">
-        {TABS.map((item) => (
-          <button
-            key={item.key}
-            onClick={() => setTabPersisted(item.key)}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors ${
-              tab === item.key ? "bg-forest-50 text-forest-700" : "text-gray-400"
-            }`}
-          >
-            <span className="relative">
-              <NavIcon name={item.icon} size={20} color="currentColor" />
-              {item.badge && <span className="absolute -top-1 -right-1.5 w-2 h-2 bg-red-500 rounded-full" />}
-            </span>
-            <span
-              className={`text-xs font-medium ${
-                tab === item.key ? "text-forest-700" : "text-gray-400"
-              }`}
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-white flex z-30" style={{ borderTop: '1px solid #DDD8CE', padding: '7px 3px 11px' }}>
+        {MAIN_TABS.map((item) => {
+          const isActive = item.key === "more"
+            ? MORE_TABS.some(t => t.key === tab)
+            : tab === item.key;
+          return (
+            <button
+              key={item.key}
+              onClick={() => {
+                if (item.key === "more") { setShowMoreMenu(!showMoreMenu); }
+                else { setTabPersisted(item.key); setShowMoreMenu(false); }
+              }}
+              className="flex-1 flex flex-col items-center gap-[3px] py-[3px]"
             >
-              {item.label}
-            </span>
-          </button>
-        ))}
+              <NavIcon name={item.icon} size={18} color={isActive ? "#1A3D2B" : "#9CA3AF"} />
+              <span className={`text-[7.5px] font-semibold tracking-wide ${isActive ? "text-forest-500" : "text-gray-400"}`}>
+                {item.key === "more" && MORE_TABS.some(t => t.key === tab) ? MORE_TABS.find(t => t.key === tab)?.label : item.label}
+              </span>
+              {isActive && item.key !== "more" && <span className="w-[3px] h-[3px] rounded-full bg-gold-400" />}
+            </button>
+          );
+        })}
       </div>
 
       {showAddBranch && <AddBranchModal />}
@@ -5119,7 +5158,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col max-w-lg mx-auto">
+    <div className="min-h-screen bg-ivory-100 flex flex-col max-w-lg mx-auto">
       {/* Header */}
       <div className="bg-forest-800 px-4 pt-5 pb-4 flex-shrink-0">
         <div className="flex items-center justify-between mb-1">
@@ -6600,7 +6639,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
     "border-gray-100";
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col max-w-lg mx-auto">
+    <div className="min-h-screen bg-ivory-100 flex flex-col max-w-lg mx-auto">
       <div className="bg-forest-800 px-4 pt-5 pb-4 flex-shrink-0">
         <div className="flex items-center justify-between mb-1">
           <div>
@@ -7071,18 +7110,22 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
     { key: "transfers", icon: "transfers", label: "Transfers" },
   ];
 
-  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Spinner /></div>;
+  if (loading) return <div className="min-h-screen bg-ivory-100 flex items-center justify-center"><Spinner /></div>;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col max-w-lg mx-auto">
-      <div className="bg-forest-800 px-4 pt-5 pb-4">
-        <div className="flex items-center justify-between mb-1">
-          <div>
-            <p className="text-gold-400 text-xs font-medium uppercase tracking-widest">Branch Manager</p>
-            <h1 className="text-ivory-50 font-black text-xl leading-tight">{branch?.name || business.name}</h1>
+    <div className="min-h-screen bg-ivory-100 flex flex-col max-w-lg mx-auto">
+      <div className="bg-forest-800 px-4 pt-8 pb-4 relative overflow-hidden">
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 85% 10%, rgba(184,150,12,0.09) 0%, transparent 55%)' }} />
+        <div className="flex items-start justify-between mb-1 relative z-10">
+          <div className="flex items-center gap-2">
+            <LedgerIcon className="w-5 h-5" />
+            <div>
+              <p className="text-[7.5px] font-medium tracking-[1.5px] uppercase" style={{ color: 'rgba(184,150,12,0.6)' }}>◆ Branch Manager</p>
+              <h1 className="text-ivory-100 font-playfair text-[15px] font-semibold tracking-tight leading-tight">{branch?.name || business.name}</h1>
+            </div>
           </div>
-          <button onClick={onLogout} className="bg-forest-700 text-gold-400 text-xs px-3 py-2 rounded-xl font-medium border border-forest-600">
-            Logout
+          <button onClick={onLogout} className="text-[8.5px] px-2.5 py-1.5 rounded-md font-normal tracking-wide relative z-10" style={{ border: '1px solid rgba(184,150,12,0.2)', color: 'rgba(232,213,163,0.45)' }}>
+            Sign Out
           </button>
         </div>
         <p className="text-forest-300 text-xs">{profile.full_name} · {business.name}</p>
@@ -7099,17 +7142,17 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
         </div>
 
         {bmTab === "overview" && (
-          <div className="p-4 pt-0 space-y-4">
-            <div className="bg-forest-700 rounded-2xl p-4">
-              <p className="text-gold-300 text-xs font-semibold uppercase tracking-widest mb-1">Branch Revenue</p>
-              <p className="text-3xl font-black text-white tracking-tight">₱{branchRevenue.toFixed(2)}</p>
-              <p className="text-forest-300 text-xs mt-1">{branchTxCount} transaction{branchTxCount !== 1 ? "s" : ""}</p>
-            </div>
+          <div className="p-3 pt-0 space-y-3">
+            <Card className="p-3">
+              <p className="text-[7.5px] font-semibold tracking-[2px] uppercase text-gray-400 mb-1">Branch Revenue</p>
+              <p className="text-[26px] font-black text-gray-800 font-lato tracking-tighter leading-none">₱{branchRevenue.toFixed(2)}</p>
+              <p className="text-[8.5px] mt-1 font-light text-gray-400">{branchTxCount} transaction{branchTxCount !== 1 ? "s" : ""}</p>
+            </Card>
 
-            <div className="grid grid-cols-3 gap-3">
-              <StatCard icon={<NavIcon name="products" size={20} color="currentColor" />} label="Products" value={branchProducts.length} color="bg-blue-50 text-blue-700" />
-              <StatCard icon={<NavIcon name="staff" size={20} color="currentColor" />} label="Staff" value={branchStaff.length} color="bg-purple-50 text-purple-700" />
-              <StatCard icon={<NavIcon name="transfers" size={20} color="currentColor" />} label="Transfers" value={transfers.filter(t => t.status === "pending").length} color="bg-yellow-50 text-yellow-700" />
+            <div className="grid grid-cols-3 gap-2">
+              <StatCard label="Products" value={branchProducts.length} dotColor="#1A3D2B" sub="In stock" />
+              <StatCard label="Staff" value={branchStaff.length} dotColor="#1A3D2B" sub="Active" />
+              <StatCard label="Transfers" value={transfers.filter(t => t.status === "pending").length} dotColor="#B8960C" sub="Pending" />
             </div>
 
             {recentTx.length > 0 && (
@@ -7370,7 +7413,7 @@ function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-ivory-100 flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm text-center">
         <div className="w-20 h-20 bg-forest-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
