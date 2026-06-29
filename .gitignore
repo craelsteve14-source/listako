@@ -3,3 +3,4 @@ dist/
 .env
 pnpm-lock.yaml
 pnpm-workspace.yaml
+package-lock.json
