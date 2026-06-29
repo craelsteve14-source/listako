@@ -807,6 +807,28 @@ function LedgerIcon({ className = "w-10 h-10", color = "#c9a84c" }) {
   );
 }
 
+const NavIcon = ({ name, size = 22, color = "currentColor" }) => {
+  const props = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
+  const icons = {
+    dashboard: <svg {...props}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
+    analytics: <svg {...props}><path d="M3 20h18"/><path d="M6 16V10"/><path d="M10 16V6"/><path d="M14 16v-5"/><path d="M18 16V8"/></svg>,
+    products: <svg {...props}><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>,
+    branch: <svg {...props}><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"/><path d="M3 9l2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/><path d="M12 3v6"/></svg>,
+    staff: <svg {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+    pending: <svg {...props}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
+    customers: <svg {...props}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+    logs: <svg {...props}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>,
+    settings: <svg {...props}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>,
+    admin: <svg {...props}><path d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26Z"/></svg>,
+    bell: <svg {...props}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
+    more: <svg {...props}><circle cx="12" cy="5" r="1.5" fill={color} stroke="none"/><circle cx="12" cy="12" r="1.5" fill={color} stroke="none"/><circle cx="12" cy="19" r="1.5" fill={color} stroke="none"/></svg>,
+    money: <svg {...props}><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M2 10h2M20 10h2M2 14h2M20 14h2"/></svg>,
+    transfers: <svg {...props}><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>,
+    overview: <svg {...props}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
+  };
+  return icons[name] || null;
+};
+
 function ListaKoLogo({ size = "text-4xl", light = false }) {
   return (
     <h1 className={`${size} font-black tracking-tight ${light ? "text-white" : "text-ivory-50"}`}>
@@ -3001,18 +3023,27 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     fetchAll();
   };
 
-  const TABS = [
-    { key: "dashboard", icon: "📊", label: "Dashboard" },
-    { key: "analytics", icon: "📈", label: "Analytics" },
-    { key: "products", icon: "📦", label: "Produkto" },
-    { key: "branches", icon: "🏪", label: "Branch" },
-    { key: "staff", icon: "👥", label: "Staff" },
-    { key: "pending", icon: (pendingProducts.length + pendingTransfers.length) > 0 ? "🔴" : "⏳", label: "Pending" },
-    { key: "customers", icon: "👤", label: "Suki" },
-    { key: "logs", icon: "📋", label: "Logs" },
-    { key: "settings", icon: "⚙️", label: "Settings" },
-    ...(isSuperAdmin ? [{ key: "admin", icon: "👑", label: "Admin" }] : []),
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const pendingCount = pendingProducts.length + pendingTransfers.length;
+
+  const MAIN_TABS = [
+    { key: "dashboard", icon: "dashboard", label: "Home" },
+    { key: "products", icon: "products", label: "Produkto" },
+    { key: "analytics", icon: "analytics", label: "Analytics" },
+    { key: "branches", icon: "branch", label: "Branch" },
   ];
+
+  const MORE_TABS = [
+    { key: "staff", icon: "staff", label: "Staff" },
+    { key: "pending", icon: "pending", label: "Pending", badge: pendingCount },
+    { key: "customers", icon: "customers", label: "Suki" },
+    { key: "logs", icon: "logs", label: "Logs" },
+    { key: "settings", icon: "settings", label: "Settings" },
+    ...(isSuperAdmin ? [{ key: "admin", icon: "admin", label: "Admin" }] : []),
+  ];
+
+  const ALL_TABS = [...MAIN_TABS, ...MORE_TABS];
+  const TABS = ALL_TABS;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col max-w-lg mx-auto">
@@ -3029,9 +3060,9 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             {/* Notification Bell */}
             <button
               onClick={() => setShowNotifications(!showNotifications)}
-              className="relative bg-forest-800 bg-opacity-50 text-forest-200 px-3 py-2 rounded-xl"
+              className="relative bg-forest-700 bg-opacity-60 text-forest-200 px-3 py-2.5 rounded-xl border border-forest-600"
             >
-              🔔
+              <NavIcon name="bell" size={18} color="#c9a84c" />
               {notifications.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-black w-5 h-5 rounded-full flex items-center justify-center">
                   {notifications.length}
@@ -3056,7 +3087,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
         <div className="bg-white border-b border-gray-100 shadow-sm">
           <div className="flex items-center justify-between px-4 py-3">
             <p className="text-sm font-bold text-gray-800">
-              🔔 Notifications {notifications.length > 0 && `(${notifications.length})`}
+              Notifications {notifications.length > 0 && `(${notifications.length})`}
             </p>
             {notifications.length > 0 && (
               <button
@@ -3293,25 +3324,25 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
 
                 <div className="grid grid-cols-2 gap-3">
                   <StatCard
-                    icon="📦"
+                    icon={<NavIcon name="products" size={20} color="#2563eb" />}
                     label="Products"
                     value={products.length}
                     color="bg-blue-50 text-blue-700"
                   />
                   <StatCard
-                    icon="🏪"
+                    icon={<NavIcon name="branch" size={20} color="#7c3aed" />}
                     label="Branches"
                     value={branches.length}
                     color="bg-purple-50 text-purple-700"
                   />
                   <StatCard
-                    icon="👥"
+                    icon={<NavIcon name="staff" size={20} color="#d97706" />}
                     label="Staff"
                     value={staff.length}
-                    color="bg-yellow-50 text-yellow-700"
+                    color="bg-amber-50 text-amber-700"
                   />
                   <StatCard
-                    icon="💸"
+                    icon={<NavIcon name="money" size={20} color="#dc2626" />}
                     label="Utang Balance"
                     value={`₱${utangTotal.toFixed(0)}`}
                     color="bg-red-50 text-red-600"
@@ -3739,26 +3770,60 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
         )}
       </div>
 
+      {/* More Menu Sheet */}
+      {showMoreMenu && (
+        <div className="fixed inset-0 z-50" onClick={() => setShowMoreMenu(false)}>
+          <div className="absolute inset-0 bg-black bg-opacity-30" />
+          <div className="absolute bottom-16 left-1/2 -translate-x-1/2 w-full max-w-lg px-3" onClick={(e) => e.stopPropagation()}>
+            <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-3 grid grid-cols-3 gap-1">
+              {MORE_TABS.map((item) => (
+                <button
+                  key={item.key}
+                  onClick={() => { setTabPersisted(item.key); setShowMoreMenu(false); }}
+                  className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl transition-colors relative ${
+                    tab === item.key ? "bg-forest-50" : "hover:bg-gray-50 active:bg-gray-100"
+                  }`}
+                >
+                  <NavIcon name={item.icon} size={22} color={tab === item.key ? "#1a3a2a" : "#9ca3af"} />
+                  {item.badge > 0 && (
+                    <span className="absolute top-1.5 right-1/4 bg-red-500 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">{item.badge}</span>
+                  )}
+                  <span className={`text-xs font-medium ${tab === item.key ? "text-forest-700" : "text-gray-500"}`}>{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Bottom Nav */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-white border-t border-gray-100 flex items-center justify-around px-2 py-2 z-30">
-        {TABS.map((item) => (
-          <button
-            key={item.key}
-            onClick={() => setTabPersisted(item.key)}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors ${
-              tab === item.key ? "bg-forest-50 text-forest-700" : "text-gray-400"
-            }`}
-          >
-            <span className="text-xl">{item.icon}</span>
-            <span
-              className={`text-xs font-medium ${
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-white border-t border-gray-100 z-30">
+        <div className="flex items-center justify-around px-3 py-1.5">
+          {MAIN_TABS.map((item) => (
+            <button
+              key={item.key}
+              onClick={() => { setTabPersisted(item.key); setShowMoreMenu(false); }}
+              className={`flex flex-col items-center gap-0.5 py-1.5 px-4 rounded-xl transition-all ${
                 tab === item.key ? "text-forest-700" : "text-gray-400"
               }`}
             >
-              {item.label}
-            </span>
+              <NavIcon name={item.icon} size={22} color={tab === item.key ? "#1a3a2a" : "#9ca3af"} />
+              <span className={`text-[10px] font-semibold ${tab === item.key ? "text-forest-700" : "text-gray-400"}`}>{item.label}</span>
+            </button>
+          ))}
+          <button
+            onClick={() => setShowMoreMenu(!showMoreMenu)}
+            className={`flex flex-col items-center gap-0.5 py-1.5 px-4 rounded-xl transition-all relative ${
+              MORE_TABS.some(t => t.key === tab) ? "text-forest-700" : "text-gray-400"
+            }`}
+          >
+            <NavIcon name="more" size={22} color={MORE_TABS.some(t => t.key === tab) ? "#1a3a2a" : "#9ca3af"} />
+            {pendingCount > 0 && (
+              <span className="absolute top-0.5 right-2 bg-red-500 text-white text-[8px] font-bold w-3.5 h-3.5 rounded-full flex items-center justify-center">{pendingCount}</span>
+            )}
+            <span className={`text-[10px] font-semibold ${MORE_TABS.some(t => t.key === tab) ? "text-forest-700" : "text-gray-400"}`}>More</span>
           </button>
-        ))}
+        </div>
       </div>
 
       {showAddBranch && <AddBranchModal />}
@@ -7001,7 +7066,7 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
     await supabase.from("notifications").insert({
       business_id: business.id,
       type: "transfer_request",
-      title: "📦 Product Transfer Request",
+      title: "Product Transfer Request",
       message: `${profile.full_name} requests to transfer ${transferQty}x ${transferProduct.name} from ${branch.name} to another branch.`,
       is_read: false,
     });
@@ -7016,9 +7081,9 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
   };
 
   const BM_TABS = [
-    { key: "overview", icon: "📊", label: "Overview" },
-    { key: "staff", icon: "👥", label: "Staff" },
-    { key: "transfers", icon: "🔄", label: "Transfers" },
+    { key: "overview", icon: "overview", label: "Overview" },
+    { key: "staff", icon: "staff", label: "Staff" },
+    { key: "transfers", icon: "transfers", label: "Transfers" },
   ];
 
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Spinner /></div>;
@@ -7057,9 +7122,9 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              <StatCard icon="📦" label="Products" value={branchProducts.length} color="bg-blue-50 text-blue-700" />
-              <StatCard icon="👥" label="Staff" value={branchStaff.length} color="bg-purple-50 text-purple-700" />
-              <StatCard icon="🔄" label="Transfers" value={transfers.filter(t => t.status === "pending").length} color="bg-yellow-50 text-yellow-700" />
+              <StatCard icon={<NavIcon name="products" size={20} color="#2563eb" />} label="Products" value={branchProducts.length} color="bg-blue-50 text-blue-700" />
+              <StatCard icon={<NavIcon name="staff" size={20} color="#7c3aed" />} label="Staff" value={branchStaff.length} color="bg-purple-50 text-purple-700" />
+              <StatCard icon={<NavIcon name="transfers" size={20} color="#d97706" />} label="Transfers" value={transfers.filter(t => t.status === "pending").length} color="bg-amber-50 text-amber-700" />
             </div>
 
             {recentTx.length > 0 && (
@@ -7202,14 +7267,16 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
       </div>
 
       {/* Bottom Nav */}
-      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-white border-t border-gray-100 flex items-center justify-around px-2 py-2 z-30">
-        {BM_TABS.map((item) => (
-          <button key={item.key} onClick={() => setBmTab(item.key)}
-            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors ${bmTab === item.key ? "bg-forest-50 text-forest-700" : "text-gray-400"}`}>
-            <span className="text-xl">{item.icon}</span>
-            <span className={`text-xs font-medium ${bmTab === item.key ? "text-forest-700" : "text-gray-400"}`}>{item.label}</span>
-          </button>
-        ))}
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-white border-t border-gray-100 z-30">
+        <div className="flex items-center justify-around px-3 py-1.5">
+          {BM_TABS.map((item) => (
+            <button key={item.key} onClick={() => setBmTab(item.key)}
+              className={`flex flex-col items-center gap-0.5 py-1.5 px-5 rounded-xl transition-all ${bmTab === item.key ? "text-forest-700" : "text-gray-400"}`}>
+              <NavIcon name={item.icon} size={22} color={bmTab === item.key ? "#1a3a2a" : "#9ca3af"} />
+              <span className={`text-[10px] font-semibold ${bmTab === item.key ? "text-forest-700" : "text-gray-400"}`}>{item.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Transfer Request Modal */}
