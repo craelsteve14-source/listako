@@ -2860,6 +2860,12 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
               </label>
             </div>
           </div>
+          <Field
+            label="Image URL (optional)"
+            value={form.image_url}
+            onChange={(v) => setForm((f) => ({ ...f, image_url: v }))}
+            placeholder="https://example.com/image.jpg"
+          />
           <button
             onClick={save}
             disabled={saving}
