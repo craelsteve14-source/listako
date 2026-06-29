@@ -68,6 +68,53 @@ const getErrorMessage = (error) => {
 };
 
 // ═══════════════════════════════════════════════════════════════
+// BARCODE GENERATOR
+// ═══════════════════════════════════════════════════════════════
+const compressImage = (file, maxWidth = 400, quality = 0.7) =>
+  new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const scale = Math.min(1, maxWidth / img.width);
+        canvas.width = img.width * scale;
+        canvas.height = img.height * scale;
+        canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+const generateBarcode = () => {
+  const timestamp = Date.now().toString(36).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `LK-${timestamp}-${random}`;
+};
+
+function BarcodeDisplay({ code }) {
+  if (!code) return null;
+  const bars = [];
+  for (let i = 0; i < code.length; i++) {
+    const charCode = code.charCodeAt(i);
+    bars.push(charCode % 4 + 1);
+    bars.push((charCode >> 2) % 3 + 1);
+  }
+  return (
+    <div className="flex flex-col items-center py-2">
+      <div className="flex items-end h-10 gap-px">
+        {bars.map((w, i) => (
+          <div key={i} className={`${i % 2 === 0 ? "bg-black" : "bg-transparent"} h-full`} style={{ width: `${w}px` }} />
+        ))}
+      </div>
+      <p className="text-xs font-mono text-gray-600 mt-1 tracking-wider">{code}</p>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // AUDIT LOG HELPER
 // ═══════════════════════════════════════════════════════════════
 const logAudit = async (businessId, userId, userName, action, entityType, entityId, details) => {
@@ -2315,6 +2362,241 @@ function AuditLogViewer({ businessId }) {
   );
 }
 
+const downloadCSV = (filename, headers, rows) => {
+  const escape = (v) => {
+    const s = String(v ?? "");
+    return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = [headers.join(","), ...rows.map((r) => r.map(escape).join(","))].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
+};
+
+function SettingsPanel({ business, products, branches, staff, showToast, onLogout, onUpdated }) {
+  const [bizForm, setBizForm] = useState({
+    name: business.name || "",
+    receipt_header: business.receipt_header || "",
+    receipt_footer: business.receipt_footer || "",
+    gcash_qr: business.gcash_qr || "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [exportingTx, setExportingTx] = useState(false);
+
+  const saveBusiness = async () => {
+    if (!bizForm.name.trim()) return showToast("Business name is required.", "error");
+    setSaving(true);
+    const { error } = await supabase.from("businesses").update({
+      name: bizForm.name.trim(),
+      receipt_header: bizForm.receipt_header.trim() || null,
+      receipt_footer: bizForm.receipt_footer.trim() || null,
+      gcash_qr: bizForm.gcash_qr || null,
+    }).eq("id", business.id);
+    setSaving(false);
+    if (error) return showToast("Failed to save. Try again.", "error");
+    showToast("Business settings updated!", "success");
+    onUpdated();
+  };
+
+  const exportProducts = () => {
+    if (products.length === 0) return showToast("No products to export.", "error");
+    downloadCSV(
+      `listako-products-${new Date().toISOString().slice(0, 10)}.csv`,
+      ["Name", "Barcode", "Price", "Wholesale Price", "Stock", "Category", "Low Stock Threshold"],
+      products.map((p) => [p.name, p.barcode || "", p.price, p.wholesale_price || "", p.stock_quantity, p.category, p.low_stock_threshold])
+    );
+    showToast("Products exported!", "success");
+  };
+
+  const exportTransactions = async () => {
+    setExportingTx(true);
+    const { data } = await supabase.from("transactions").select("*, transaction_items(*)")
+      .eq("business_id", business.id).eq("status", "completed")
+      .order("created_at", { ascending: false }).limit(500);
+    setExportingTx(false);
+    if (!data || data.length === 0) return showToast("No transactions to export.", "error");
+    downloadCSV(
+      `listako-transactions-${new Date().toISOString().slice(0, 10)}.csv`,
+      ["Date", "Receipt #", "Total", "Items", "Payment", "Cashier", "Customer"],
+      data.map((t) => [
+        new Date(t.created_at).toLocaleString("en-PH"),
+        t.receipt_number || t.id.slice(0, 8),
+        t.total_amount,
+        (t.transaction_items || []).length,
+        t.payment_method || "cash",
+        t.cashier_name || "",
+        t.customer_name || "",
+      ])
+    );
+    showToast("Transactions exported!", "success");
+  };
+
+  const exportCustomers = async () => {
+    const { data } = await supabase.from("customers").select("*").eq("business_id", business.id).order("name");
+    if (!data || data.length === 0) return showToast("No customers to export.", "error");
+    downloadCSV(
+      `listako-customers-${new Date().toISOString().slice(0, 10)}.csv`,
+      ["Name", "Phone", "Email", "Address", "Suki", "Visits", "Total Spent"],
+      data.map((c) => [c.name, c.phone || "", c.email || "", c.address || "", c.is_suki ? "Yes" : "No", c.visit_count || 0, c.total_spent || 0])
+    );
+    showToast("Customers exported!", "success");
+  };
+
+  const lowStockProducts = products.filter((p) => p.stock_quantity <= (p.low_stock_threshold || 10));
+
+  return (
+    <div className="p-4 space-y-4">
+      <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide">Settings</h2>
+
+      <Card className="p-4 space-y-3">
+        <p className="font-bold text-gray-800 text-sm">Business Profile</p>
+        <Field label="Business Name" value={bizForm.name}
+          onChange={(v) => setBizForm((f) => ({ ...f, name: v }))} placeholder="My Store" />
+        <Field label="Receipt Header (optional)" value={bizForm.receipt_header}
+          onChange={(v) => setBizForm((f) => ({ ...f, receipt_header: v }))} placeholder="Thank you for shopping!" />
+        <Field label="Receipt Footer (optional)" value={bizForm.receipt_footer}
+          onChange={(v) => setBizForm((f) => ({ ...f, receipt_footer: v }))} placeholder="Visit us again!" />
+        <div>
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">GCash QR Code (optional)</label>
+          <p className="text-xs text-gray-400 mb-2">Upload your GCash QR — cashiers will show it to customers during GCash payment.</p>
+          {bizForm.gcash_qr && (
+            <div className="relative mb-2">
+              <img src={bizForm.gcash_qr} alt="GCash QR" className="w-40 h-40 object-contain mx-auto rounded-xl border border-blue-200 bg-white p-1" />
+              <button type="button" onClick={() => setBizForm((f) => ({ ...f, gcash_qr: "" }))}
+                className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full text-xs font-bold">✕</button>
+            </div>
+          )}
+          <label className="flex items-center justify-center gap-2 bg-blue-50 text-blue-700 font-semibold py-2.5 rounded-xl text-sm cursor-pointer border border-blue-200">
+            📱 {bizForm.gcash_qr ? "Change QR" : "Upload GCash QR"}
+            <input type="file" accept="image/*" className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const dataUrl = await compressImage(file, 500, 0.85);
+                setBizForm((f) => ({ ...f, gcash_qr: dataUrl }));
+              }} />
+          </label>
+        </div>
+        <button onClick={saveBusiness} disabled={saving}
+          className="w-full bg-forest-600 text-white font-bold py-3 rounded-xl disabled:opacity-60 text-sm">
+          {saving ? "Saving..." : "Save Business Info"}
+        </button>
+      </Card>
+
+      <Card className="p-4 space-y-3">
+        <p className="font-bold text-gray-800 text-sm">Export Data (CSV)</p>
+        <p className="text-xs text-gray-400">Download your data as spreadsheet files.</p>
+        <div className="grid grid-cols-1 gap-2">
+          <button onClick={exportProducts}
+            className="flex items-center gap-2 bg-blue-50 text-blue-700 font-semibold py-2.5 px-4 rounded-xl text-sm">
+            📦 Export Products ({products.length})
+          </button>
+          <button onClick={exportTransactions} disabled={exportingTx}
+            className="flex items-center gap-2 bg-green-50 text-green-700 font-semibold py-2.5 px-4 rounded-xl text-sm disabled:opacity-60">
+            {exportingTx ? "Exporting..." : "💰 Export Transactions (Last 500)"}
+          </button>
+          <button onClick={exportCustomers}
+            className="flex items-center gap-2 bg-purple-50 text-purple-700 font-semibold py-2.5 px-4 rounded-xl text-sm">
+            👤 Export Customers
+          </button>
+        </div>
+      </Card>
+
+      {lowStockProducts.length > 0 && (
+        <Card className="p-4 space-y-2">
+          <p className="font-bold text-red-600 text-sm">⚠️ Low Stock Alert ({lowStockProducts.length})</p>
+          <div className="space-y-1.5">
+            {lowStockProducts.slice(0, 10).map((p) => (
+              <div key={p.id} className="flex items-center justify-between bg-red-50 rounded-lg px-3 py-2">
+                <p className="text-xs font-medium text-gray-700 truncate flex-1">{p.name}</p>
+                <p className="text-xs font-bold text-red-600 ml-2">{p.stock_quantity} left</p>
+              </div>
+            ))}
+            {lowStockProducts.length > 10 && (
+              <p className="text-xs text-gray-400 text-center">+{lowStockProducts.length - 10} more items</p>
+            )}
+          </div>
+        </Card>
+      )}
+
+      <Card className="p-4 space-y-2">
+        <p className="font-bold text-gray-800 text-sm">App Info</p>
+        <div className="space-y-1 text-xs text-gray-500">
+          <p>ListaKo v1.0 — Filipino-First Business Manager</p>
+          <p>Products: {products.length} · Branches: {branches.length} · Staff: {staff.length}</p>
+          <p>Plan: {business.plan ? business.plan.charAt(0).toUpperCase() + business.plan.slice(1) : "Trial"}</p>
+        </div>
+      </Card>
+
+      <button onClick={() => setShowHelp(true)}
+        className="w-full bg-gold-100 text-gold-800 font-bold py-3 rounded-xl text-sm">
+        📖 How to Use ListaKo
+      </button>
+
+      <button onClick={onLogout}
+        className="w-full bg-red-50 text-red-500 font-semibold py-3 rounded-xl text-sm">
+        Logout
+      </button>
+
+      {showHelp && (
+        <Modal title="Paano Gamitin ang ListaKo" onClose={() => setShowHelp(false)}>
+          <div className="space-y-4 text-sm text-gray-700">
+            <div>
+              <p className="font-bold text-forest-700 mb-1">📊 Dashboard</p>
+              <p className="text-xs text-gray-500">Tingnan ang revenue, transactions, at low stock alerts ngayong araw.</p>
+            </div>
+            <div>
+              <p className="font-bold text-forest-700 mb-1">📈 Analytics</p>
+              <p className="text-xs text-gray-500">I-view ang charts para sa revenue trends, best sellers, at cashier performance.</p>
+            </div>
+            <div>
+              <p className="font-bold text-forest-700 mb-1">📦 Produkto</p>
+              <p className="text-xs text-gray-500">Mag-add, edit, at manage ng products. Pwedeng mag-generate ng barcode at mag-set ng wholesale pricing.</p>
+            </div>
+            <div>
+              <p className="font-bold text-forest-700 mb-1">🏪 Branch</p>
+              <p className="text-xs text-gray-500">Mag-manage ng iba't ibang branches ng iyong negosyo.</p>
+            </div>
+            <div>
+              <p className="font-bold text-forest-700 mb-1">👥 Staff</p>
+              <p className="text-xs text-gray-500">Mag-add ng cashiers, inventory staff, at branch managers. I-assign sila sa mga branches.</p>
+            </div>
+            <div>
+              <p className="font-bold text-forest-700 mb-1">⏳ Pending</p>
+              <p className="text-xs text-gray-500">I-approve ang mga void requests, product transfers, at bagong products.</p>
+            </div>
+            <div>
+              <p className="font-bold text-forest-700 mb-1">👤 Suki</p>
+              <p className="text-xs text-gray-500">I-track ang iyong loyal customers at ang kanilang purchase history.</p>
+            </div>
+            <div>
+              <p className="font-bold text-forest-700 mb-1">📋 Logs</p>
+              <p className="text-xs text-gray-500">I-review ang audit trail ng lahat ng actions sa system.</p>
+            </div>
+            <div>
+              <p className="font-bold text-forest-700 mb-1">⚙️ Settings</p>
+              <p className="text-xs text-gray-500">I-edit ang business info, receipt headers, at mag-export ng data.</p>
+            </div>
+            <div className="bg-gold-50 rounded-xl p-3">
+              <p className="font-bold text-gold-700 text-xs mb-1">💡 Tips</p>
+              <ul className="text-xs text-gray-600 space-y-1 list-disc list-inside">
+                <li>Mag-scan ng barcode gamit ang camera ng cashier</li>
+                <li>I-set ang wholesale pricing para sa bulk buyers</li>
+                <li>Gamitin ang "Utang" feature para sa credit na customers</li>
+                <li>Ma-install ang ListaKo bilang app sa phone — i-tap ang "Add to Home Screen"</li>
+              </ul>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
+
 function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }) {
   const [tab, setTab] = useState(() => {
     return localStorage.getItem("owner_tab") || "dashboard";
@@ -2386,6 +2668,10 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     const [saving, setSaving] = useState(false);
     const save = async () => {
       if (!form.name.trim()) return showToast("Ilagay ang pangalan ng branch.", "error");
+      const plan = PLANS[business.plan] || PLANS.basic;
+      if (branches.length >= plan.branches) {
+        return showToast(`Naabot na ang limit ng ${plan.label} plan (${plan.branches} branch). Mag-upgrade para makapag-add pa.`, "error");
+      }
       setSaving(true);
       const { error } = await supabase
         .from("branches")
@@ -2476,12 +2762,25 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             onChange={(v) => setForm((f) => ({ ...f, name: v }))}
             placeholder="Coca-Cola 1.5L"
           />
-          <Field
-            label="Barcode (opsyonal)"
-            value={form.barcode}
-            onChange={(v) => setForm((f) => ({ ...f, barcode: v }))}
-            placeholder="I-type ang barcode"
-          />
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Barcode (opsyonal)</label>
+            <div className="flex gap-2">
+              <input
+                value={form.barcode}
+                onChange={(e) => setForm((f) => ({ ...f, barcode: e.target.value }))}
+                placeholder="I-type ang barcode"
+                className="flex-1 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500"
+              />
+              <button
+                type="button"
+                onClick={() => setForm((f) => ({ ...f, barcode: generateBarcode() }))}
+                className="px-3 py-2 bg-gold-500 text-forest-900 text-xs font-bold rounded-xl whitespace-nowrap"
+              >
+                Generate
+              </button>
+            </div>
+            {form.barcode && <BarcodeDisplay code={form.barcode} />}
+          </div>
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Category</label>
             <select value={form.category}
@@ -2529,6 +2828,38 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
               type="number"
             />
           </div>
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Product Image (optional)</label>
+            {form.image_url && (
+              <div className="relative mb-2">
+                <img src={form.image_url} alt="Preview" className="w-full h-32 object-cover rounded-xl border border-gray-200" />
+                <button type="button" onClick={() => setForm((f) => ({ ...f, image_url: "" }))}
+                  className="absolute top-1 right-1 bg-red-500 text-white w-6 h-6 rounded-full text-xs font-bold">✕</button>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <label className="flex-1 flex items-center justify-center gap-2 bg-forest-50 text-forest-700 font-semibold py-2.5 rounded-xl text-sm cursor-pointer border border-forest-200">
+                📷 Take Photo
+                <input type="file" accept="image/*" capture="environment" className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const dataUrl = await compressImage(file);
+                    setForm((f) => ({ ...f, image_url: dataUrl }));
+                  }} />
+              </label>
+              <label className="flex-1 flex items-center justify-center gap-2 bg-gray-50 text-gray-600 font-semibold py-2.5 rounded-xl text-sm cursor-pointer border border-gray-200">
+                🖼️ Gallery
+                <input type="file" accept="image/*" className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const dataUrl = await compressImage(file);
+                    setForm((f) => ({ ...f, image_url: dataUrl }));
+                  }} />
+              </label>
+            </div>
+          </div>
           <Field
             label="Image URL (optional)"
             value={form.image_url}
@@ -2554,6 +2885,10 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
       if (!form.full_name.trim()) return showToast("Ilagay ang pangalan ng staff.", "error");
       if (!form.email.trim()) return showToast("Ilagay ang email ng staff.", "error");
       if (!form.branch_id) return showToast("Pumili ng branch.", "error");
+      const plan = PLANS[business.plan] || PLANS.basic;
+      if (staff.length >= plan.staff) {
+        return showToast(`Naabot na ang limit ng ${plan.label} plan (${plan.staff} staff). Mag-upgrade para makapag-add pa.`, "error");
+      }
       setSaving(true);
       try {
         const tempPassword = "ListaKo" + Math.random().toString(36).slice(2, 8) + "!";
@@ -2675,6 +3010,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     { key: "pending", icon: (pendingProducts.length + pendingTransfers.length) > 0 ? "🔴" : "⏳", label: "Pending" },
     { key: "customers", icon: "👤", label: "Suki" },
     { key: "logs", icon: "📋", label: "Logs" },
+    { key: "settings", icon: "⚙️", label: "Settings" },
     ...(isSuperAdmin ? [{ key: "admin", icon: "👑", label: "Admin" }] : []),
   ];
 
@@ -3084,7 +3420,10 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                 ) : (
                   products.map((p) => (
                     <Card key={p.id} className="p-4">
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between gap-3">
+                        {p.image_url && (
+                          <img src={p.image_url} alt={p.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0 border border-gray-200" />
+                        )}
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-gray-800 text-sm truncate">{p.name}</p>
                           <p className="text-xs text-gray-400">
@@ -3384,6 +3723,18 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             {tab === "logs" && (
               <AuditLogViewer businessId={business.id} />
             )}
+
+            {tab === "settings" && (
+              <SettingsPanel
+                business={business}
+                products={products}
+                branches={branches}
+                staff={staff}
+                showToast={showToast}
+                onLogout={onLogout}
+                onUpdated={fetchAll}
+              />
+            )}
           </>
         )}
       </div>
@@ -3567,6 +3918,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
 
   const buildReceiptText = () => {
     const lines = [];
+    if (business?.receipt_header) lines.push(business.receipt_header);
     lines.push(business?.name || "Store");
     if (branch?.name) lines.push(branch.name);
     lines.push("─".repeat(28));
@@ -3597,6 +3949,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
     }
     lines.push("─".repeat(28));
     lines.push(`Cashier: ${cashier?.full_name}`);
+    if (business?.receipt_footer) lines.push(business.receipt_footer);
     lines.push("Powered by ListaKo");
     return lines.join("\n");
   };
@@ -3634,6 +3987,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
       ? `<div class="receipt-row"><span>Ref #</span><span>${transaction.reference_number}</span></div>` : "";
     printDiv.innerHTML = `
       <div class="receipt-header">
+        ${business?.receipt_header ? `<p>${business.receipt_header}</p>` : ""}
         <h2>${business?.name || "Store"}</h2>
         <p>${branch?.name || ""}</p>
         <p>${transaction?.receipt_number} | ${formatDate(transaction?.created_at || new Date())}</p>
@@ -3650,6 +4004,7 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
       <div class="receipt-divider"></div>
       <div class="receipt-footer">
         <p>Cashier: ${cashier?.full_name || ""}</p>
+        ${business?.receipt_footer ? `<p>${business.receipt_footer}</p>` : ""}
         <p>Powered by ListaKo</p>
       </div>
     `;
@@ -3662,6 +4017,9 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 px-4">
       <div className="bg-white w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col">
         <div className="bg-forest-800 px-5 py-5 text-center flex-shrink-0">
+          {business?.receipt_header && (
+            <p className="text-forest-300 text-xs mb-1">{business.receipt_header}</p>
+          )}
           <p className="text-gold-400 text-xs font-medium uppercase tracking-widest mb-1">
             Official Receipt
           </p>
@@ -3761,6 +4119,9 @@ function ReceiptView({ transaction, items, business, branch, cashier, onClose, o
           <div className="border-t border-dashed border-gray-200 mt-3 mb-3"></div>
           <div className="text-center">
             <p className="text-xs text-gray-400">Cashier: {cashier?.full_name}</p>
+            {business?.receipt_footer && (
+              <p className="text-xs text-gray-400 mt-1">{business.receipt_footer}</p>
+            )}
             <p className="text-xs text-gray-300 mt-1">Powered by ListaKo</p>
           </div>
         </div>
@@ -4183,6 +4544,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           product_id: product.id,
           product_name: product.name,
           unit_price: Number(product.price),
+          retail_price: Number(product.price),
           quantity: 1,
           subtotal: Number(product.price),
           stock: product.stock_quantity,
@@ -4206,7 +4568,10 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             return i;
           }
           const newQty = i.quantity + delta;
-          return { ...i, quantity: newQty, subtotal: newQty * i.unit_price };
+          const retailPrice = i.retail_price || i.unit_price;
+          const isWholesale = i.wholesale_price && newQty >= (i.wholesale_min_qty || 1);
+          const effectivePrice = isWholesale ? i.wholesale_price : retailPrice;
+          return { ...i, quantity: newQty, unit_price: effectivePrice, subtotal: newQty * effectivePrice, is_wholesale: !!isWholesale };
         })
         .filter((i) => i.quantity > 0)
     );
@@ -4872,21 +5237,26 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     p.stock_quantity <= 0 ? "opacity-50" : "hover:bg-gray-50"
                   }`}
                 >
-                  <div>
-                    <p className="text-sm font-semibold text-gray-800">{p.name}</p>
-                    <p
-                      className={`text-xs mt-0.5 ${
-                        p.stock_quantity <= 0
-                          ? "text-red-400 font-semibold"
-                          : p.stock_quantity <= p.low_stock_threshold
-                          ? "text-yellow-500"
-                          : "text-gray-400"
-                      }`}
-                    >
-                      {p.stock_quantity <= 0 ? "Out of stock" : `Stock: ${p.stock_quantity}`}
-                    </p>
+                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                    {p.image_url && (
+                      <img src={p.image_url} alt="" className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{p.name}</p>
+                      <p
+                        className={`text-xs mt-0.5 ${
+                          p.stock_quantity <= 0
+                            ? "text-red-400 font-semibold"
+                            : p.stock_quantity <= p.low_stock_threshold
+                            ? "text-yellow-500"
+                            : "text-gray-400"
+                        }`}
+                      >
+                        {p.stock_quantity <= 0 ? "Out of stock" : `Stock: ${p.stock_quantity}`}
+                      </p>
+                    </div>
                   </div>
-                  <span className="text-sm font-black text-forest-700">
+                  <span className="text-sm font-black text-forest-700 flex-shrink-0">
                     ₱{Number(p.price).toFixed(2)}
                   </span>
                 </button>
@@ -4933,6 +5303,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       </p>
                       <p className="text-xs text-gray-400 mt-0.5">
                         ₱{item.unit_price.toFixed(2)} each
+                        {item.is_wholesale && <span className="ml-1 text-gold-600 font-bold">(Wholesale)</span>}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -5153,6 +5524,12 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 {/* GCash / Maya Reference Number — REQUIRED — shown first so it's always visible */}
                 {(paymentMethod === "gcash" || paymentMethod === "maya") && (
                   <div className="border-2 border-red-300 rounded-2xl p-3 bg-red-50">
+                    {paymentMethod === "gcash" && business.gcash_qr && (
+                      <div className="mb-3 text-center">
+                        <p className="text-xs font-bold text-blue-700 mb-1">📱 Show this QR to customer</p>
+                        <img src={business.gcash_qr} alt="GCash QR" className="w-48 h-48 object-contain mx-auto rounded-xl border border-blue-200 bg-white p-1" />
+                      </div>
+                    )}
                     <p className="text-xs font-black text-red-600 uppercase mb-1">
                       ⚠️ {paymentMethod === "gcash" ? "GCash" : "Maya"} Reference No. — REQUIRED
                     </p>
@@ -6999,6 +7376,144 @@ function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
 // ═══════════════════════════════════════════════════════════════
 // ROOT APP
 // ═══════════════════════════════════════════════════════════════
+function InstallPrompt() {
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showBanner, setShowBanner] = useState(false);
+  const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [installed, setInstalled] = useState(false);
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+
+  useEffect(() => {
+    if (isStandalone) { setInstalled(true); return; }
+    const dismissed = localStorage.getItem("install_dismissed");
+    if (dismissed && Date.now() - Number(dismissed) < 7 * 24 * 60 * 60 * 1000) return;
+
+    const handler = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowBanner(true);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", () => { setInstalled(true); setShowBanner(false); });
+
+    if (isIOS && !isStandalone) {
+      setTimeout(() => setShowBanner(true), 3000);
+    }
+
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") setInstalled(true);
+      setDeferredPrompt(null);
+      setShowBanner(false);
+    } else if (isIOS) {
+      setShowIOSGuide(true);
+    }
+  };
+
+  const dismiss = () => {
+    localStorage.setItem("install_dismissed", String(Date.now()));
+    setShowBanner(false);
+  };
+
+  if (installed || !showBanner) return null;
+
+  return (
+    <>
+      <div className="fixed bottom-16 left-2 right-2 max-w-lg mx-auto bg-forest-800 text-white rounded-2xl p-4 shadow-2xl z-[90] border border-forest-600">
+        <div className="flex items-start gap-3">
+          <div className="w-12 h-12 bg-forest-600 rounded-xl flex items-center justify-center flex-shrink-0">
+            <span className="text-2xl">📲</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-sm">I-install ang ListaKo</p>
+            <p className="text-forest-300 text-xs mt-0.5">
+              {isIOS
+                ? "Mag-add sa Home Screen para mas mabilis mag-open — parang real app!"
+                : "I-download sa iyong phone para mas mabilis at offline-ready!"}
+            </p>
+          </div>
+          <button onClick={dismiss} className="text-forest-400 text-lg leading-none mt-0.5">✕</button>
+        </div>
+        <div className="flex gap-2 mt-3">
+          <button onClick={handleInstall}
+            className="flex-1 bg-gold-400 text-forest-900 font-bold py-2.5 rounded-xl text-sm">
+            {isIOS ? "Paano I-install" : "I-install Ngayon"}
+          </button>
+          <button onClick={dismiss}
+            className="px-4 py-2.5 text-forest-300 text-sm font-medium rounded-xl border border-forest-600">
+            Mamaya na
+          </button>
+        </div>
+      </div>
+
+      {showIOSGuide && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-end justify-center z-[100]">
+          <div className="bg-white w-full max-w-lg rounded-t-3xl p-6 pb-10">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-black text-gray-800 text-lg">I-install ang ListaKo</h3>
+              <button onClick={() => setShowIOSGuide(false)} className="text-gray-400 text-xl">✕</button>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <span className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">1</span>
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">I-tap ang Share button</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Ang icon na may arrow pataas (⬆️) sa ibaba ng Safari</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">2</span>
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">Hanapin ang "Add to Home Screen"</p>
+                  <p className="text-xs text-gray-500 mt-0.5">I-scroll pababa sa menu at i-tap ang "Add to Home Screen"</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">3</span>
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">I-tap ang "Add"</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Ma-add ang ListaKo icon sa iyong Home Screen — parang downloaded app!</p>
+                </div>
+              </div>
+            </div>
+            <button onClick={() => setShowIOSGuide(false)}
+              className="w-full bg-forest-600 text-white font-bold py-3 rounded-xl mt-6 text-sm">
+              OK, Gets ko na!
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+function OfflineBanner() {
+  const [offline, setOffline] = useState(!navigator.onLine);
+  useEffect(() => {
+    const goOffline = () => setOffline(true);
+    const goOnline = () => setOffline(false);
+    window.addEventListener("offline", goOffline);
+    window.addEventListener("online", goOnline);
+    return () => {
+      window.removeEventListener("offline", goOffline);
+      window.removeEventListener("online", goOnline);
+    };
+  }, []);
+  if (!offline) return null;
+  return (
+    <div className="fixed top-0 left-0 right-0 bg-red-600 text-white text-center py-2 text-xs font-bold z-[100]">
+      Offline — Some features may not work. Data will sync when reconnected.
+    </div>
+  );
+}
+
 export default function App() {
   const [screen, setScreen] = useState("landing");
   const [otpEmail, setOtpEmail] = useState("");
@@ -7162,6 +7677,8 @@ export default function App() {
 
     return (
       <>
+        <OfflineBanner />
+        <InstallPrompt />
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         {profile.role === "owner" ? (
           <OwnerDashboard
