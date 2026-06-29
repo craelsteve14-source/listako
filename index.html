@@ -2,18 +2,40 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ListaKo" />
     <meta name="theme-color" content="#0d1f17" />
+    <meta name="description" content="Filipino-First Business Management System — POS, inventory, analytics para sa iyong tindahan." />
+    <meta name="format-detection" content="telephone=no" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="120x120" href="/icon-192.png" />
     <title>ListaKo</title>
+    <style>
+      /* iOS safe area support */
+      body {
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        overscroll-behavior-y: contain;
+      }
+      /* iOS splash screen background */
+      html { background-color: #0d1f17; }
+      /* Prevent pull-to-refresh on installed PWA */
+      html, body { overflow: hidden; height: 100%; }
+      #root { overflow: auto; height: 100%; -webkit-overflow-scrolling: touch; }
+      /* Selection color */
+      ::selection { background: #c9a84c33; }
+    </style>
   </head>
   <body>
     <div id="root"></div>

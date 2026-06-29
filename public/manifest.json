@@ -1,12 +1,19 @@
 {
-  "name": "ListaKo",
+  "name": "ListaKo — Business Manager",
   "short_name": "ListaKo",
-  "description": "Filipino-First Business Management System",
+  "description": "Filipino-First Business Management System. POS, inventory, analytics, at higit pa para sa iyong tindahan.",
   "start_url": "/",
+  "id": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "background_color": "#0d1f17",
   "theme_color": "#0d1f17",
   "orientation": "portrait",
+  "lang": "fil",
+  "dir": "ltr",
+  "categories": ["business", "finance", "productivity"],
+  "scope": "/",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icon-192.png",
@@ -17,6 +24,26 @@
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Open POS",
+      "short_name": "POS",
+      "url": "/?tab=pos",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "View Dashboard",
+      "short_name": "Dashboard",
+      "url": "/?tab=dashboard",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }

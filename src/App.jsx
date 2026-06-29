@@ -7370,6 +7370,124 @@ function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
 // ═══════════════════════════════════════════════════════════════
 // ROOT APP
 // ═══════════════════════════════════════════════════════════════
+function InstallPrompt() {
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showBanner, setShowBanner] = useState(false);
+  const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [installed, setInstalled] = useState(false);
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isStandalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+
+  useEffect(() => {
+    if (isStandalone) { setInstalled(true); return; }
+    const dismissed = localStorage.getItem("install_dismissed");
+    if (dismissed && Date.now() - Number(dismissed) < 7 * 24 * 60 * 60 * 1000) return;
+
+    const handler = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowBanner(true);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", () => { setInstalled(true); setShowBanner(false); });
+
+    if (isIOS && !isStandalone) {
+      setTimeout(() => setShowBanner(true), 3000);
+    }
+
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  const handleInstall = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === "accepted") setInstalled(true);
+      setDeferredPrompt(null);
+      setShowBanner(false);
+    } else if (isIOS) {
+      setShowIOSGuide(true);
+    }
+  };
+
+  const dismiss = () => {
+    localStorage.setItem("install_dismissed", String(Date.now()));
+    setShowBanner(false);
+  };
+
+  if (installed || !showBanner) return null;
+
+  return (
+    <>
+      <div className="fixed bottom-16 left-2 right-2 max-w-lg mx-auto bg-forest-800 text-white rounded-2xl p-4 shadow-2xl z-[90] border border-forest-600">
+        <div className="flex items-start gap-3">
+          <div className="w-12 h-12 bg-forest-600 rounded-xl flex items-center justify-center flex-shrink-0">
+            <span className="text-2xl">📲</span>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-bold text-sm">I-install ang ListaKo</p>
+            <p className="text-forest-300 text-xs mt-0.5">
+              {isIOS
+                ? "Mag-add sa Home Screen para mas mabilis mag-open — parang real app!"
+                : "I-download sa iyong phone para mas mabilis at offline-ready!"}
+            </p>
+          </div>
+          <button onClick={dismiss} className="text-forest-400 text-lg leading-none mt-0.5">✕</button>
+        </div>
+        <div className="flex gap-2 mt-3">
+          <button onClick={handleInstall}
+            className="flex-1 bg-gold-400 text-forest-900 font-bold py-2.5 rounded-xl text-sm">
+            {isIOS ? "Paano I-install" : "I-install Ngayon"}
+          </button>
+          <button onClick={dismiss}
+            className="px-4 py-2.5 text-forest-300 text-sm font-medium rounded-xl border border-forest-600">
+            Mamaya na
+          </button>
+        </div>
+      </div>
+
+      {showIOSGuide && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-end justify-center z-[100]">
+          <div className="bg-white w-full max-w-lg rounded-t-3xl p-6 pb-10">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-black text-gray-800 text-lg">I-install ang ListaKo</h3>
+              <button onClick={() => setShowIOSGuide(false)} className="text-gray-400 text-xl">✕</button>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <span className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">1</span>
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">I-tap ang Share button</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Ang icon na may arrow pataas (⬆️) sa ibaba ng Safari</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">2</span>
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">Hanapin ang "Add to Home Screen"</p>
+                  <p className="text-xs text-gray-500 mt-0.5">I-scroll pababa sa menu at i-tap ang "Add to Home Screen"</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">3</span>
+                <div>
+                  <p className="font-semibold text-gray-800 text-sm">I-tap ang "Add"</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Ma-add ang ListaKo icon sa iyong Home Screen — parang downloaded app!</p>
+                </div>
+              </div>
+            </div>
+            <button onClick={() => setShowIOSGuide(false)}
+              className="w-full bg-forest-600 text-white font-bold py-3 rounded-xl mt-6 text-sm">
+              OK, Gets ko na!
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 function OfflineBanner() {
   const [offline, setOffline] = useState(!navigator.onLine);
   useEffect(() => {
@@ -7554,6 +7672,7 @@ export default function App() {
     return (
       <>
         <OfflineBanner />
+        <InstallPrompt />
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
         {profile.role === "owner" ? (
           <OwnerDashboard
