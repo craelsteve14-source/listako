@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { useZxing } from "react-zxing";
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 // ═══════════════════════════════════════════════════════════════
 // SUPABASE CLIENT
@@ -65,6 +66,23 @@ const getErrorMessage = (error) => {
   if (msg.includes("network")) return "Walang koneksyon sa internet. I-check ang iyong WiFi o data.";
   return error?.message || "May nangyaring mali. Subukan muli.";
 };
+
+// ═══════════════════════════════════════════════════════════════
+// AUDIT LOG HELPER
+// ═══════════════════════════════════════════════════════════════
+const logAudit = async (businessId, userId, userName, action, entityType, entityId, details) => {
+  await supabase.from("audit_logs").insert({
+    business_id: businessId,
+    user_id: userId,
+    user_name: userName,
+    action,
+    entity_type: entityType || null,
+    entity_id: entityId || null,
+    details: details || null,
+  });
+};
+
+const SESSION_TIMEOUT_MS = 15 * 60 * 1000;
 
 // ═══════════════════════════════════════════════════════════════
 // TRIAL HELPERS
@@ -967,9 +985,18 @@ function SignupScreen({ onBack, onSuccess, showToast }) {
 function LoginScreen({ onBack, onSuccess, onForgotPassword, showToast }) {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
+  const [attempts, setAttempts] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState(null);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
+  const MAX_ATTEMPTS = 5;
+  const LOCKOUT_MS = 5 * 60 * 1000;
+
   const handleLogin = async () => {
+    if (lockedUntil && new Date() < lockedUntil) {
+      const mins = Math.ceil((lockedUntil - new Date()) / 60000);
+      return showToast(`Account locked. Try again in ${mins} minute${mins !== 1 ? "s" : ""}.`, "error");
+    }
     if (!form.email.trim()) return showToast("Ilagay ang iyong email address.", "error");
     if (!form.password) return showToast("Ilagay ang iyong password.", "error");
     setLoading(true);
@@ -978,7 +1005,20 @@ function LoginScreen({ onBack, onSuccess, onForgotPassword, showToast }) {
         email: form.email.trim(),
         password: form.password,
       });
-      if (error) throw error;
+      if (error) {
+        const newAttempts = attempts + 1;
+        setAttempts(newAttempts);
+        if (newAttempts >= MAX_ATTEMPTS) {
+          const lockTime = new Date(Date.now() + LOCKOUT_MS);
+          setLockedUntil(lockTime);
+          setAttempts(0);
+          showToast(`Too many failed attempts. Locked for 5 minutes.`, "error");
+          return;
+        }
+        throw error;
+      }
+      setAttempts(0);
+      setLockedUntil(null);
       onSuccess();
     } catch (err) {
       showToast(getErrorMessage(err), "error");
@@ -1452,6 +1492,829 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════
+// ANALYTICS DASHBOARD (Phase 6)
+// ═══════════════════════════════════════════════════════════════
+const CHART_COLORS = ["#1e5631", "#d4af37", "#3d7249", "#c9a84c", "#6b9a74", "#a8872a", "#a8c5af", "#866a22", "#d4e2d7", "#6b5520"];
+
+function AnalyticsDashboard({ business, branches, showToast }) {
+  const [analyticsTab, setAnalyticsTab] = useState("revenue");
+  const [timeFilter, setTimeFilter] = useState("week");
+  const [branchFilter, setBranchFilter] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [revenueData, setRevenueData] = useState({ daily: [], weekly: [], monthly: [] });
+  const [bestSellers, setBestSellers] = useState([]);
+  const [slowMovers, setSlowMovers] = useState([]);
+  const [cashierStats, setCashierStats] = useState([]);
+  const [branchStats, setBranchStats] = useState([]);
+  const [shifts, setShifts] = useState([]);
+  const [exportingPDF, setExportingPDF] = useState(false);
+
+  const ANALYTICS_TABS = [
+    { key: "revenue", label: "Revenue" },
+    { key: "products", label: "Products" },
+    { key: "cashiers", label: "Cashiers" },
+    { key: "branches", label: "Branches" },
+    { key: "shifts", label: "Shifts" },
+  ];
+
+  const TIME_FILTERS = [
+    { key: "today", label: "Today" },
+    { key: "week", label: "This Week" },
+    { key: "month", label: "This Month" },
+  ];
+
+  const getDateRange = useCallback((filter) => {
+    const now = new Date();
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+    const start = new Date(now);
+    if (filter === "today") {
+      start.setHours(0, 0, 0, 0);
+    } else if (filter === "week") {
+      start.setDate(now.getDate() - 6);
+      start.setHours(0, 0, 0, 0);
+    } else {
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+    }
+    return { start, end };
+  }, []);
+
+  const fetchRevenue = useCallback(async () => {
+    const now = new Date();
+    const sevenDaysAgo = new Date(now);
+    sevenDaysAgo.setDate(now.getDate() - 6);
+    sevenDaysAgo.setHours(0, 0, 0, 0);
+
+    let query = supabase
+      .from("transactions")
+      .select("total_amount, created_at, branch_id")
+      .eq("business_id", business.id)
+      .eq("status", "completed")
+      .gte("created_at", sevenDaysAgo.toISOString())
+      .order("created_at");
+    if (branchFilter !== "all") query = query.eq("branch_id", branchFilter);
+    const { data: txns } = await query;
+
+    const dailyMap = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      const key = d.toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric" });
+      dailyMap[key] = 0;
+    }
+    (txns || []).forEach((tx) => {
+      const d = new Date(tx.created_at);
+      const key = d.toLocaleDateString("en-PH", { weekday: "short", month: "short", day: "numeric" });
+      if (dailyMap[key] !== undefined) dailyMap[key] += Number(tx.total_amount);
+    });
+    const daily = Object.entries(dailyMap).map(([name, revenue]) => ({ name, revenue: Math.round(revenue * 100) / 100 }));
+
+    const fourWeeksAgo = new Date(now);
+    fourWeeksAgo.setDate(now.getDate() - 27);
+    fourWeeksAgo.setHours(0, 0, 0, 0);
+    let wQuery = supabase
+      .from("transactions")
+      .select("total_amount, created_at")
+      .eq("business_id", business.id)
+      .eq("status", "completed")
+      .gte("created_at", fourWeeksAgo.toISOString());
+    if (branchFilter !== "all") wQuery = wQuery.eq("branch_id", branchFilter);
+    const { data: wTxns } = await wQuery;
+    const weeklyMap = {};
+    for (let w = 3; w >= 0; w--) {
+      const wStart = new Date(now);
+      wStart.setDate(now.getDate() - (w * 7 + 6));
+      const wEnd = new Date(now);
+      wEnd.setDate(now.getDate() - w * 7);
+      const label = `Week ${4 - w}`;
+      weeklyMap[label] = 0;
+      (wTxns || []).forEach((tx) => {
+        const d = new Date(tx.created_at);
+        if (d >= wStart && d <= wEnd) weeklyMap[label] += Number(tx.total_amount);
+      });
+    }
+    const weekly = Object.entries(weeklyMap).map(([name, revenue]) => ({ name, revenue: Math.round(revenue * 100) / 100 }));
+
+    const sixMonthsAgo = new Date(now);
+    sixMonthsAgo.setMonth(now.getMonth() - 5);
+    sixMonthsAgo.setDate(1);
+    sixMonthsAgo.setHours(0, 0, 0, 0);
+    let mQuery = supabase
+      .from("transactions")
+      .select("total_amount, created_at")
+      .eq("business_id", business.id)
+      .eq("status", "completed")
+      .gte("created_at", sixMonthsAgo.toISOString());
+    if (branchFilter !== "all") mQuery = mQuery.eq("branch_id", branchFilter);
+    const { data: mTxns } = await mQuery;
+    const monthlyMap = {};
+    for (let m = 5; m >= 0; m--) {
+      const mDate = new Date(now);
+      mDate.setMonth(now.getMonth() - m);
+      const label = mDate.toLocaleDateString("en-PH", { month: "short", year: "2-digit" });
+      monthlyMap[label] = 0;
+    }
+    (mTxns || []).forEach((tx) => {
+      const d = new Date(tx.created_at);
+      const label = d.toLocaleDateString("en-PH", { month: "short", year: "2-digit" });
+      if (monthlyMap[label] !== undefined) monthlyMap[label] += Number(tx.total_amount);
+    });
+    const monthly = Object.entries(monthlyMap).map(([name, revenue]) => ({ name, revenue: Math.round(revenue * 100) / 100 }));
+
+    setRevenueData({ daily, weekly, monthly });
+  }, [business.id, branchFilter]);
+
+  const fetchBestSellers = useCallback(async () => {
+    const { start } = getDateRange(timeFilter);
+    let query = supabase
+      .from("transaction_items")
+      .select("product_id, product_name, quantity, subtotal, transactions!inner(business_id, status, created_at, branch_id)")
+      .eq("transactions.business_id", business.id)
+      .eq("transactions.status", "completed")
+      .gte("transactions.created_at", start.toISOString());
+    if (branchFilter !== "all") query = query.eq("transactions.branch_id", branchFilter);
+    const { data } = await query;
+
+    const productMap = {};
+    (data || []).forEach((item) => {
+      if (!productMap[item.product_id]) {
+        productMap[item.product_id] = { name: item.product_name, qty: 0, revenue: 0 };
+      }
+      productMap[item.product_id].qty += item.quantity;
+      productMap[item.product_id].revenue += Number(item.subtotal);
+    });
+    const sorted = Object.entries(productMap)
+      .map(([id, v]) => ({ id, ...v }))
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 10);
+    setBestSellers(sorted);
+  }, [business.id, timeFilter, branchFilter, getDateRange]);
+
+  const fetchSlowMovers = useCallback(async () => {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    let query = supabase
+      .from("transaction_items")
+      .select("product_id, transactions!inner(business_id, status, created_at)")
+      .eq("transactions.business_id", business.id)
+      .eq("transactions.status", "completed")
+      .gte("transactions.created_at", thirtyDaysAgo.toISOString());
+    const { data: recentSales } = await query;
+    const soldIds = new Set((recentSales || []).map((i) => i.product_id));
+
+    const { data: allProducts } = await supabase
+      .from("products")
+      .select("id, name, price, stock_quantity, category")
+      .eq("business_id", business.id)
+      .eq("status", "active")
+      .order("name");
+    const slow = (allProducts || []).filter((p) => !soldIds.has(p.id));
+    setSlowMovers(slow);
+  }, [business.id]);
+
+  const fetchCashierStats = useCallback(async () => {
+    const { start } = getDateRange(timeFilter);
+    let query = supabase
+      .from("transactions")
+      .select("cashier_id, total_amount, created_at, profiles!inner(full_name)")
+      .eq("business_id", business.id)
+      .eq("status", "completed")
+      .gte("created_at", start.toISOString());
+    if (branchFilter !== "all") query = query.eq("branch_id", branchFilter);
+    const { data } = await query;
+
+    const cashierMap = {};
+    (data || []).forEach((tx) => {
+      const cid = tx.cashier_id;
+      if (!cashierMap[cid]) {
+        cashierMap[cid] = { name: tx.profiles?.full_name || "Unknown", txCount: 0, revenue: 0 };
+      }
+      cashierMap[cid].txCount += 1;
+      cashierMap[cid].revenue += Number(tx.total_amount);
+    });
+    const sorted = Object.entries(cashierMap)
+      .map(([id, v]) => ({ id, ...v, avg: v.txCount > 0 ? v.revenue / v.txCount : 0 }))
+      .sort((a, b) => b.revenue - a.revenue);
+    setCashierStats(sorted);
+  }, [business.id, timeFilter, branchFilter, getDateRange]);
+
+  const fetchBranchStats = useCallback(async () => {
+    const { start } = getDateRange(timeFilter);
+    const { data } = await supabase
+      .from("transactions")
+      .select("branch_id, total_amount")
+      .eq("business_id", business.id)
+      .eq("status", "completed")
+      .gte("created_at", start.toISOString());
+
+    const branchMap = {};
+    (branches || []).forEach((b) => { branchMap[b.id] = { name: b.name, revenue: 0, txCount: 0 }; });
+    (data || []).forEach((tx) => {
+      if (branchMap[tx.branch_id]) {
+        branchMap[tx.branch_id].revenue += Number(tx.total_amount);
+        branchMap[tx.branch_id].txCount += 1;
+      }
+    });
+    const sorted = Object.values(branchMap).sort((a, b) => b.revenue - a.revenue);
+    setBranchStats(sorted);
+  }, [business.id, branches, timeFilter, getDateRange]);
+
+  const fetchShifts = useCallback(async () => {
+    const { start } = getDateRange(timeFilter);
+    let query = supabase
+      .from("shifts")
+      .select("*, profiles!inner(full_name)")
+      .eq("business_id", business.id)
+      .gte("started_at", start.toISOString())
+      .order("started_at", { ascending: false })
+      .limit(50);
+    if (branchFilter !== "all") query = query.eq("branch_id", branchFilter);
+    const { data } = await query;
+    setShifts(data || []);
+  }, [business.id, timeFilter, branchFilter, getDateRange]);
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      await Promise.all([
+        fetchRevenue(),
+        fetchBestSellers(),
+        fetchSlowMovers(),
+        fetchCashierStats(),
+        fetchBranchStats(),
+        fetchShifts(),
+      ]);
+      setLoading(false);
+    };
+    load();
+  }, [fetchRevenue, fetchBestSellers, fetchSlowMovers, fetchCashierStats, fetchBranchStats, fetchShifts]);
+
+  const totalRevenue = useMemo(() => revenueData.daily.reduce((s, d) => s + d.revenue, 0), [revenueData.daily]);
+
+  const exportPDF = () => {
+    setExportingPDF(true);
+    const printDiv = document.createElement("div");
+    printDiv.id = "print-analytics";
+    printDiv.style.cssText = "padding:20px;font-family:sans-serif;font-size:12px;color:#000;";
+
+    let html = `<h1 style="font-size:18px;margin-bottom:4px;">${business.name} — Analytics Report</h1>`;
+    html += `<p style="font-size:11px;color:#666;margin-bottom:16px;">Generated: ${new Date().toLocaleDateString("en-PH", { dateStyle: "long" })}</p>`;
+    html += `<hr style="border-top:1px solid #ccc;margin-bottom:12px;">`;
+
+    html += `<h2 style="font-size:14px;margin-bottom:8px;">7-Day Revenue</h2>`;
+    html += `<table style="width:100%;border-collapse:collapse;margin-bottom:16px;">`;
+    html += `<tr style="background:#f0f0f0;"><th style="text-align:left;padding:4px 8px;border:1px solid #ddd;">Day</th><th style="text-align:right;padding:4px 8px;border:1px solid #ddd;">Revenue</th></tr>`;
+    revenueData.daily.forEach((d) => {
+      html += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${d.name}</td><td style="text-align:right;padding:4px 8px;border:1px solid #ddd;">₱${d.revenue.toFixed(2)}</td></tr>`;
+    });
+    html += `<tr style="font-weight:bold;"><td style="padding:4px 8px;border:1px solid #ddd;">Total</td><td style="text-align:right;padding:4px 8px;border:1px solid #ddd;">₱${totalRevenue.toFixed(2)}</td></tr>`;
+    html += `</table>`;
+
+    html += `<h2 style="font-size:14px;margin-bottom:8px;">Top 10 Best Sellers</h2>`;
+    html += `<table style="width:100%;border-collapse:collapse;margin-bottom:16px;">`;
+    html += `<tr style="background:#f0f0f0;"><th style="text-align:left;padding:4px 8px;border:1px solid #ddd;">#</th><th style="text-align:left;padding:4px 8px;border:1px solid #ddd;">Product</th><th style="text-align:right;padding:4px 8px;border:1px solid #ddd;">Qty</th><th style="text-align:right;padding:4px 8px;border:1px solid #ddd;">Revenue</th></tr>`;
+    bestSellers.forEach((p, i) => {
+      html += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${i + 1}</td><td style="padding:4px 8px;border:1px solid #ddd;">${p.name}</td><td style="text-align:right;padding:4px 8px;border:1px solid #ddd;">${p.qty}</td><td style="text-align:right;padding:4px 8px;border:1px solid #ddd;">₱${p.revenue.toFixed(2)}</td></tr>`;
+    });
+    html += `</table>`;
+
+    html += `<h2 style="font-size:14px;margin-bottom:8px;">Cashier Performance</h2>`;
+    html += `<table style="width:100%;border-collapse:collapse;margin-bottom:16px;">`;
+    html += `<tr style="background:#f0f0f0;"><th style="text-align:left;padding:4px 8px;border:1px solid #ddd;">Cashier</th><th style="text-align:right;padding:4px 8px;border:1px solid #ddd;">Transactions</th><th style="text-align:right;padding:4px 8px;border:1px solid #ddd;">Revenue</th><th style="text-align:right;padding:4px 8px;border:1px solid #ddd;">Avg</th></tr>`;
+    cashierStats.forEach((c) => {
+      html += `<tr><td style="padding:4px 8px;border:1px solid #ddd;">${c.name}</td><td style="text-align:right;padding:4px 8px;border:1px solid #ddd;">${c.txCount}</td><td style="text-align:right;padding:4px 8px;border:1px solid #ddd;">₱${c.revenue.toFixed(2)}</td><td style="text-align:right;padding:4px 8px;border:1px solid #ddd;">₱${c.avg.toFixed(2)}</td></tr>`;
+    });
+    html += `</table>`;
+
+    printDiv.innerHTML = html;
+    document.body.appendChild(printDiv);
+    const origTitle = document.title;
+    document.title = `${business.name} Analytics Report`;
+    const style = document.createElement("style");
+    style.textContent = `@media print { body > *:not(#print-analytics) { display: none !important; } #print-analytics { display: block !important; } }`;
+    document.head.appendChild(style);
+    window.print();
+    document.body.removeChild(printDiv);
+    document.head.removeChild(style);
+    document.title = origTitle;
+    setExportingPDF(false);
+  };
+
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (!active || !payload?.length) return null;
+    return (
+      <div className="bg-forest-800 text-white px-3 py-2 rounded-xl shadow-lg text-xs">
+        <p className="font-semibold">{label}</p>
+        <p className="text-gold-300 font-black">₱{Number(payload[0].value).toFixed(2)}</p>
+      </div>
+    );
+  };
+
+  if (loading) return <div className="p-8 text-center"><Spinner /><p className="text-gray-400 text-xs mt-2">Loading analytics...</p></div>;
+
+  return (
+    <div className="p-4 space-y-4 pb-8">
+      {/* Analytics sub-tabs */}
+      <div className="flex gap-1 overflow-x-auto hide-scrollbar -mx-1 px-1">
+        {ANALYTICS_TABS.map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setAnalyticsTab(t.key)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
+              analyticsTab === t.key ? "bg-forest-600 text-white" : "bg-gray-100 text-gray-500"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Filters row */}
+      {analyticsTab !== "revenue" && (
+        <div className="flex gap-2 flex-wrap">
+          {TIME_FILTERS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setTimeFilter(f.key)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium ${
+                timeFilter === f.key ? "bg-gold-400 text-forest-900" : "bg-gray-100 text-gray-500"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+          {branches.length > 1 && (
+            <select
+              value={branchFilter}
+              onChange={(e) => setBranchFilter(e.target.value)}
+              className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
+            >
+              <option value="all">All Branches</option>
+              {branches.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
+      {/* Branch filter for revenue tab */}
+      {analyticsTab === "revenue" && branches.length > 1 && (
+        <div className="flex gap-2">
+          <select
+            value={branchFilter}
+            onChange={(e) => setBranchFilter(e.target.value)}
+            className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white"
+          >
+            <option value="all">All Branches</option>
+            {branches.map((b) => (
+              <option key={b.id} value={b.id}>{b.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Export button */}
+      <div className="flex justify-end">
+        <button
+          onClick={exportPDF}
+          disabled={exportingPDF}
+          className="text-xs bg-forest-700 text-gold-300 px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
+        >
+          {exportingPDF ? "Exporting..." : "Export PDF"}
+        </button>
+      </div>
+
+      {/* ─── REVENUE TAB ─── */}
+      {analyticsTab === "revenue" && (
+        <div className="space-y-4">
+          <Card className="p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">7-Day Revenue Total</p>
+            <p className="text-2xl font-black text-forest-700">₱{totalRevenue.toFixed(2)}</p>
+          </Card>
+
+          <Card className="p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Daily Revenue (7 Days)</p>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={revenueData.daily}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                  <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Line type="monotone" dataKey="revenue" stroke="#1e5631" strokeWidth={2.5} dot={{ r: 4, fill: "#d4af37" }} activeDot={{ r: 6 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Weekly Comparison</p>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={revenueData.weekly}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
+                    {revenueData.weekly.map((_, i) => (
+                      <Cell key={i} fill={i === revenueData.weekly.length - 1 ? "#d4af37" : "#1e5631"} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          <Card className="p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Monthly Comparison</p>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={revenueData.monthly}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="revenue" fill="#3d7249" radius={[6, 6, 0, 0]}>
+                    {revenueData.monthly.map((_, i) => (
+                      <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ─── PRODUCTS TAB ─── */}
+      {analyticsTab === "products" && (
+        <div className="space-y-4">
+          <Card className="p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Top 10 Best Sellers</p>
+            {bestSellers.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">No sales data for this period.</p>
+            ) : (
+              <div className="space-y-2">
+                {bestSellers.map((p, i) => (
+                  <div key={p.id} className="flex items-center gap-3">
+                    <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black ${
+                      i < 3 ? "bg-gold-100 text-gold-700" : "bg-gray-100 text-gray-500"
+                    }`}>
+                      {i + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-800 truncate">{p.name}</p>
+                      <p className="text-xs text-gray-400">{p.qty} sold</p>
+                    </div>
+                    <p className="text-sm font-black text-forest-700">₱{p.revenue.toFixed(2)}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {bestSellers.length > 0 && (
+            <Card className="p-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Best Sellers Chart</p>
+              <div className="h-52">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={bestSellers.slice(0, 5)} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis type="number" tick={{ fontSize: 9 }} tickFormatter={(v) => `${v}`} />
+                    <YAxis type="category" dataKey="name" tick={{ fontSize: 9 }} width={80} />
+                    <Tooltip formatter={(v) => [`${v} units`, "Qty Sold"]} />
+                    <Bar dataKey="qty" radius={[0, 6, 6, 0]}>
+                      {bestSellers.slice(0, 5).map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          )}
+
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Slow-Moving Products</p>
+              {slowMovers.length > 0 && (
+                <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                  {slowMovers.length}
+                </span>
+              )}
+            </div>
+            {slowMovers.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">All products have recent sales.</p>
+            ) : (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {slowMovers.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between bg-red-50 rounded-xl px-3 py-2">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-800">{p.name}</p>
+                      <p className="text-xs text-gray-400">{p.category} · Stock: {p.stock_quantity}</p>
+                    </div>
+                    <span className="text-xs bg-red-200 text-red-700 px-2 py-0.5 rounded-full font-semibold">
+                      No sales 30d
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* ─── CASHIERS TAB ─── */}
+      {analyticsTab === "cashiers" && (
+        <div className="space-y-4">
+          <Card className="p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Per-Cashier Performance</p>
+            {cashierStats.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">No cashier data for this period.</p>
+            ) : (
+              <div className="space-y-3">
+                {cashierStats.map((c, i) => (
+                  <div key={c.id} className="bg-gray-50 rounded-xl p-3">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                          i === 0 ? "bg-gold-200 text-gold-800" : "bg-gray-200 text-gray-600"
+                        }`}>
+                          {i + 1}
+                        </span>
+                        <p className="text-sm font-bold text-gray-800">{c.name}</p>
+                      </div>
+                      <p className="text-sm font-black text-forest-700">₱{c.revenue.toFixed(2)}</p>
+                    </div>
+                    <div className="flex gap-4 ml-8">
+                      <p className="text-xs text-gray-400">{c.txCount} transactions</p>
+                      <p className="text-xs text-gray-400">Avg ₱{c.avg.toFixed(2)}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+
+          {cashierStats.length > 0 && (
+            <Card className="p-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Revenue by Cashier</p>
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={cashierStats}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                    <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
+                      {cashierStats.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ─── BRANCHES TAB ─── */}
+      {analyticsTab === "branches" && (
+        <div className="space-y-4">
+          {branchStats.length === 0 ? (
+            <Card className="p-4">
+              <p className="text-xs text-gray-400 text-center py-4">No branch data available.</p>
+            </Card>
+          ) : (
+            <>
+              <Card className="p-4">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Branch Sales Comparison</p>
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={branchStats}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="name" tick={{ fontSize: 9 }} />
+                      <YAxis tick={{ fontSize: 9 }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Bar dataKey="revenue" radius={[6, 6, 0, 0]}>
+                        {branchStats.map((_, i) => (
+                          <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+
+              <Card className="p-4">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Branch Details</p>
+                <div className="space-y-2">
+                  {branchStats.map((b, i) => (
+                    <div key={i} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">{b.name}</p>
+                        <p className="text-xs text-gray-400">{b.txCount} transactions</p>
+                      </div>
+                      <p className="text-sm font-black text-forest-700">₱{b.revenue.toFixed(2)}</p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* ─── SHIFTS TAB ─── */}
+      {analyticsTab === "shifts" && (
+        <div className="space-y-4">
+          <Card className="p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Shift History</p>
+            {shifts.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">No shift records for this period.</p>
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {shifts.map((s) => (
+                  <div key={s.id} className={`rounded-xl p-3 border ${s.status === "open" ? "bg-green-50 border-green-200" : "bg-gray-50 border-gray-200"}`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-sm font-bold text-gray-800">{s.profiles?.full_name}</p>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        s.status === "open" ? "bg-green-200 text-green-700" : "bg-gray-200 text-gray-600"
+                      }`}>
+                        {s.status === "open" ? "Active" : "Closed"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-500 mt-2">
+                      <p>Start: {new Date(s.started_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</p>
+                      {s.ended_at && <p>End: {new Date(s.ended_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}</p>}
+                      <p>Starting: ₱{Number(s.starting_cash || 0).toFixed(2)}</p>
+                      {s.ending_cash != null && <p>Ending: ₱{Number(s.ending_cash).toFixed(2)}</p>}
+                      {s.total_transactions != null && <p>Transactions: {s.total_transactions}</p>}
+                      {s.total_sales != null && <p>Sales: ₱{Number(s.total_sales).toFixed(2)}</p>}
+                      {s.cash_difference != null && (
+                        <p className={Number(s.cash_difference) < 0 ? "text-red-500 font-semibold" : "text-green-600 font-semibold"}>
+                          Diff: {Number(s.cash_difference) >= 0 ? "+" : ""}₱{Number(s.cash_difference).toFixed(2)}
+                        </p>
+                      )}
+                    </div>
+                    {s.notes && <p className="text-xs text-gray-400 mt-1 italic">{s.notes}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CustomerModal({ existing, businessId, showToast, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    name: existing?.name || "",
+    phone: existing?.phone || "",
+    email: existing?.email || "",
+    address: existing?.address || "",
+    is_suki: existing?.is_suki || false,
+    notes: existing?.notes || "",
+  });
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!form.name.trim()) return showToast("Enter customer name.", "error");
+    setSaving(true);
+    const payload = { business_id: businessId, name: form.name.trim(), phone: form.phone.trim() || null, email: form.email.trim() || null, address: form.address.trim() || null, is_suki: form.is_suki, notes: form.notes.trim() || null };
+    const { error } = existing
+      ? await supabase.from("customers").update(payload).eq("id", existing.id)
+      : await supabase.from("customers").insert(payload);
+    setSaving(false);
+    if (error) return showToast("Failed to save customer.", "error");
+    showToast(existing ? "Customer updated!" : "Customer added!", "success");
+    onSaved();
+  };
+
+  return (
+    <Modal title={existing ? "Edit Customer" : "Add Customer"} onClose={onClose}>
+      <div className="space-y-4">
+        <Field label="Name" value={form.name} onChange={(v) => setForm(f => ({ ...f, name: v }))} placeholder="Juan dela Cruz" />
+        <Field label="Phone" value={form.phone} onChange={(v) => setForm(f => ({ ...f, phone: v }))} placeholder="09XX XXX XXXX" type="tel" />
+        <Field label="Email (optional)" value={form.email} onChange={(v) => setForm(f => ({ ...f, email: v }))} placeholder="email@example.com" type="email" />
+        <Field label="Address (optional)" value={form.address} onChange={(v) => setForm(f => ({ ...f, address: v }))} placeholder="Brgy, City" />
+        <div className="flex items-center gap-3">
+          <button onClick={() => setForm(f => ({ ...f, is_suki: !f.is_suki }))}
+            className={`w-12 h-7 rounded-full transition-colors relative ${form.is_suki ? "bg-gold-400" : "bg-gray-300"}`}>
+            <span className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform ${form.is_suki ? "translate-x-5" : "translate-x-0.5"}`} />
+          </button>
+          <span className="text-sm font-medium text-gray-700">Mark as Suki</span>
+        </div>
+        <Field label="Notes (optional)" value={form.notes} onChange={(v) => setForm(f => ({ ...f, notes: v }))} placeholder="Special notes about this customer..." />
+        <button onClick={save} disabled={saving}
+          className="w-full bg-forest-600 text-white font-bold py-3 rounded-xl disabled:opacity-60">
+          {saving ? "Saving..." : existing ? "Update Customer" : "Add Customer"}
+        </button>
+        {existing && (
+          <button onClick={async () => {
+            await supabase.from("customers").delete().eq("id", existing.id);
+            showToast("Customer removed.", "success");
+            onSaved();
+          }} className="w-full bg-red-50 text-red-500 font-semibold py-2.5 rounded-xl text-sm">
+            Remove Customer
+          </button>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
+function AuditLogViewer({ businessId }) {
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [actionFilter, setActionFilter] = useState("all");
+
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      let query = supabase.from("audit_logs").select("*")
+        .eq("business_id", businessId)
+        .order("created_at", { ascending: false })
+        .limit(100);
+      if (actionFilter !== "all") query = query.eq("action", actionFilter);
+      const { data } = await query;
+      setLogs(data || []);
+      setLoading(false);
+    };
+    load();
+  }, [businessId, actionFilter]);
+
+  const ACTION_LABELS = {
+    transaction_completed: { label: "Sale", color: "bg-green-100 text-green-700" },
+    void_approved: { label: "Void", color: "bg-red-100 text-red-700" },
+    stock_update: { label: "Stock", color: "bg-blue-100 text-blue-700" },
+    shift_report: { label: "Shift", color: "bg-purple-100 text-purple-700" },
+    transfer_approved: { label: "Transfer", color: "bg-yellow-100 text-yellow-700" },
+    login: { label: "Login", color: "bg-gray-100 text-gray-700" },
+    logout: { label: "Logout", color: "bg-gray-100 text-gray-500" },
+  };
+
+  const FILTERS = ["all", "transaction_completed", "void_approved", "stock_update", "login", "logout"];
+
+  return (
+    <div className="p-4 space-y-4">
+      <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide">Audit Log</h2>
+      <div className="flex gap-1 overflow-x-auto hide-scrollbar -mx-1 px-1">
+        {FILTERS.map((f) => (
+          <button key={f} onClick={() => setActionFilter(f)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap ${
+              actionFilter === f ? "bg-forest-600 text-white" : "bg-gray-100 text-gray-500"
+            }`}>
+            {f === "all" ? "All" : ACTION_LABELS[f]?.label || f}
+          </button>
+        ))}
+      </div>
+      {loading ? (
+        <div className="py-8 text-center"><Spinner /></div>
+      ) : logs.length === 0 ? (
+        <Card className="p-8 text-center">
+          <p className="text-2xl mb-2">📋</p>
+          <p className="text-xs text-gray-400">No activity logs found.</p>
+        </Card>
+      ) : (
+        <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+          {logs.map((log) => {
+            const actionInfo = ACTION_LABELS[log.action] || { label: log.action, color: "bg-gray-100 text-gray-600" };
+            return (
+              <Card key={log.id} className="p-3">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${actionInfo.color}`}>{actionInfo.label}</span>
+                    <p className="text-sm font-semibold text-gray-800">{log.user_name || "System"}</p>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    {new Date(log.created_at).toLocaleString("en-PH", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true })}
+                  </p>
+                </div>
+                {log.details && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {log.details.receipt && <span>Receipt: {log.details.receipt} </span>}
+                    {log.details.amount != null && <span>· ₱{Number(log.details.amount).toFixed(2)} </span>}
+                    {log.details.method && <span>· {log.details.method} </span>}
+                    {log.details.items && <span>· {log.details.items} items</span>}
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }) {
   const [tab, setTab] = useState(() => {
     return localStorage.getItem("owner_tab") || "dashboard";
@@ -1476,12 +2339,17 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
   const [pendingProducts, setPendingProducts] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [pendingTransfers, setPendingTransfers] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [showAddCustomer, setShowAddCustomer] = useState(false);
+  const [editCustomer, setEditCustomer] = useState(null);
+  const [customerSearch, setCustomerSearch] = useState("");
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const [b, p, s, tx, utang, pending, notifs] = await Promise.all([
+    const [b, p, s, tx, utang, pending, notifs, xfers, cust] = await Promise.all([
       supabase.from("branches").select("*").eq("business_id", business.id).order("created_at"),
       supabase.from("products").select("*").eq("business_id", business.id).eq("status", "active").order("name"),
       supabase.from("profiles").select("*").eq("business_id", business.id).neq("role", "owner").order("full_name"),
@@ -1489,6 +2357,9 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
       supabase.from("utang_records").select("*").eq("business_id", business.id).in("status", ["unpaid", "partial"]),
       supabase.from("products").select("*").eq("business_id", business.id).eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("notifications").select("*").eq("business_id", business.id).eq("is_read", false).is("recipient_id", null).order("created_at", { ascending: false }).limit(20),
+      supabase.from("product_transfers").select("*, products(name, stock_quantity), from_branch:branches!product_transfers_from_branch_id_fkey(name), to_branch:branches!product_transfers_to_branch_id_fkey(name), requester:profiles!product_transfers_requested_by_fkey(full_name)")
+        .eq("business_id", business.id).eq("status", "pending").order("created_at", { ascending: false }),
+      supabase.from("customers").select("*").eq("business_id", business.id).order("name"),
     ]);
     setBranches(b.data || []);
     setProducts(p.data || []);
@@ -1496,6 +2367,8 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     setRecentTx((tx.data || []).slice(0, 5));
     setPendingProducts(pending.data || []);
     setNotifications(notifs.data || []);
+    setPendingTransfers(xfers.data || []);
+    setCustomers(cust.data || []);
     const revenue = (tx.data || []).reduce((sum, t) => sum + Number(t.total_amount), 0);
     setTodayRevenue(revenue);
     setTodayTxCount((tx.data || []).length);
@@ -1557,9 +2430,12 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
       name: existing?.name || "",
       barcode: existing?.barcode || "",
       price: existing?.price || "",
+      wholesale_price: existing?.wholesale_price || "",
+      wholesale_min_qty: existing?.wholesale_min_qty || "12",
       stock_quantity: existing?.stock_quantity || "",
       low_stock_threshold: existing?.low_stock_threshold || "10",
       category: existing?.category || "Others",
+      image_url: existing?.image_url || "",
     });
     const [saving, setSaving] = useState(false);
     const save = async () => {
@@ -1572,9 +2448,12 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
         name: form.name.trim(),
         barcode: form.barcode.trim() || null,
         price: Number(form.price),
+        wholesale_price: form.wholesale_price ? Number(form.wholesale_price) : null,
+        wholesale_min_qty: Number(form.wholesale_min_qty) || 1,
         stock_quantity: Number(form.stock_quantity) || 0,
         low_stock_threshold: Number(form.low_stock_threshold) || 10,
         category: form.category,
+        image_url: form.image_url.trim() || null,
       };
       const { error } = existing
         ? await supabase.from("products").update(payload).eq("id", existing.id)
@@ -1633,6 +2512,28 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             onChange={(v) => setForm((f) => ({ ...f, low_stock_threshold: v }))}
             placeholder="10"
             type="number"
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label="Wholesale Price (₱)"
+              value={form.wholesale_price}
+              onChange={(v) => setForm((f) => ({ ...f, wholesale_price: v }))}
+              placeholder="0.00"
+              type="number"
+            />
+            <Field
+              label="Min Qty (Wholesale)"
+              value={form.wholesale_min_qty}
+              onChange={(v) => setForm((f) => ({ ...f, wholesale_min_qty: v }))}
+              placeholder="12"
+              type="number"
+            />
+          </div>
+          <Field
+            label="Image URL (optional)"
+            value={form.image_url}
+            onChange={(v) => setForm((f) => ({ ...f, image_url: v }))}
+            placeholder="https://example.com/image.jpg"
           />
           <button
             onClick={save}
@@ -1767,10 +2668,13 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
 
   const TABS = [
     { key: "dashboard", icon: "📊", label: "Dashboard" },
+    { key: "analytics", icon: "📈", label: "Analytics" },
     { key: "products", icon: "📦", label: "Produkto" },
     { key: "branches", icon: "🏪", label: "Branch" },
     { key: "staff", icon: "👥", label: "Staff" },
-    { key: "pending", icon: pendingProducts.length > 0 ? "🔴" : "⏳", label: "Pending" },
+    { key: "pending", icon: (pendingProducts.length + pendingTransfers.length) > 0 ? "🔴" : "⏳", label: "Pending" },
+    { key: "customers", icon: "👤", label: "Suki" },
+    { key: "logs", icon: "📋", label: "Logs" },
     ...(isSuperAdmin ? [{ key: "admin", icon: "👑", label: "Admin" }] : []),
   ];
 
@@ -2155,6 +3059,10 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
               </div>
             )}
 
+            {tab === "analytics" && (
+              <AnalyticsDashboard business={business} branches={branches} showToast={showToast} />
+            )}
+
             {tab === "products" && (
               <div className="p-4 space-y-3">
                 <div className="flex items-center justify-between">
@@ -2372,7 +3280,109 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                     ))}
                   </>
                 )}
+
+                {/* Transfer Requests */}
+                <div className="mt-6">
+                  <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide mb-3">
+                    {pendingTransfers.length} Transfer Request{pendingTransfers.length !== 1 ? "s" : ""}
+                  </h2>
+                  {pendingTransfers.length === 0 ? (
+                    <Card className="p-6 text-center">
+                      <p className="text-2xl mb-1">📦</p>
+                      <p className="text-xs text-gray-400">No pending transfer requests</p>
+                    </Card>
+                  ) : (
+                    <div className="space-y-3">
+                      {pendingTransfers.map((t) => (
+                        <Card key={t.id} className="p-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-sm font-bold text-gray-800">{t.products?.name}</p>
+                            <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded-full font-semibold">Pending</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mb-1">
+                            {t.quantity} units · {t.from_branch?.name} → {t.to_branch?.name}
+                          </p>
+                          <p className="text-xs text-gray-400 mb-1">
+                            Requested by {t.requester?.full_name} · {new Date(t.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}
+                          </p>
+                          {t.notes && <p className="text-xs text-gray-400 italic mb-2">{t.notes}</p>}
+                          <p className="text-xs text-gray-400 mb-3">Available stock: {t.products?.stock_quantity || 0}</p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={async () => {
+                                const { error } = await supabase.from("product_transfers").update({ status: "completed", approved_by: profile.id, completed_at: new Date().toISOString() }).eq("id", t.id);
+                                if (error) return showToast("Failed to approve.", "error");
+                                await supabase.from("products").update({ stock_quantity: Math.max(0, (t.products?.stock_quantity || 0) - t.quantity) }).eq("id", t.product_id);
+                                showToast("Transfer approved and completed!", "success");
+                                fetchAll();
+                              }}
+                              className="flex-1 bg-forest-600 text-white font-bold py-2.5 rounded-xl text-xs"
+                            >
+                              Approve & Transfer
+                            </button>
+                            <button
+                              onClick={async () => {
+                                await supabase.from("product_transfers").update({ status: "rejected", approved_by: profile.id }).eq("id", t.id);
+                                showToast("Transfer rejected.", "warning");
+                                fetchAll();
+                              }}
+                              className="flex-1 bg-red-100 text-red-600 font-bold py-2.5 rounded-xl text-xs"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
+            )}
+
+            {tab === "customers" && (
+              <div className="p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide">
+                    {customers.length} Customer{customers.length !== 1 ? "s" : ""}
+                  </h2>
+                  <button onClick={() => setShowAddCustomer(true)}
+                    className="bg-forest-600 text-white text-xs px-3 py-2 rounded-xl font-bold">+ Add Suki</button>
+                </div>
+                <input type="text" value={customerSearch} onChange={(e) => setCustomerSearch(e.target.value)}
+                  placeholder="Search customers..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500" />
+                {customers.filter(c => !customerSearch.trim() || c.name.toLowerCase().includes(customerSearch.toLowerCase())).length === 0 ? (
+                  <Card className="p-8 text-center">
+                    <p className="text-3xl mb-2">👤</p>
+                    <p className="font-semibold text-gray-600 text-sm">No customers yet</p>
+                    <p className="text-xs text-gray-400 mt-1">Add your suki customers to track their purchases.</p>
+                  </Card>
+                ) : (
+                  <div className="space-y-2">
+                    {customers.filter(c => !customerSearch.trim() || c.name.toLowerCase().includes(customerSearch.toLowerCase())).map((c) => (
+                      <Card key={c.id} className="p-4" onClick={() => setEditCustomer(c)}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-bold text-gray-800 text-sm">{c.name}</p>
+                              {c.is_suki && <span className="text-xs bg-gold-100 text-gold-700 px-2 py-0.5 rounded-full font-bold">Suki</span>}
+                            </div>
+                            <p className="text-xs text-gray-400 mt-0.5">
+                              {c.phone || "No phone"} · {c.visit_count} visit{c.visit_count !== 1 ? "s" : ""} · ₱{Number(c.total_spent || 0).toFixed(0)} spent
+                            </p>
+                          </div>
+                          <button onClick={(e) => { e.stopPropagation(); setEditCustomer(c); }}
+                            className="text-xs bg-gray-100 text-gray-600 px-2 py-1.5 rounded-lg font-medium">Edit</button>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {tab === "logs" && (
+              <AuditLogViewer businessId={business.id} />
             )}
           </>
         )}
@@ -2404,6 +3414,17 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
       {showAddProduct && <ProductModal onClose={() => setShowAddProduct(false)} />}
       {editProduct && <ProductModal existing={editProduct} onClose={() => setEditProduct(null)} />}
       {showAddStaff && <AddStaffModal />}
+
+      {/* Customer Modal */}
+      {(showAddCustomer || editCustomer) && (
+        <CustomerModal
+          existing={editCustomer}
+          businessId={business.id}
+          showToast={showToast}
+          onClose={() => { setShowAddCustomer(false); setEditCustomer(null); }}
+          onSaved={() => { setShowAddCustomer(false); setEditCustomer(null); fetchAll(); }}
+        />
+      )}
     </div>
   );
 }
@@ -2913,8 +3934,105 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   const [utangPayAmount, setUtangPayAmount] = useState("");
   const [reconcileModal, setReconcileModal] = useState(false);
   const [cashCounted, setCashCounted] = useState("");
+  const [returnModal, setReturnModal] = useState(null);
+  const [returnReason, setReturnReason] = useState("");
+  const [returnItems, setReturnItems] = useState([]);
   const [cashierNotifs, setCashierNotifs] = useState([]);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [pinVerified, setPinVerified] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinInput, setPinInput] = useState("");
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [pinSetupValue, setPinSetupValue] = useState("");
+  const [pinSetupConfirm, setPinSetupConfirm] = useState("");
+  const [currentShift, setCurrentShift] = useState(null);
+  const [showShiftModal, setShowShiftModal] = useState(false);
+  const [shiftStartCash, setShiftStartCash] = useState("");
+  const [shiftEndCash, setShiftEndCash] = useState("");
+  const [shiftNotes, setShiftNotes] = useState("");
+  const [shiftLoading, setShiftLoading] = useState(false);
+
+  useEffect(() => {
+    const loadShift = async () => {
+      const { data } = await supabase
+        .from("shifts")
+        .select("*")
+        .eq("cashier_id", profile.id)
+        .eq("status", "open")
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      setCurrentShift(data || null);
+    };
+    loadShift();
+  }, [profile.id]);
+
+  const openShift = async () => {
+    if (!shiftStartCash || isNaN(Number(shiftStartCash))) return;
+    setShiftLoading(true);
+    const { data, error } = await supabase
+      .from("shifts")
+      .insert({
+        business_id: business.id,
+        branch_id: branch?.id || null,
+        cashier_id: profile.id,
+        starting_cash: Number(shiftStartCash),
+      })
+      .select()
+      .maybeSingle();
+    setShiftLoading(false);
+    if (error) return showToast("Hindi ma-open ang shift.", "error");
+    setCurrentShift(data);
+    setShowShiftModal(false);
+    setShiftStartCash("");
+    showToast("Shift started!", "success");
+  };
+
+  const closeShift = async () => {
+    if (!currentShift) return;
+    if (!shiftEndCash || isNaN(Number(shiftEndCash))) return showToast("Enter the ending cash amount.", "error");
+    setShiftLoading(true);
+    const today = new Date(currentShift.started_at);
+    const { data: shiftTxns } = await supabase
+      .from("transactions")
+      .select("total_amount, payment_method")
+      .eq("business_id", business.id)
+      .eq("cashier_id", profile.id)
+      .eq("status", "completed")
+      .gte("created_at", currentShift.started_at);
+    const totalSales = (shiftTxns || []).reduce((s, t) => s + Number(t.total_amount), 0);
+    const totalTx = (shiftTxns || []).length;
+    const expectedCash = Number(currentShift.starting_cash) + (shiftTxns || []).filter(t => t.payment_method === "cash").reduce((s, t) => s + Number(t.total_amount), 0);
+    const cashDiff = Number(shiftEndCash) - expectedCash;
+    const { error } = await supabase
+      .from("shifts")
+      .update({
+        ended_at: new Date().toISOString(),
+        ending_cash: Number(shiftEndCash),
+        total_sales: totalSales,
+        total_transactions: totalTx,
+        cash_difference: cashDiff,
+        notes: shiftNotes.trim() || null,
+        status: "closed",
+      })
+      .eq("id", currentShift.id);
+    setShiftLoading(false);
+    if (error) return showToast("Hindi ma-close ang shift.", "error");
+    if (Math.abs(cashDiff) > 0) {
+      await supabase.from("notifications").insert({
+        business_id: business.id,
+        type: "shift_report",
+        title: cashDiff < 0 ? "⚠️ Shift Cash Shortage" : "💰 Shift Closed",
+        message: `${profile.full_name} closed shift. Sales: ₱${totalSales.toFixed(2)}, ${totalTx} txns. Cash ${cashDiff >= 0 ? "over" : "short"} by ₱${Math.abs(cashDiff).toFixed(2)}.`,
+        is_read: false,
+      });
+    }
+    setCurrentShift(null);
+    setShowShiftModal(false);
+    setShiftEndCash("");
+    setShiftNotes("");
+    showToast(`Shift closed! Sales: ₱${totalSales.toFixed(2)}`, "success");
+  };
 
   const subtotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
   const discountAmount = discountValue
@@ -3032,6 +4150,13 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   };
 
   // Add to cart with stock validation
+  const getEffectivePrice = (product, qty) => {
+    if (product.wholesale_price && product.wholesale_min_qty && qty >= product.wholesale_min_qty) {
+      return Number(product.wholesale_price);
+    }
+    return Number(product.price);
+  };
+
   const addToCart = (product) => {
     setCartPersisted((prev) => {
       const existing = prev.find((i) => i.product_id === product.id);
@@ -3040,9 +4165,11 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           showToast(`Only ${product.stock_quantity} units of ${product.name} in stock.`, "warning");
           return prev;
         }
+        const newQty = existing.quantity + 1;
+        const price = getEffectivePrice(product, newQty);
         return prev.map((i) =>
           i.product_id === product.id
-            ? { ...i, quantity: i.quantity + 1, subtotal: (i.quantity + 1) * i.unit_price }
+            ? { ...i, quantity: newQty, unit_price: price, subtotal: newQty * price, is_wholesale: product.wholesale_price && newQty >= (product.wholesale_min_qty || 1) }
             : i
         );
       }
@@ -3059,6 +4186,8 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           quantity: 1,
           subtotal: Number(product.price),
           stock: product.stock_quantity,
+          wholesale_price: product.wholesale_price ? Number(product.wholesale_price) : null,
+          wholesale_min_qty: product.wholesale_min_qty || 1,
         },
       ];
     });
@@ -3204,9 +4333,36 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
     setCashCounted("");
   };
 
-  // Process checkout — THIS IS WHERE THE BUG WAS (missing closing brace)
+  const verifyPin = async (pin) => {
+    if (pin === profile.pin_code) {
+      setPinVerified(true);
+      setShowPinModal(false);
+      setPinInput("");
+      return true;
+    }
+    showToast("Incorrect PIN. Try again.", "error");
+    setPinInput("");
+    return false;
+  };
+
+  const setupPin = async () => {
+    if (pinSetupValue.length !== 4 || !/^\d{4}$/.test(pinSetupValue)) return showToast("PIN must be exactly 4 digits.", "error");
+    if (pinSetupValue !== pinSetupConfirm) return showToast("PINs don't match.", "error");
+    const { error } = await supabase.from("profiles").update({ pin_code: pinSetupValue }).eq("id", profile.id);
+    if (error) return showToast("Failed to save PIN.", "error");
+    profile.pin_code = pinSetupValue;
+    setShowPinSetup(false);
+    setPinSetupValue("");
+    setPinSetupConfirm("");
+    showToast("PIN set successfully!", "success");
+  };
+
   const processCheckout = async () => {
     if (cart.length === 0) return showToast("Cart is empty.", "error");
+    if (profile.pin_code && !pinVerified) {
+      setShowPinModal(true);
+      return;
+    }
     if (paymentMethod === "cash" && (!amountTendered || Number(amountTendered) < total)) {
       return showToast("Amount tendered is less than the total.", "error");
     }
@@ -3443,7 +4599,9 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
         }
       }
 
-      // Show receipt and clear all persisted state
+      logAudit(business.id, profile.id, profile.full_name, "transaction_completed", "transaction", txn.id, { receipt: txn.receipt_number, amount: total, method: paymentMethod, items: cart.length });
+      setPinVerified(false);
+
       setReceiptItems(cart.map((i) => ({ ...i })));
       setReceipt(txn);
       setCartPersisted([]);
@@ -3554,15 +4712,39 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
             <p className="text-gold-400 text-xs font-medium uppercase tracking-widest">Cashier</p>
             <h1 className="text-ivory-50 font-black text-lg leading-tight">{business.name}</h1>
           </div>
-          <button
-            onClick={onLogout}
-            className="bg-forest-700 text-gold-400 text-xs px-3 py-2 rounded-xl font-medium border border-forest-600"
-          >
-            Logout
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => profile.pin_code ? setShowPinSetup(true) : setShowPinSetup(true)}
+              className="text-xs px-2 py-2 rounded-xl font-medium border bg-forest-700 text-forest-200 border-forest-600"
+              title={profile.pin_code ? "Change PIN" : "Set PIN"}
+            >
+              {profile.pin_code ? "🔒" : "🔓"}
+            </button>
+            <button
+              onClick={() => setShowShiftModal(true)}
+              className={`text-xs px-3 py-2 rounded-xl font-medium border ${
+                currentShift
+                  ? "bg-green-700 text-green-100 border-green-600"
+                  : "bg-forest-700 text-gold-400 border-forest-600"
+              }`}
+            >
+              {currentShift ? "On Shift" : "Start Shift"}
+            </button>
+            <button
+              onClick={onLogout}
+              className="bg-forest-700 text-gold-400 text-xs px-3 py-2 rounded-xl font-medium border border-forest-600"
+            >
+              Logout
+            </button>
+          </div>
         </div>
         <p className="text-forest-300 text-xs">
           {branch?.name || "No branch"} · {profile.full_name}
+          {currentShift && (
+            <span className="text-green-400 ml-1">
+              · Shift since {new Date(currentShift.started_at).toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit", hour12: true })}
+            </span>
+          )}
         </p>
       </div>
 
@@ -4205,18 +5387,22 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                     </div>
                   )}
                   {txn.status === "completed" && (
-                    isToday(txn.created_at) ? (
+                    <div className="flex gap-2 mt-1">
+                      {isToday(txn.created_at) && (
+                        <button
+                          onClick={() => setVoidModal(txn)}
+                          className="text-xs text-red-500 font-semibold bg-red-50 px-3 py-1.5 rounded-lg"
+                        >
+                          Request Void
+                        </button>
+                      )}
                       <button
-                        onClick={() => setVoidModal(txn)}
-                        className="text-xs text-red-500 font-semibold bg-red-50 px-3 py-1.5 rounded-lg mt-1"
+                        onClick={() => setReturnModal(txn)}
+                        className="text-xs text-blue-600 font-semibold bg-blue-50 px-3 py-1.5 rounded-lg"
                       >
-                        Request Void
+                        Return/Refund
                       </button>
-                    ) : (
-                      <p className="text-xs text-gray-400 mt-1 bg-gray-50 px-3 py-1.5 rounded-lg">
-                        🔒 Cannot void — older than today
-                      </p>
-                    )
+                    </div>
                   )}
                   {txn.status === "pending_void" && (
                     <div className="mt-1 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-1.5">
@@ -4518,6 +5704,263 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 className="flex-1 bg-forest-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50"
               >
                 Confirm Payment ✓
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PIN Verification Modal */}
+      {showPinModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-6 w-72 text-center">
+            <div className="w-14 h-14 bg-forest-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <span className="text-2xl">🔒</span>
+            </div>
+            <h3 className="font-black text-gray-800 text-base mb-1">Enter PIN</h3>
+            <p className="text-xs text-gray-500 mb-4">Enter your 4-digit PIN to confirm this transaction.</p>
+            <input
+              type="password"
+              inputMode="numeric"
+              maxLength={4}
+              value={pinInput}
+              onChange={(e) => setPinInput(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="● ● ● ●"
+              className="w-full border-2 border-forest-300 rounded-xl px-4 py-3 text-2xl font-bold text-center tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-forest-500 mb-4"
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button onClick={() => { setShowPinModal(false); setPinInput(""); }}
+                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm">Cancel</button>
+              <button onClick={async () => { if (await verifyPin(pinInput)) processCheckout(); }}
+                disabled={pinInput.length !== 4}
+                className="flex-1 bg-forest-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50">Verify</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PIN Setup Modal */}
+      {showPinSetup && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-6 w-72 text-center">
+            <h3 className="font-black text-gray-800 text-base mb-1">Set Your PIN</h3>
+            <p className="text-xs text-gray-500 mb-4">Create a 4-digit PIN for transaction security.</p>
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1 text-left">New PIN</p>
+            <input type="password" inputMode="numeric" maxLength={4} value={pinSetupValue}
+              onChange={(e) => setPinSetupValue(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="● ● ● ●"
+              className="w-full border-2 border-forest-300 rounded-xl px-4 py-3 text-xl font-bold text-center tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-forest-500 mb-3" />
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1 text-left">Confirm PIN</p>
+            <input type="password" inputMode="numeric" maxLength={4} value={pinSetupConfirm}
+              onChange={(e) => setPinSetupConfirm(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              placeholder="● ● ● ●"
+              className="w-full border-2 border-forest-300 rounded-xl px-4 py-3 text-xl font-bold text-center tracking-[0.5em] focus:outline-none focus:ring-2 focus:ring-forest-500 mb-4" />
+            <div className="flex gap-3">
+              <button onClick={() => { setShowPinSetup(false); setPinSetupValue(""); setPinSetupConfirm(""); }}
+                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm">Cancel</button>
+              <button onClick={setupPin} disabled={pinSetupValue.length !== 4 || pinSetupConfirm.length !== 4}
+                className="flex-1 bg-forest-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50">Save PIN</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Shift Modal */}
+      {showShiftModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-3xl p-5">
+            {currentShift ? (
+              <>
+                <h3 className="font-black text-gray-800 text-base mb-1">Close Shift</h3>
+                <p className="text-xs text-gray-500 mb-1">
+                  Started: {new Date(currentShift.started_at).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}
+                </p>
+                <p className="text-xs text-gray-500 mb-3">
+                  Starting cash: ₱{Number(currentShift.starting_cash).toFixed(2)}
+                </p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+                  Total Cash in Drawer
+                </p>
+                <input
+                  type="number"
+                  value={shiftEndCash}
+                  onChange={(e) => setShiftEndCash(e.target.value)}
+                  placeholder="Enter total cash counted..."
+                  className="w-full border-2 border-forest-300 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-forest-500 mb-3"
+                />
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+                  Notes (optional)
+                </p>
+                <textarea
+                  value={shiftNotes}
+                  onChange={(e) => setShiftNotes(e.target.value)}
+                  placeholder="Any notes about this shift..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm h-16 resize-none focus:outline-none focus:ring-2 focus:ring-forest-400 mb-3"
+                />
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setShowShiftModal(false); setShiftEndCash(""); setShiftNotes(""); }}
+                    className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={closeShift}
+                    disabled={shiftLoading || !shiftEndCash}
+                    className="flex-1 bg-red-500 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50"
+                  >
+                    {shiftLoading ? "Closing..." : "Close Shift"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 className="font-black text-gray-800 text-base mb-1">Start New Shift</h3>
+                <p className="text-xs text-gray-500 mb-4">
+                  Count your starting cash before beginning your shift.
+                </p>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">
+                  Starting Cash in Drawer
+                </p>
+                <input
+                  type="number"
+                  value={shiftStartCash}
+                  onChange={(e) => setShiftStartCash(e.target.value)}
+                  placeholder="Enter starting cash amount..."
+                  className="w-full border-2 border-forest-300 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-forest-500 mb-3"
+                />
+                <div className="flex gap-2 mb-4 flex-wrap">
+                  {[500, 1000, 2000, 5000].map((amt) => (
+                    <button
+                      key={amt}
+                      onClick={() => setShiftStartCash(String(amt))}
+                      className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium"
+                    >
+                      ₱{amt.toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setShowShiftModal(false); setShiftStartCash(""); }}
+                    className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={openShift}
+                    disabled={shiftLoading || !shiftStartCash}
+                    className="flex-1 bg-forest-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50"
+                  >
+                    {shiftLoading ? "Starting..." : "Start Shift"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Return/Refund Modal */}
+      {returnModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-black text-gray-800 text-base">Return / Refund</h3>
+              <button onClick={() => { setReturnModal(null); setReturnReason(""); setReturnItems([]); }} className="text-gray-400 text-xl">✕</button>
+            </div>
+            <p className="text-xs text-gray-500 mb-1">
+              {returnModal.receipt_number} · ₱{Number(returnModal.total_amount).toFixed(2)}
+            </p>
+            <p className="text-xs text-gray-400 mb-3">
+              {new Date(returnModal.created_at).toLocaleString("en-PH", { dateStyle: "medium", timeStyle: "short" })}
+            </p>
+            {returnModal.transaction_items && (
+              <div className="space-y-2 mb-4">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Select items to return</p>
+                {returnModal.transaction_items.map((item, i) => {
+                  const selected = returnItems.find(r => r.idx === i);
+                  return (
+                    <div key={i} className={`rounded-xl p-3 border cursor-pointer transition-colors ${selected ? "bg-blue-50 border-blue-300" : "bg-gray-50 border-gray-200"}`}
+                      onClick={() => {
+                        setReturnItems(prev => {
+                          const exists = prev.find(r => r.idx === i);
+                          if (exists) return prev.filter(r => r.idx !== i);
+                          return [...prev, { idx: i, product_name: item.products?.name || item.product_name, quantity: item.quantity, unit_price: item.unit_price, subtotal: item.subtotal, product_id: item.product_id }];
+                        });
+                      }}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-5 h-5 rounded-md border-2 flex items-center justify-center text-xs ${selected ? "bg-blue-500 border-blue-500 text-white" : "border-gray-300"}`}>
+                            {selected && "✓"}
+                          </span>
+                          <div>
+                            <p className="text-sm font-medium text-gray-800">{item.products?.name || item.product_name}</p>
+                            <p className="text-xs text-gray-400">×{item.quantity} @ ₱{Number(item.unit_price).toFixed(2)}</p>
+                          </div>
+                        </div>
+                        <p className="text-sm font-bold text-gray-700">₱{Number(item.subtotal).toFixed(2)}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Reason for Return</p>
+            <textarea value={returnReason} onChange={(e) => setReturnReason(e.target.value)}
+              placeholder="Why is the customer returning these items?"
+              className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm h-16 resize-none focus:outline-none focus:ring-2 focus:ring-blue-400 mb-3" />
+            {returnItems.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3 mb-3">
+                <p className="text-xs text-blue-700 font-semibold">
+                  Refund amount: ₱{returnItems.reduce((s, r) => s + Number(r.subtotal), 0).toFixed(2)} for {returnItems.length} item{returnItems.length !== 1 ? "s" : ""}
+                </p>
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button onClick={() => { setReturnModal(null); setReturnReason(""); setReturnItems([]); }}
+                className="flex-1 bg-gray-100 text-gray-600 font-semibold py-3 rounded-xl text-sm">Cancel</button>
+              <button
+                disabled={returnItems.length === 0 || !returnReason.trim()}
+                onClick={async () => {
+                  const refundAmount = returnItems.reduce((s, r) => s + Number(r.subtotal), 0);
+                  const { error } = await supabase.from("returns").insert({
+                    business_id: business.id,
+                    branch_id: branch?.id || null,
+                    transaction_id: returnModal.id,
+                    cashier_id: profile.id,
+                    reason: returnReason.trim(),
+                    refund_amount: refundAmount,
+                    refund_method: returnModal.payment_method,
+                    items: returnItems.map(r => ({ product_name: r.product_name, quantity: r.quantity, unit_price: r.unit_price, subtotal: r.subtotal })),
+                  });
+                  if (error) return showToast("Failed to process return.", "error");
+                  for (const item of returnItems) {
+                    if (item.product_id) {
+                      await supabase.rpc("increment_stock", { p_id: item.product_id, qty: item.quantity }).catch(() => {
+                        supabase.from("products").select("stock_quantity").eq("id", item.product_id).maybeSingle().then(({ data }) => {
+                          if (data) supabase.from("products").update({ stock_quantity: data.stock_quantity + item.quantity }).eq("id", item.product_id);
+                        });
+                      });
+                    }
+                  }
+                  logAudit(business.id, profile.id, profile.full_name, "return_processed", "transaction", returnModal.id, { refund: refundAmount, items: returnItems.length, reason: returnReason.trim() });
+                  await supabase.from("notifications").insert({
+                    business_id: business.id,
+                    type: "return",
+                    title: "🔄 Return Processed",
+                    message: `${profile.full_name} processed a return of ₱${refundAmount.toFixed(2)} on ${returnModal.receipt_number}. Reason: ${returnReason.trim()}`,
+                    is_read: false,
+                  });
+                  showToast(`Return processed! Refund: ₱${refundAmount.toFixed(2)}`, "success");
+                  setReturnModal(null);
+                  setReturnReason("");
+                  setReturnItems([]);
+                  loadHistory();
+                }}
+                className="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl text-sm disabled:opacity-50">
+                Process Return
               </button>
             </div>
           </div>
@@ -5069,12 +6512,415 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
 }
 
 // ═══════════════════════════════════════════════════════════════
+// BRANCH MANAGER DASHBOARD (Phase 7)
+// ═══════════════════════════════════════════════════════════════
+function BranchManagerDashboard({ profile, business, branch, onLogout, showToast }) {
+  const [bmTab, setBmTab] = useState("overview");
+  const [loading, setLoading] = useState(true);
+  const [branchRevenue, setBranchRevenue] = useState(0);
+  const [branchTxCount, setBranchTxCount] = useState(0);
+  const [branchProducts, setBranchProducts] = useState([]);
+  const [branchStaff, setBranchStaff] = useState([]);
+  const [staffPerformance, setStaffPerformance] = useState([]);
+  const [recentTx, setRecentTx] = useState([]);
+  const [transfers, setTransfers] = useState([]);
+  const [allBranches, setAllBranches] = useState([]);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const [transferProduct, setTransferProduct] = useState(null);
+  const [transferQty, setTransferQty] = useState("");
+  const [transferToBranch, setTransferToBranch] = useState("");
+  const [transferNotes, setTransferNotes] = useState("");
+  const [transferSearch, setTransferSearch] = useState("");
+  const [transferSearchResults, setTransferSearchResults] = useState([]);
+  const [transferSaving, setTransferSaving] = useState(false);
+  const [timeFilter, setTimeFilter] = useState("today");
+
+  const getDateRange = useCallback((filter) => {
+    const now = new Date();
+    const start = new Date(now);
+    if (filter === "today") {
+      start.setHours(0, 0, 0, 0);
+    } else if (filter === "week") {
+      start.setDate(now.getDate() - 6);
+      start.setHours(0, 0, 0, 0);
+    } else {
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+    }
+    return start;
+  }, []);
+
+  const fetchAll = useCallback(async () => {
+    if (!branch?.id) return;
+    setLoading(true);
+    const start = getDateRange(timeFilter);
+
+    const [txRes, prodRes, staffRes, transferRes, branchRes] = await Promise.all([
+      supabase.from("transactions").select("*, profiles!inner(full_name)")
+        .eq("business_id", business.id).eq("branch_id", branch.id)
+        .eq("status", "completed").gte("created_at", start.toISOString())
+        .order("created_at", { ascending: false }),
+      supabase.from("products").select("*")
+        .eq("business_id", business.id).eq("status", "active").order("name"),
+      supabase.from("profiles").select("*")
+        .eq("business_id", business.id).eq("branch_id", branch.id)
+        .neq("role", "owner").order("full_name"),
+      supabase.from("product_transfers").select("*, products(name), from_branch:branches!product_transfers_from_branch_id_fkey(name), to_branch:branches!product_transfers_to_branch_id_fkey(name), requester:profiles!product_transfers_requested_by_fkey(full_name)")
+        .eq("business_id", business.id)
+        .or(`from_branch_id.eq.${branch.id},to_branch_id.eq.${branch.id}`)
+        .order("created_at", { ascending: false }).limit(20),
+      supabase.from("branches").select("*").eq("business_id", business.id).neq("id", branch.id),
+    ]);
+
+    const txns = txRes.data || [];
+    setRecentTx(txns.slice(0, 10));
+    setBranchRevenue(txns.reduce((s, t) => s + Number(t.total_amount), 0));
+    setBranchTxCount(txns.length);
+    setBranchProducts(prodRes.data || []);
+    setBranchStaff(staffRes.data || []);
+    setTransfers(transferRes.data || []);
+    setAllBranches(branchRes.data || []);
+
+    const perfMap = {};
+    txns.forEach((tx) => {
+      if (!perfMap[tx.cashier_id]) perfMap[tx.cashier_id] = { name: tx.profiles?.full_name || "Unknown", txCount: 0, revenue: 0 };
+      perfMap[tx.cashier_id].txCount += 1;
+      perfMap[tx.cashier_id].revenue += Number(tx.total_amount);
+    });
+    setStaffPerformance(Object.entries(perfMap).map(([id, v]) => ({ id, ...v, avg: v.txCount > 0 ? v.revenue / v.txCount : 0 })).sort((a, b) => b.revenue - a.revenue));
+
+    setLoading(false);
+  }, [business.id, branch?.id, timeFilter, getDateRange]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  useEffect(() => {
+    if (!transferSearch.trim()) { setTransferSearchResults([]); return; }
+    const timer = setTimeout(async () => {
+      const { data } = await supabase.from("products").select("id, name, stock_quantity")
+        .eq("business_id", business.id).eq("status", "active")
+        .ilike("name", `%${transferSearch}%`).limit(10);
+      setTransferSearchResults(data || []);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [transferSearch, business.id]);
+
+  const submitTransfer = async () => {
+    if (!transferProduct || !transferQty || !transferToBranch) return;
+    if (Number(transferQty) <= 0) return showToast("Quantity must be greater than 0.", "error");
+    if (Number(transferQty) > transferProduct.stock_quantity) return showToast("Not enough stock to transfer.", "error");
+    setTransferSaving(true);
+    const { error } = await supabase.from("product_transfers").insert({
+      business_id: business.id,
+      product_id: transferProduct.id,
+      from_branch_id: branch.id,
+      to_branch_id: transferToBranch,
+      quantity: Number(transferQty),
+      requested_by: profile.id,
+      notes: transferNotes.trim() || null,
+    });
+    setTransferSaving(false);
+    if (error) return showToast("Transfer request failed.", "error");
+    await supabase.from("notifications").insert({
+      business_id: business.id,
+      type: "transfer_request",
+      title: "📦 Product Transfer Request",
+      message: `${profile.full_name} requests to transfer ${transferQty}x ${transferProduct.name} from ${branch.name} to another branch.`,
+      is_read: false,
+    });
+    showToast("Transfer request sent to owner!", "success");
+    setShowTransferModal(false);
+    setTransferProduct(null);
+    setTransferQty("");
+    setTransferToBranch("");
+    setTransferNotes("");
+    setTransferSearch("");
+    fetchAll();
+  };
+
+  const BM_TABS = [
+    { key: "overview", icon: "📊", label: "Overview" },
+    { key: "staff", icon: "👥", label: "Staff" },
+    { key: "transfers", icon: "🔄", label: "Transfers" },
+  ];
+
+  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Spinner /></div>;
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col max-w-lg mx-auto">
+      <div className="bg-forest-800 px-4 pt-5 pb-4">
+        <div className="flex items-center justify-between mb-1">
+          <div>
+            <p className="text-gold-400 text-xs font-medium uppercase tracking-widest">Branch Manager</p>
+            <h1 className="text-ivory-50 font-black text-xl leading-tight">{branch?.name || business.name}</h1>
+          </div>
+          <button onClick={onLogout} className="bg-forest-700 text-gold-400 text-xs px-3 py-2 rounded-xl font-medium border border-forest-600">
+            Logout
+          </button>
+        </div>
+        <p className="text-forest-300 text-xs">{profile.full_name} · {business.name}</p>
+      </div>
+
+      <div className="flex-1 overflow-y-auto pb-20">
+        <div className="p-4 flex gap-2 mb-1">
+          {[{ key: "today", label: "Today" }, { key: "week", label: "This Week" }, { key: "month", label: "This Month" }].map((f) => (
+            <button key={f.key} onClick={() => setTimeFilter(f.key)}
+              className={`px-3 py-1 rounded-lg text-xs font-medium ${timeFilter === f.key ? "bg-gold-400 text-forest-900" : "bg-gray-100 text-gray-500"}`}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+
+        {bmTab === "overview" && (
+          <div className="p-4 pt-0 space-y-4">
+            <div className="bg-forest-700 rounded-2xl p-4">
+              <p className="text-gold-300 text-xs font-semibold uppercase tracking-widest mb-1">Branch Revenue</p>
+              <p className="text-3xl font-black text-white tracking-tight">₱{branchRevenue.toFixed(2)}</p>
+              <p className="text-forest-300 text-xs mt-1">{branchTxCount} transaction{branchTxCount !== 1 ? "s" : ""}</p>
+            </div>
+
+            <div className="grid grid-cols-3 gap-3">
+              <StatCard icon="📦" label="Products" value={branchProducts.length} color="bg-blue-50 text-blue-700" />
+              <StatCard icon="👥" label="Staff" value={branchStaff.length} color="bg-purple-50 text-purple-700" />
+              <StatCard icon="🔄" label="Transfers" value={transfers.filter(t => t.status === "pending").length} color="bg-yellow-50 text-yellow-700" />
+            </div>
+
+            {recentTx.length > 0 && (
+              <div>
+                <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide mb-2">Recent Transactions</h2>
+                <div className="space-y-2">
+                  {recentTx.slice(0, 5).map((tx) => (
+                    <Card key={tx.id} className="p-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs font-mono text-gray-400">{tx.receipt_number}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 capitalize">
+                          {tx.profiles?.full_name} · {tx.payment_method} · {new Date(tx.created_at).toLocaleTimeString("en-PH", { hour: "numeric", minute: "2-digit", hour12: true })}
+                        </p>
+                      </div>
+                      <p className="font-black text-forest-700">₱{Number(tx.total_amount).toFixed(2)}</p>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div>
+              <h2 className="font-bold text-gray-700 text-sm uppercase tracking-wide mb-2">Low Stock Alerts</h2>
+              {branchProducts.filter(p => p.stock_quantity <= p.low_stock_threshold).length === 0 ? (
+                <Card className="p-3"><p className="text-xs text-gray-400 text-center">No low stock items.</p></Card>
+              ) : (
+                <div className="space-y-2">
+                  {branchProducts.filter(p => p.stock_quantity <= p.low_stock_threshold).map((p) => (
+                    <Card key={p.id} className="p-3 flex items-center justify-between border-l-4 border-red-400">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">{p.name}</p>
+                        <p className="text-xs text-gray-400">{p.category}</p>
+                      </div>
+                      <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-lg">{p.stock_quantity} left</span>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {bmTab === "staff" && (
+          <div className="p-4 pt-0 space-y-4">
+            <Card className="p-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Staff Performance</p>
+              {staffPerformance.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-4">No staff data for this period.</p>
+              ) : (
+                <div className="space-y-3">
+                  {staffPerformance.map((s, i) => (
+                    <div key={s.id} className="bg-gray-50 rounded-xl p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? "bg-gold-200 text-gold-800" : "bg-gray-200 text-gray-600"}`}>
+                            {i + 1}
+                          </span>
+                          <p className="text-sm font-bold text-gray-800">{s.name}</p>
+                        </div>
+                        <p className="text-sm font-black text-forest-700">₱{s.revenue.toFixed(2)}</p>
+                      </div>
+                      <div className="flex gap-4 ml-8">
+                        <p className="text-xs text-gray-400">{s.txCount} transactions</p>
+                        <p className="text-xs text-gray-400">Avg ₱{s.avg.toFixed(2)}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+
+            <Card className="p-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Branch Staff</p>
+              {branchStaff.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-4">No staff assigned to this branch.</p>
+              ) : (
+                <div className="space-y-2">
+                  {branchStaff.map((s) => (
+                    <div key={s.id} className="flex items-center justify-between bg-gray-50 rounded-xl px-3 py-2.5">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">{s.full_name}</p>
+                        <p className="text-xs text-gray-400">{s.email}</p>
+                      </div>
+                      <span className={`text-xs px-2 py-1 rounded-full font-semibold ${ROLE_COLORS[s.role]}`}>
+                        {ROLE_LABELS[s.role]}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
+
+        {bmTab === "transfers" && (
+          <div className="p-4 pt-0 space-y-4">
+            <button onClick={() => setShowTransferModal(true)}
+              className="w-full bg-forest-600 text-white font-bold py-3 rounded-xl text-sm">
+              Request Product Transfer
+            </button>
+
+            <Card className="p-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Transfer History</p>
+              {transfers.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-4">No transfers yet.</p>
+              ) : (
+                <div className="space-y-2">
+                  {transfers.map((t) => (
+                    <div key={t.id} className={`rounded-xl p-3 border ${
+                      t.status === "pending" ? "bg-yellow-50 border-yellow-200" :
+                      t.status === "completed" ? "bg-green-50 border-green-200" :
+                      t.status === "rejected" ? "bg-red-50 border-red-200" :
+                      "bg-blue-50 border-blue-200"
+                    }`}>
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-bold text-gray-800">{t.products?.name}</p>
+                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full capitalize ${
+                          t.status === "pending" ? "bg-yellow-200 text-yellow-700" :
+                          t.status === "completed" ? "bg-green-200 text-green-700" :
+                          t.status === "rejected" ? "bg-red-200 text-red-700" :
+                          "bg-blue-200 text-blue-700"
+                        }`}>
+                          {t.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        {t.quantity} units · {t.from_branch?.name} → {t.to_branch?.name}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-1">
+                        {t.requester?.full_name} · {new Date(t.created_at).toLocaleDateString("en-PH", { month: "short", day: "numeric" })}
+                      </p>
+                      {t.notes && <p className="text-xs text-gray-400 italic mt-1">{t.notes}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </Card>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Nav */}
+      <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-lg bg-white border-t border-gray-100 flex items-center justify-around px-2 py-2 z-30">
+        {BM_TABS.map((item) => (
+          <button key={item.key} onClick={() => setBmTab(item.key)}
+            className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors ${bmTab === item.key ? "bg-forest-50 text-forest-700" : "text-gray-400"}`}>
+            <span className="text-xl">{item.icon}</span>
+            <span className={`text-xs font-medium ${bmTab === item.key ? "text-forest-700" : "text-gray-400"}`}>{item.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Transfer Request Modal */}
+      {showTransferModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end z-50">
+          <div className="bg-white w-full rounded-t-3xl p-5 max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-black text-gray-800 text-base">Request Product Transfer</h3>
+              <button onClick={() => { setShowTransferModal(false); setTransferProduct(null); setTransferSearch(""); }} className="text-gray-400 text-xl">✕</button>
+            </div>
+
+            {!transferProduct ? (
+              <>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Search Product</p>
+                <input type="text" value={transferSearch} onChange={(e) => setTransferSearch(e.target.value)}
+                  placeholder="Search product name..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-2" />
+                <div className="space-y-1 max-h-48 overflow-y-auto">
+                  {transferSearchResults.map((p) => (
+                    <button key={p.id} onClick={() => { setTransferProduct(p); setTransferSearch(""); setTransferSearchResults([]); }}
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-gray-50 flex justify-between items-center">
+                      <p className="text-sm font-medium text-gray-800">{p.name}</p>
+                      <p className="text-xs text-gray-400">Stock: {p.stock_quantity}</p>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="bg-forest-50 border border-forest-200 rounded-xl p-3 mb-3">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-semibold text-gray-800 text-sm">{transferProduct.name}</p>
+                      <p className="text-xs text-gray-500">Available: {transferProduct.stock_quantity}</p>
+                    </div>
+                    <button onClick={() => setTransferProduct(null)} className="text-xs text-red-500 font-semibold">Change</button>
+                  </div>
+                </div>
+
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Transfer To</p>
+                <select value={transferToBranch} onChange={(e) => setTransferToBranch(e.target.value)}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 bg-white mb-3">
+                  <option value="">Select destination branch...</option>
+                  {allBranches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                </select>
+
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Quantity</p>
+                <input type="number" value={transferQty} onChange={(e) => setTransferQty(e.target.value)}
+                  placeholder="How many units to transfer?"
+                  className="w-full border-2 border-forest-300 rounded-xl px-4 py-3 text-lg font-bold focus:outline-none focus:ring-2 focus:ring-forest-500 mb-3" />
+
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-2">Notes (Optional)</p>
+                <input type="text" value={transferNotes} onChange={(e) => setTransferNotes(e.target.value)}
+                  placeholder="Reason for transfer..."
+                  className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 mb-4" />
+
+                <button onClick={submitTransfer} disabled={transferSaving || !transferToBranch || !transferQty}
+                  className="w-full bg-forest-600 text-white font-bold py-3.5 rounded-2xl text-sm disabled:opacity-50">
+                  {transferSaving ? "Sending..." : "Send Transfer Request"}
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
 // STAFF DASHBOARD
 // ═══════════════════════════════════════════════════════════════
 function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
   if (profile.role === "cashier") {
     return (
       <CashierPOS
+        profile={profile}
+        business={business}
+        branch={branch}
+        onLogout={onLogout}
+        showToast={showToast}
+      />
+    );
+  }
+
+  if (profile.role === "branch_manager") {
+    return (
+      <BranchManagerDashboard
         profile={profile}
         business={business}
         branch={branch}
@@ -5240,9 +7086,31 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    if (session && profile && business) {
+      logAudit(business.id, profile.id, profile.full_name, "logout", "session", null, null);
+    }
     await supabase.auth.signOut();
     setScreen("landing");
   };
+
+  useEffect(() => {
+    if (!session) return;
+    let timer;
+    const resetTimer = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        showToast("Session expired due to inactivity. Please log in again.", "warning");
+        handleLogout();
+      }, SESSION_TIMEOUT_MS);
+    };
+    const events = ["mousedown", "keydown", "touchstart", "scroll"];
+    events.forEach((e) => window.addEventListener(e, resetTimer));
+    resetTimer();
+    return () => {
+      clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, resetTimer));
+    };
+  }, [session]);
 
   const goToOTP = (email, type) => {
     setOtpEmail(email);
