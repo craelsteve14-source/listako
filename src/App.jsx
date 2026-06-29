@@ -2711,7 +2711,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     const revenue = (tx.data || []).reduce((sum, t) => sum + Number(t.total_amount), 0);
     setTodayRevenue(revenue);
     setTodayTxCount((tx.data || []).length);
-    const utangAmt = (utang.data || []).reduce((sum, u) => sum + Number(u.balance || u.amount), 0);
+    const utangAmt = (utang.data || []).reduce((sum, u) => sum + (Number(u.amount) - Number(u.amount_paid || 0)), 0);
     setUtangTotal(utangAmt);
     setLoading(false);
   }, [business.id]);
