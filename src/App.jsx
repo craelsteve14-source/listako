@@ -807,6 +807,53 @@ function LedgerIcon({ className = "w-10 h-10", color = "#c9a84c" }) {
   );
 }
 
+const NavIcon = ({ name, size = 22, color = "currentColor" }) => {
+  const props = { width: size, height: size, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
+  const icons = {
+    dashboard: <svg {...props}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
+    analytics: <svg {...props}><path d="M3 20h18"/><path d="M6 16V10"/><path d="M10 16V6"/><path d="M14 16v-5"/><path d="M18 16V8"/></svg>,
+    products: <svg {...props}><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>,
+    branch: <svg {...props}><path d="M3 9h18v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9Z"/><path d="M3 9l2.45-4.9A2 2 0 0 1 7.24 3h9.52a2 2 0 0 1 1.8 1.1L21 9"/><path d="M12 3v6"/></svg>,
+    staff: <svg {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+    pending: <svg {...props}><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
+    customers: <svg {...props}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+    logs: <svg {...props}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></svg>,
+    settings: <svg {...props}><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z"/></svg>,
+    admin: <svg {...props}><path d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26Z"/></svg>,
+    bell: <svg {...props}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>,
+    more: <svg {...props}><circle cx="12" cy="5" r="1.5" fill={color} stroke="none"/><circle cx="12" cy="12" r="1.5" fill={color} stroke="none"/><circle cx="12" cy="19" r="1.5" fill={color} stroke="none"/></svg>,
+    money: <svg {...props}><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M2 10h2M20 10h2M2 14h2M20 14h2"/></svg>,
+    transfers: <svg {...props}><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>,
+    overview: <svg {...props}><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>,
+    upload: <svg {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>,
+    download: <svg {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
+    book: <svg {...props}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>,
+    tag: <svg {...props}><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>,
+    lock: <svg {...props}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+    unlock: <svg {...props}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>,
+    alert: <svg {...props}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>,
+    info: <svg {...props}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>,
+    mail: <svg {...props}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>,
+    phone: <svg {...props}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>,
+    key: <svg {...props}><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>,
+    star: <svg {...props}><path d="M12 2L15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26Z"/></svg>,
+    creditcard: <svg {...props}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>,
+    clock: <svg {...props}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+    rocket: <svg {...props}><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>,
+    image: <svg {...props}><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>,
+    lightbulb: <svg {...props}><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7V17h8v-2.3A7 7 0 0 0 12 2z"/></svg>,
+    scale: <svg {...props}><path d="M16 3h5v5"/><path d="M8 3H3v5"/><path d="M12 22V8"/><path d="m3 3 5 5"/><path d="m21 3-5 5"/><path d="M2 17h20"/></svg>,
+    cart: <svg {...props}><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,
+    qrcode: <svg {...props}><rect x="2" y="2" width="8" height="8" rx="1"/><rect x="14" y="2" width="8" height="8" rx="1"/><rect x="2" y="14" width="8" height="8" rx="1"/><rect x="14" y="14" width="4" height="4" rx="0.5"/><path d="M18 14h4v4"/><path d="M14 18h4v4"/></svg>,
+    refresh: <svg {...props}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>,
+    check: <svg {...props}><polyline points="20 6 9 17 4 12"/></svg>,
+    x: <svg {...props}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+    shield: <svg {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+    cash: <svg {...props}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+  };
+  return icons[name] || null;
+};
+
 function ListaKoLogo({ size = "text-4xl", light = false }) {
   return (
     <h1 className={`${size} font-black tracking-tight ${light ? "text-white" : "text-ivory-50"}`}>
@@ -3002,16 +3049,16 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
   };
 
   const TABS = [
-    { key: "dashboard", icon: "📊", label: "Dashboard" },
-    { key: "analytics", icon: "📈", label: "Analytics" },
-    { key: "products", icon: "📦", label: "Produkto" },
-    { key: "branches", icon: "🏪", label: "Branch" },
-    { key: "staff", icon: "👥", label: "Staff" },
-    { key: "pending", icon: (pendingProducts.length + pendingTransfers.length) > 0 ? "🔴" : "⏳", label: "Pending" },
-    { key: "customers", icon: "👤", label: "Suki" },
-    { key: "logs", icon: "📋", label: "Logs" },
-    { key: "settings", icon: "⚙️", label: "Settings" },
-    ...(isSuperAdmin ? [{ key: "admin", icon: "👑", label: "Admin" }] : []),
+    { key: "dashboard", icon: "dashboard", label: "Dashboard" },
+    { key: "analytics", icon: "analytics", label: "Analytics" },
+    { key: "products", icon: "products", label: "Produkto" },
+    { key: "branches", icon: "branch", label: "Branch" },
+    { key: "staff", icon: "staff", label: "Staff" },
+    { key: "pending", icon: "pending", label: "Pending", badge: (pendingProducts.length + pendingTransfers.length) > 0 },
+    { key: "customers", icon: "customers", label: "Suki" },
+    { key: "logs", icon: "logs", label: "Logs" },
+    { key: "settings", icon: "settings", label: "Settings" },
+    ...(isSuperAdmin ? [{ key: "admin", icon: "admin", label: "Admin" }] : []),
   ];
 
   return (
@@ -3031,7 +3078,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
               onClick={() => setShowNotifications(!showNotifications)}
               className="relative bg-forest-800 bg-opacity-50 text-forest-200 px-3 py-2 rounded-xl"
             >
-              🔔
+              <NavIcon name="bell" size={20} color="currentColor" />
               {notifications.length > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-black w-5 h-5 rounded-full flex items-center justify-center">
                   {notifications.length}
@@ -3056,7 +3103,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
         <div className="bg-white border-b border-gray-100 shadow-sm">
           <div className="flex items-center justify-between px-4 py-3">
             <p className="text-sm font-bold text-gray-800">
-              🔔 Notifications {notifications.length > 0 && `(${notifications.length})`}
+              <span className="inline-flex items-center gap-1.5"><NavIcon name="bell" size={16} color="currentColor" /> Notifications {notifications.length > 0 && `(${notifications.length})`}</span>
             </p>
             {notifications.length > 0 && (
               <button
@@ -3293,25 +3340,25 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
 
                 <div className="grid grid-cols-2 gap-3">
                   <StatCard
-                    icon="📦"
+                    icon={<NavIcon name="products" size={20} color="currentColor" />}
                     label="Products"
                     value={products.length}
                     color="bg-blue-50 text-blue-700"
                   />
                   <StatCard
-                    icon="🏪"
+                    icon={<NavIcon name="branch" size={20} color="currentColor" />}
                     label="Branches"
                     value={branches.length}
                     color="bg-purple-50 text-purple-700"
                   />
                   <StatCard
-                    icon="👥"
+                    icon={<NavIcon name="staff" size={20} color="currentColor" />}
                     label="Staff"
                     value={staff.length}
                     color="bg-yellow-50 text-yellow-700"
                   />
                   <StatCard
-                    icon="💸"
+                    icon={<NavIcon name="money" size={20} color="currentColor" />}
                     label="Utang Balance"
                     value={`₱${utangTotal.toFixed(0)}`}
                     color="bg-red-50 text-red-600"
@@ -3486,7 +3533,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                                 : "bg-gray-50 text-gray-400"
                             }`}
                           >
-                            {p.no_discount ? "🚫 No Discount" : "Allow Discount"}
+                            {p.no_discount ? <><NavIcon name="lock" size={14} color="currentColor" /> No Discount</> : "Allow Discount"}
                           </button>
                         </div>
                       </div>
@@ -3749,7 +3796,10 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
               tab === item.key ? "bg-forest-50 text-forest-700" : "text-gray-400"
             }`}
           >
-            <span className="text-xl">{item.icon}</span>
+            <span className="relative">
+              <NavIcon name={item.icon} size={20} color="currentColor" />
+              {item.badge && <span className="absolute -top-1 -right-1.5 w-2 h-2 bg-red-500 rounded-full" />}
+            </span>
             <span
               className={`text-xs font-medium ${
                 tab === item.key ? "text-forest-700" : "text-gray-400"
@@ -7001,7 +7051,7 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
     await supabase.from("notifications").insert({
       business_id: business.id,
       type: "transfer_request",
-      title: "📦 Product Transfer Request",
+      title: "Product Transfer Request",
       message: `${profile.full_name} requests to transfer ${transferQty}x ${transferProduct.name} from ${branch.name} to another branch.`,
       is_read: false,
     });
@@ -7016,9 +7066,9 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
   };
 
   const BM_TABS = [
-    { key: "overview", icon: "📊", label: "Overview" },
-    { key: "staff", icon: "👥", label: "Staff" },
-    { key: "transfers", icon: "🔄", label: "Transfers" },
+    { key: "overview", icon: "overview", label: "Overview" },
+    { key: "staff", icon: "staff", label: "Staff" },
+    { key: "transfers", icon: "transfers", label: "Transfers" },
   ];
 
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><Spinner /></div>;
@@ -7057,9 +7107,9 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
             </div>
 
             <div className="grid grid-cols-3 gap-3">
-              <StatCard icon="📦" label="Products" value={branchProducts.length} color="bg-blue-50 text-blue-700" />
-              <StatCard icon="👥" label="Staff" value={branchStaff.length} color="bg-purple-50 text-purple-700" />
-              <StatCard icon="🔄" label="Transfers" value={transfers.filter(t => t.status === "pending").length} color="bg-yellow-50 text-yellow-700" />
+              <StatCard icon={<NavIcon name="products" size={20} color="currentColor" />} label="Products" value={branchProducts.length} color="bg-blue-50 text-blue-700" />
+              <StatCard icon={<NavIcon name="staff" size={20} color="currentColor" />} label="Staff" value={branchStaff.length} color="bg-purple-50 text-purple-700" />
+              <StatCard icon={<NavIcon name="transfers" size={20} color="currentColor" />} label="Transfers" value={transfers.filter(t => t.status === "pending").length} color="bg-yellow-50 text-yellow-700" />
             </div>
 
             {recentTx.length > 0 && (
@@ -7206,7 +7256,7 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
         {BM_TABS.map((item) => (
           <button key={item.key} onClick={() => setBmTab(item.key)}
             className={`flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-colors ${bmTab === item.key ? "bg-forest-50 text-forest-700" : "text-gray-400"}`}>
-            <span className="text-xl">{item.icon}</span>
+            <NavIcon name={item.icon} size={20} color="currentColor" />
             <span className={`text-xs font-medium ${bmTab === item.key ? "text-forest-700" : "text-gray-400"}`}>{item.label}</span>
           </button>
         ))}
@@ -7465,7 +7515,7 @@ function InstallPrompt() {
                 <span className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center text-sm font-bold text-blue-700 flex-shrink-0">1</span>
                 <div>
                   <p className="font-semibold text-gray-800 text-sm">I-tap ang Share button</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Ang icon na may arrow pataas (⬆️) sa ibaba ng Safari</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Ang icon na may arrow pataas sa ibaba ng Safari</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
