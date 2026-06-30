@@ -881,44 +881,402 @@ function ListaKoLogo({ size = "text-4xl", light = false }) {
   );
 }
 
-function LandingScreen({ onShowSignup, onShowLogin }) {
+function LandingScreen({ onShowSignup, onShowLogin, onForgotPassword, showToast }) {
+  const [form, setForm] = useState({ email: '', password: '', remember: false });
+  const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [attempts, setAttempts] = useState(0);
+  const [lockedUntil, setLockedUntil] = useState(null);
+  const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const MAX_ATTEMPTS = 5;
+  const LOCKOUT_MS = 5 * 60 * 1000;
+
+  const handleLogin = async () => {
+    if (lockedUntil && new Date() < lockedUntil) {
+      const mins = Math.ceil((lockedUntil - new Date()) / 60000);
+      return showToast && showToast(`Account locked. Try again in ${mins} minute${mins !== 1 ? 's' : ''}.`, 'error');
+    }
+    if (!form.email.trim()) return showToast && showToast('Ilagay ang iyong email address.', 'error');
+    if (!form.password) return showToast && showToast('Ilagay ang iyong password.', 'error');
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: form.email.trim(),
+        password: form.password,
+      });
+      if (error) {
+        const na = attempts + 1;
+        setAttempts(na);
+        if (na >= MAX_ATTEMPTS) {
+          setLockedUntil(new Date(Date.now() + LOCKOUT_MS));
+          setAttempts(0);
+          showToast && showToast('Too many failed attempts. Locked for 5 minutes.', 'error');
+          return;
+        }
+        throw error;
+      }
+      setAttempts(0);
+      setLockedUntil(null);
+    } catch (err) {
+      showToast && showToast(getErrorMessage(err), 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const inputStyle = {
+    width: '100%',
+    background: 'rgba(5,14,7,0.85)',
+    border: '1px solid rgba(185,150,12,0.2)',
+    borderRadius: '10px',
+    color: 'rgba(245,240,232,0.88)',
+    fontSize: '13px',
+    outline: 'none',
+    fontFamily: 'Inter, sans-serif',
+  };
+
   return (
-    <div className="min-h-screen bg-surface-dark flex flex-col items-center justify-between px-6 relative overflow-hidden" style={{ padding: '48px 22px 26px' }}>
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 75% 15%, rgba(185,150,12,0.1) 0%, transparent 55%), radial-gradient(ellipse at 25% 85%, rgba(26,52,40,0.25) 0%, transparent 50%)' }} />
-      <div className="flex flex-col items-center gap-3 z-10">
-        <div className="flex flex-col items-center gap-2.5">
-          <LogoMark size={62} />
-          <h1 className="font-playfair text-[30px] font-semibold text-ivory-100 tracking-tight leading-none">
-            Lista<em className="italic text-gold-400">Ko</em>
-          </h1>
-          <p className="text-[8px] font-medium tracking-[3px] uppercase" style={{ color: 'rgba(232,213,163,0.4)' }}>Business Operating System</p>
+    <div style={{ background: '#07100A', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }} className="relative overflow-hidden flex flex-col">
+
+      {/* Gold arc decoration (top-right) */}
+      <svg className="absolute pointer-events-none" style={{ top: 0, right: 0, width: '55%', height: '70%', zIndex: 0, opacity: 0.7 }} viewBox="0 0 600 480" fill="none" preserveAspectRatio="xMaxYMin meet">
+        <path d="M 580 0 Q 480 80 380 180 Q 260 300 140 480" stroke="url(#arcGold)" strokeWidth="1.2" fill="none"/>
+        <defs>
+          <linearGradient id="arcGold" x1="580" y1="0" x2="140" y2="480" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stopColor="#C8A415" stopOpacity="0.9"/>
+            <stop offset="55%" stopColor="#B9960C" stopOpacity="0.45"/>
+            <stop offset="100%" stopColor="#B9960C" stopOpacity="0"/>
+          </linearGradient>
+        </defs>
+      </svg>
+
+      {/* Subtle radial glow */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 72% 8%, rgba(185,150,12,0.07) 0%, transparent 40%), radial-gradient(ellipse at 20% 90%, rgba(26,52,40,0.18) 0%, transparent 45%)' }} />
+
+      {/* ─── HEADER ─── */}
+      <header className="relative z-10 flex items-center justify-between px-6 md:px-10 pt-5 pb-3">
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2.5">
+            <LogoMark size={40} />
+            <h1 className="font-playfair text-[22px] font-semibold text-white tracking-tight leading-none">
+              Lista<em className="italic" style={{ color: '#B9960C' }}>Ko</em>
+            </h1>
+          </div>
+          <p className="text-[7px] font-semibold tracking-[3px] uppercase mt-0.5 ml-[50px]" style={{ color: 'rgba(185,150,12,0.4)' }}>Business Operating System</p>
         </div>
-        <p className="text-[11px] text-center leading-relaxed font-light max-w-[200px]" style={{ color: 'rgba(245,240,232,0.5)' }}>
-          The Operating System for Every Filipino Business — POS, inventory, staff, reports, and growth.
-        </p>
-        <div className="rounded-lg px-4 py-2.5 text-center" style={{ border: '1px solid rgba(185,150,12,0.2)', background: 'rgba(185,150,12,0.06)' }}>
-          <p className="text-[7.5px] font-semibold tracking-[2px] uppercase text-gold-400 mb-0.5">Complimentary Access</p>
-          <p className="text-[10px] font-light" style={{ color: 'rgba(232,213,163,0.5)' }}>7 Days · No commitment required</p>
+        <button className="hidden md:flex items-center gap-1.5 text-[11px] font-light" style={{ color: 'rgba(245,240,232,0.45)' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          English
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+        </button>
+      </header>
+
+      {/* ─── MAIN TWO-COLUMN ─── */}
+      <main className="relative z-10 flex-1 flex flex-col md:flex-row items-start gap-6 px-6 md:px-10 pb-6" style={{ maxWidth: '1160px', margin: '0 auto', width: '100%' }}>
+
+        {/* ─── LEFT: MARKETING ─── */}
+        <div className="flex-1 flex flex-col pt-6 md:pt-10 pb-6">
+
+          {/* "THE OPERATING SYSTEM" badge */}
+          <div className="inline-flex items-center gap-2 mb-5" style={{ border: '1px solid rgba(185,150,12,0.32)', borderRadius: '20px', padding: '5px 13px', background: 'rgba(185,150,12,0.05)', width: 'fit-content' }}>
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="#B9960C"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+            <span className="font-semibold uppercase tracking-[2.5px]" style={{ color: '#B9960C', fontSize: '9.5px' }}>The Operating System</span>
+          </div>
+
+          {/* Headline */}
+          <h2 className="font-playfair font-bold text-white mb-4" style={{ fontSize: 'clamp(30px, 4.2vw, 54px)', lineHeight: '1.08', letterSpacing: '-0.5px' }}>
+            Run your<br />business with<br />
+            <em className="italic" style={{ color: '#B9960C' }}>confidence.</em>
+          </h2>
+
+          {/* Body */}
+          <p className="mb-6 leading-relaxed" style={{ color: 'rgba(245,240,232,0.52)', fontSize: '13px', maxWidth: '270px' }}>
+            Everything your business needs—<br />
+            POS, inventory, staff, reports,<br />
+            and growth—in one powerful<br />
+            operating system.
+          </p>
+
+          {/* Feature bullets */}
+          <div className="flex flex-col gap-3 mb-7">
+            {[
+              { icon: '⚡', title: 'Set up in under 5 minutes', sub: 'Get started fast and easy.' },
+              { icon: '🛡', title: 'Bank-level security', sub: 'Your data is encrypted and safe.' },
+              { icon: '🎧', title: 'Free migration support', sub: "We'll help you move your data." },
+            ].map(({ icon, title, sub }) => (
+              <div key={title} className="flex items-center gap-3">
+                <div className="flex-shrink-0 flex items-center justify-center text-[15px]" style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(22,46,32,0.95)', border: '1px solid rgba(185,150,12,0.14)' }}>
+                  {icon}
+                </div>
+                <div>
+                  <p className="font-semibold text-white" style={{ fontSize: '12px' }}>{title}</p>
+                  <p style={{ fontSize: '10px', color: 'rgba(245,240,232,0.4)' }}>{sub}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* ─── DEVICE MOCKUP (CSS art) ─── */}
+          <div className="relative mb-6 hidden md:block" style={{ height: '210px' }}>
+            {/* Monitor body */}
+            <div style={{
+              position: 'absolute', left: '0px', bottom: '0px',
+              width: '230px', height: '165px',
+              background: 'linear-gradient(145deg, #0D2016 0%, #0A1A0E 100%)',
+              borderRadius: '8px 8px 0 0',
+              border: '1.5px solid rgba(185,150,12,0.18)',
+              boxShadow: '0 0 50px rgba(185,150,12,0.06), 0 24px 48px rgba(0,0,0,0.7)',
+              transform: 'perspective(700px) rotateY(6deg) rotateX(2deg)',
+              overflow: 'hidden',
+            }}>
+              {/* Screen bezel */}
+              <div style={{ margin: '5px', height: 'calc(100% - 10px)', background: '#060E08', borderRadius: '4px', overflow: 'hidden', padding: '4px' }}>
+                {/* Traffic lights */}
+                <div className="flex gap-1 mb-2">
+                  {['#22C55E','#B9960C','#7A1515'].map((c,i) => <div key={i} style={{ width:'4px',height:'4px',borderRadius:'50%',background:c,opacity:0.8 }}/>)}
+                </div>
+                {/* Stat row */}
+                <div className="grid grid-cols-3 gap-1 mb-1.5">
+                  {[['Revenue','₱12,450','#B9960C'],['Items','234','rgba(245,240,232,0.75)'],['Today','₱890','rgba(245,240,232,0.75)']].map(([lbl,val,col],i) => (
+                    <div key={i} style={{ background:'rgba(22,46,32,0.8)', borderRadius:'3px', padding:'3px', border:'1px solid rgba(185,150,12,0.1)' }}>
+                      <div style={{ fontSize:'3.5px', color:'rgba(232,213,163,0.35)', marginBottom:'1px' }}>{lbl}</div>
+                      <div style={{ fontSize:'6px', fontWeight:'700', color:col }}>{val}</div>
+                    </div>
+                  ))}
+                </div>
+                {/* Chart */}
+                <div style={{ background:'rgba(22,46,32,0.35)', borderRadius:'3px', padding:'3px 4px', marginBottom:'1.5px', height:'48px' }}>
+                  <div style={{ fontSize:'3.5px', color:'rgba(232,213,163,0.25)', marginBottom:'2px' }}>Sales</div>
+                  <div className="flex items-end gap-0.5" style={{ height:'36px' }}>
+                    {[38,60,42,78,52,88,68,82,58,74,92,80].map((h,i) => (
+                      <div key={i} style={{ flex:1, height:`${h}%`, background: i===11?'#B9960C':'rgba(185,150,12,0.28)', borderRadius:'1px 1px 0 0' }}/>
+                    ))}
+                  </div>
+                </div>
+                {/* Table rows */}
+                {[['Pandesal','₱45'],['Rice (1kg)','₱120'],['Royal Tru','₱35']].map(([item,price],i)=>(
+                  <div key={i} className="flex justify-between" style={{ padding:'1.5px 2px', background: i%2===0?'rgba(22,46,32,0.5)':'transparent', borderRadius:'1px', marginBottom:'1px' }}>
+                    <span style={{ fontSize:'3.5px', color:'rgba(245,240,232,0.45)' }}>{item}</span>
+                    <span style={{ fontSize:'3.5px', color:'#B9960C', fontWeight:'600' }}>{price}</span>
+                  </div>
+                ))}
+              </div>
+              {/* Screen glow */}
+              <div style={{ position:'absolute',inset:0,background:'radial-gradient(ellipse at 50% 0%,rgba(185,150,12,0.07) 0%,transparent 60%)',pointerEvents:'none' }}/>
+            </div>
+            {/* Monitor stand neck */}
+            <div style={{ position:'absolute', left:'95px', bottom:'0px', width:'40px', height:'10px', background:'linear-gradient(180deg,#162A1A 0%,#0D1A10 100%)', borderRadius:'0 0 3px 3px' }}/>
+            {/* Monitor stand base */}
+            <div style={{ position:'absolute', left:'75px', bottom:'-4px', width:'80px', height:'4px', background:'linear-gradient(90deg,#0D1A10 0%,#1A2E1E 50%,#0D1A10 100%)', borderRadius:'2px' }}/>
+
+            {/* Phone (leaning against monitor right side) */}
+            <div style={{
+              position:'absolute', left:'196px', bottom:'14px',
+              width:'58px', height:'102px',
+              background:'linear-gradient(180deg,#F0EDD8 0%,#E5E0C8 100%)',
+              borderRadius:'9px',
+              border:'2px solid rgba(240,235,220,0.95)',
+              boxShadow:'0 12px 32px rgba(0,0,0,0.55), 0 0 16px rgba(185,150,12,0.04)',
+              transform:'rotate(-5deg)',
+              overflow:'hidden',
+            }}>
+              <div style={{ margin:'3px', height:'calc(100% - 6px)', background:'#060E08', borderRadius:'7px', overflow:'hidden', padding:'3px' }}>
+                <div style={{ fontSize:'4px', color:'#B9960C', fontWeight:'700', textAlign:'center', marginBottom:'2px', fontFamily:'serif' }}>ListaKo</div>
+                <div style={{ background:'rgba(22,46,32,0.8)', borderRadius:'2px', padding:'2px 3px', marginBottom:'1.5px' }}>
+                  <div style={{ fontSize:'3px', color:'rgba(232,213,163,0.45)' }}>Today's Sales</div>
+                  <div style={{ fontSize:'6px', color:'#B9960C', fontWeight:'700' }}>₱12,450</div>
+                </div>
+                {['Sales','Inventory','Staff'].map((m,i)=>(
+                  <div key={i} style={{ background:'rgba(22,46,32,0.45)', borderRadius:'1.5px', padding:'1.5px 3px', fontSize:'3px', color:'rgba(245,240,232,0.45)', marginBottom:'1px' }}>{m}</div>
+                ))}
+                {/* Mini chart */}
+                <div className="flex items-end gap-px mt-1.5" style={{ height:'14px', padding:'0 2px' }}>
+                  {[50,70,45,85,60,90,75].map((h,i)=>(
+                    <div key={i} style={{ flex:1, height:`${h}%`, background:i===6?'#B9960C':'rgba(185,150,12,0.35)', borderRadius:'0.5px 0.5px 0 0' }}/>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Ground shadow */}
+            <div style={{ position:'absolute', left:'-10px', bottom:'-6px', width:'280px', height:'8px', background:'radial-gradient(ellipse at 45% 50%, rgba(185,150,12,0.12) 0%, transparent 70%)', borderRadius:'50%' }}/>
+          </div>
+
+          {/* Trusted by */}
+          <div>
+            <p className="font-semibold uppercase tracking-[2px] mb-2.5" style={{ fontSize:'8.5px', color:'rgba(245,240,232,0.3)', textAlign:'left' }}>
+              Trusted by thousands of Filipino businesses nationwide
+            </p>
+            <div className="flex items-center gap-4 flex-wrap mb-3">
+              {['PUREGOLD','AllDay','MiniStop','WalterMart','Robinsons'].map(b=>(
+                <span key={b} style={{ fontSize:'9px', fontWeight:'700', color:'rgba(245,240,232,0.28)', letterSpacing:'0.3px' }}>{b}</span>
+              ))}
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="flex gap-px">
+                {[1,2,3,4,5].map(i=><span key={i} style={{ color:'#B9960C', fontSize:'14px', lineHeight:1 }}>★</span>)}
+              </div>
+              <span style={{ fontSize:'11px', fontWeight:'600', color:'rgba(245,240,232,0.75)' }}>4.9/5 average rating</span>
+            </div>
+          </div>
+
+          {/* Mobile-only CTA (hidden on desktop) */}
+          <div className="flex flex-col gap-2 mt-6 md:hidden">
+            <button onClick={onShowLogin} style={{ background:'#B9960C', color:'#060E08', fontWeight:'700', padding:'13px', borderRadius:'10px', fontSize:'13px', border:'none', cursor:'pointer' }}>Sign In →</button>
+            <button onClick={onShowSignup} style={{ background:'transparent', color:'rgba(245,240,232,0.6)', padding:'11px', borderRadius:'10px', fontSize:'12px', border:'1px solid rgba(185,150,12,0.22)', cursor:'pointer', letterSpacing:'1px' }}>Create Business</button>
+          </div>
         </div>
-      </div>
-      <div className="w-full space-y-2 z-10">
-        <button
-          onClick={onShowSignup}
-          className="w-full bg-gold-400 text-forest-800 font-bold py-3.5 rounded-lg text-[10px] tracking-[2px] uppercase active:scale-95 transition-transform"
-        >
-          Create Account
-        </button>
-        <button
-          onClick={onShowLogin}
-          className="w-full py-3 rounded-lg text-[10px] font-normal tracking-[1.5px] uppercase active:scale-95 transition-transform"
-          style={{ border: '1px solid rgba(184,150,12,0.25)', color: 'rgba(232,213,163,0.6)' }}
-        >
-          Sign In
-        </button>
-        <p className="text-[8.5px] text-center tracking-wide z-10" style={{ color: 'rgba(245,240,232,0.18)' }}>
-          ListaKo · For every business in the Philippines
-        </p>
-      </div>
+
+        {/* ─── RIGHT: LOGIN CARD (desktop only) ─── */}
+        <div className="hidden md:block w-[420px] lg:w-[450px] flex-shrink-0 pt-6 lg:pt-10">
+          <div style={{ background:'rgba(9,20,12,0.96)', border:'1px solid rgba(185,150,12,0.13)', borderRadius:'20px', padding:'34px 30px 28px', backdropFilter:'blur(20px)', boxShadow:'0 24px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(185,150,12,0.04)' }}>
+
+            <h3 className="font-playfair font-bold text-white mb-1" style={{ fontSize:'26px' }}>Welcome Back</h3>
+            <p className="mb-6" style={{ fontSize:'13px', color:'rgba(245,240,232,0.42)' }}>Sign in to continue managing your business.</p>
+
+            {/* Email */}
+            <div className="mb-4">
+              <label style={{ display:'block', fontSize:'11px', fontWeight:'600', color:'rgba(245,240,232,0.85)', marginBottom:'7px', letterSpacing:'0.3px' }}>Email Address</label>
+              <div style={{ position:'relative' }}>
+                <div style={{ position:'absolute', left:'13px', top:'50%', transform:'translateY(-50%)', color:'rgba(245,240,232,0.3)', display:'flex' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                </div>
+                <input
+                  type="email"
+                  value={form.email}
+                  onChange={e => setF('email', e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                  placeholder="you@example.com"
+                  style={{ ...inputStyle, padding:'12px 14px 12px 40px' }}
+                />
+              </div>
+            </div>
+
+            {/* Password */}
+            <div className="mb-4">
+              <label style={{ display:'block', fontSize:'11px', fontWeight:'600', color:'rgba(245,240,232,0.85)', marginBottom:'7px', letterSpacing:'0.3px' }}>Password</label>
+              <div style={{ position:'relative' }}>
+                <div style={{ position:'absolute', left:'13px', top:'50%', transform:'translateY(-50%)', color:'rgba(245,240,232,0.3)', display:'flex' }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                </div>
+                <input
+                  type={showPass ? 'text' : 'password'}
+                  value={form.password}
+                  onChange={e => setF('password', e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleLogin()}
+                  placeholder="Enter your password"
+                  style={{ ...inputStyle, padding:'12px 42px 12px 40px' }}
+                />
+                <button type="button" onClick={() => setShowPass(p => !p)} style={{ position:'absolute', right:'13px', top:'50%', transform:'translateY(-50%)', color:'rgba(245,240,232,0.3)', background:'none', border:'none', cursor:'pointer', display:'flex', padding:0 }}>
+                  {showPass
+                    ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                    : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  }
+                </button>
+              </div>
+            </div>
+
+            {/* Remember me + Forgot Password */}
+            <div className="flex items-center justify-between mb-5">
+              <label className="flex items-center gap-2" style={{ cursor:'pointer' }}>
+                <div onClick={() => setF('remember', !form.remember)} style={{ width:'16px', height:'16px', borderRadius:'4px', border: form.remember ? 'none' : '1.5px solid rgba(185,150,12,0.38)', background: form.remember ? '#B9960C' : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', flexShrink:0, transition:'all 0.15s' }}>
+                  {form.remember && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
+                </div>
+                <span style={{ fontSize:'12px', color:'rgba(245,240,232,0.58)' }}>Remember me</span>
+              </label>
+              <button onClick={onForgotPassword} style={{ fontSize:'12px', color:'#B9960C', fontWeight:'500', background:'none', border:'none', cursor:'pointer', padding:0 }}>Forgot Password?</button>
+            </div>
+
+            {/* Sign In button */}
+            <button
+              onClick={handleLogin}
+              disabled={loading}
+              style={{ width:'100%', background: loading ? 'rgba(185,150,12,0.55)' : '#B9960C', color:'#060E08', fontWeight:'700', fontSize:'14px', padding:'14px', borderRadius:'10px', border:'none', cursor: loading ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', marginBottom:'20px', transition:'opacity 0.2s', letterSpacing:'0.2px' }}
+            >
+              {loading ? 'Signing in...' : <><span>Sign In</span><span style={{ fontSize:'16px', lineHeight:1 }}>→</span></>}
+            </button>
+
+            {/* OR CONTINUE WITH */}
+            <div className="flex items-center gap-3 mb-3">
+              <div style={{ flex:1, height:'1px', background:'rgba(185,150,12,0.1)' }}/>
+              <span style={{ fontSize:'9.5px', fontWeight:'600', letterSpacing:'2px', color:'rgba(245,240,232,0.28)' }}>OR CONTINUE WITH</span>
+              <div style={{ flex:1, height:'1px', background:'rgba(185,150,12,0.1)' }}/>
+            </div>
+
+            {/* Google */}
+            <button style={{ width:'100%', background:'transparent', border:'1px solid rgba(245,240,232,0.11)', borderRadius:'10px', padding:'12px 16px', display:'flex', alignItems:'center', gap:'10px', marginBottom:'8px', cursor:'pointer', color:'rgba(245,240,232,0.75)', fontSize:'13px', fontWeight:'500' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+              Continue with Google
+            </button>
+
+            {/* Microsoft */}
+            <button style={{ width:'100%', background:'transparent', border:'1px solid rgba(245,240,232,0.11)', borderRadius:'10px', padding:'12px 16px', display:'flex', alignItems:'center', gap:'10px', marginBottom:'8px', cursor:'pointer', color:'rgba(245,240,232,0.75)', fontSize:'13px', fontWeight:'500' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24"><rect x="1" y="1" width="10.5" height="10.5" fill="#F25022"/><rect x="12.5" y="1" width="10.5" height="10.5" fill="#7FBA00"/><rect x="1" y="12.5" width="10.5" height="10.5" fill="#00A4EF"/><rect x="12.5" y="12.5" width="10.5" height="10.5" fill="#FFB900"/></svg>
+              Continue with Microsoft
+            </button>
+
+            {/* Biometrics */}
+            <button style={{ width:'100%', background:'rgba(6,14,8,0.7)', border:'1px solid rgba(185,150,12,0.11)', borderRadius:'10px', padding:'11px 16px', display:'flex', alignItems:'center', gap:'10px', marginBottom:'20px', cursor:'pointer', color:'rgba(245,240,232,0.65)', fontSize:'13px' }}>
+              <div style={{ width:'34px', height:'34px', borderRadius:'8px', background:'linear-gradient(145deg,#142218 0%,#1E3428 100%)', border:'1px solid rgba(185,150,12,0.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
+                  <path d="M16 3C9.373 3 4 8.373 4 15v4" stroke="url(#fp1)" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M28 15c0-6.627-5.373-12-12-12" stroke="url(#fp2)" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M8 19v-4a8 8 0 0 1 16 0v4" stroke="url(#fp3)" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M12 19v-4a4 4 0 0 1 8 0v4" stroke="url(#fp4)" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M16 15v8" stroke="url(#fp5)" strokeWidth="2" strokeLinecap="round"/>
+                  <defs>
+                    <linearGradient id="fp1" x1="4" y1="3" x2="4" y2="19" gradientUnits="userSpaceOnUse"><stop stopColor="#22C55E"/><stop offset="1" stopColor="#16A34A"/></linearGradient>
+                    <linearGradient id="fp2" x1="16" y1="3" x2="28" y2="15" gradientUnits="userSpaceOnUse"><stop stopColor="#22C55E"/><stop offset="1" stopColor="#B9960C"/></linearGradient>
+                    <linearGradient id="fp3" x1="8" y1="11" x2="24" y2="19" gradientUnits="userSpaceOnUse"><stop stopColor="#22C55E"/><stop offset="1" stopColor="#B9960C"/></linearGradient>
+                    <linearGradient id="fp4" x1="12" y1="11" x2="20" y2="19" gradientUnits="userSpaceOnUse"><stop stopColor="#B9960C"/><stop offset="1" stopColor="#22C55E"/></linearGradient>
+                    <linearGradient id="fp5" x1="16" y1="15" x2="16" y2="23" gradientUnits="userSpaceOnUse"><stop stopColor="#B9960C"/><stop offset="1" stopColor="#22C55E"/></linearGradient>
+                  </defs>
+                </svg>
+              </div>
+              <div>
+                <div style={{ fontWeight:'600', fontSize:'13px', color:'rgba(245,240,232,0.82)' }}>Use Biometrics</div>
+                <div style={{ fontSize:'10px', color:'rgba(245,240,232,0.36)' }}>Sign in with your fingerprint</div>
+              </div>
+            </button>
+
+            {/* Create Business */}
+            <div className="text-center mb-4">
+              <span style={{ fontSize:'13px', color:'rgba(245,240,232,0.45)' }}>Don't have an account? </span>
+              <button onClick={onShowSignup} style={{ fontSize:'13px', color:'#B9960C', fontWeight:'600', background:'none', border:'none', cursor:'pointer', padding:0, display:'inline-flex', alignItems:'center', gap:'5px' }}>
+                Create Business
+                <span style={{ width:'17px', height:'17px', borderRadius:'50%', border:'1.5px solid #B9960C', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:'10px', lineHeight:1 }}>→</span>
+              </button>
+            </div>
+
+            {/* Encrypted badge */}
+            <div className="flex items-center justify-center gap-1.5">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(245,240,232,0.28)" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              <span style={{ fontSize:'11px', color:'rgba(245,240,232,0.32)' }}>
+                Your data is <span style={{ color:'#22C55E' }}>encrypted</span> and <span style={{ color:'#0EA5E9' }}>secure.</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* ─── FOOTER ─── */}
+      <footer className="relative z-10 px-6 md:px-10 py-5" style={{ borderTop:'1px solid rgba(185,150,12,0.08)' }}>
+        <div className="flex flex-col md:flex-row items-center justify-between gap-3" style={{ maxWidth:'1160px', margin:'0 auto' }}>
+          <div className="flex items-center gap-2.5">
+            <LogoMark size={22} />
+            <div>
+              <span className="font-playfair text-[13px] font-semibold text-white">Lista<em className="italic" style={{ color:'#B9960C' }}>Ko</em></span>
+              <p style={{ fontSize:'6.5px', fontWeight:'600', letterSpacing:'2.5px', textTransform:'uppercase', color:'rgba(185,150,12,0.35)', margin:0 }}>Business Operating System</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-5">
+            {['Privacy Policy','Terms of Service','Help Center'].map(l=>(
+              <button key={l} style={{ fontSize:'11px', color:'rgba(245,240,232,0.32)', fontWeight:'500', background:'none', border:'none', cursor:'pointer', padding:0 }}>{l}</button>
+            ))}
+          </div>
+        </div>
+        <p className="text-center mt-3" style={{ fontSize:'10px', color:'rgba(245,240,232,0.18)' }}>© 2025 ListaKo. All rights reserved.</p>
+      </footer>
     </div>
   );
 }
@@ -7994,6 +8352,8 @@ export default function App() {
         <LandingScreen
           onShowSignup={() => setScreen("signup")}
           onShowLogin={() => setScreen("login")}
+          onForgotPassword={() => setScreen("forgot")}
+          showToast={showToast}
         />
       )}
       {screen === "signup" && (
