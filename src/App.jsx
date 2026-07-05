@@ -3429,14 +3429,24 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
 
   const deleteProduct = async (id) => {
     if (!window.confirm("Tanggalin ang produktong ito?")) return;
-    await supabase.from("products").delete().eq("id", id);
+    const { error } = await supabase
+      .from("products")
+      .update({ status: "inactive" })
+      .eq("id", id)
+      .eq("business_id", business.id);
+    if (error) return showToast("Hindi matanggal ang produkto. Subukan muli.", "error");
     showToast("Produkto natanggal.", "success");
     fetchAll();
   };
 
   const deleteBranch = async (id) => {
     if (!window.confirm("Tanggalin ang branch na ito?")) return;
-    await supabase.from("branches").delete().eq("id", id);
+    const { error } = await supabase
+      .from("branches")
+      .delete()
+      .eq("id", id)
+      .eq("business_id", business.id);
+    if (error) return showToast("Hindi matanggal ang branch. Subukan muli.", "error");
     showToast("Branch natanggal.", "success");
     fetchAll();
   };
