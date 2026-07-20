@@ -8712,7 +8712,7 @@ export default function App() {
         setBusiness(null);
         setBranch(null);
         setIsSuperAdmin(false);
-        setScreen("landing");
+        setScreen("login");
         setAppLoading(false);
       }
     });
@@ -8790,7 +8790,7 @@ export default function App() {
       logAudit(business.id, profile.id, profile.full_name, "logout", "session", null, null);
     }
     await supabase.auth.signOut();
-    setScreen("landing");
+    setScreen("login");
   };
 
   useEffect(() => {
