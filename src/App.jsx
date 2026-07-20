@@ -940,9 +940,7 @@ function LandingScreen({ onShowSignup, onShowLogin, onForgotPassword, showToast 
   };
 
   return (
-    <div style={{ background: '#07100A', minHeight: '100vh', fontFamily: 'Inter, sans-serif', backgroundImage: 'url(/signin-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundBlendMode: 'luminosity' }} className="relative overflow-hidden flex flex-col">
-      {/* Dark overlay so existing dark design is preserved */}
-      <div style={{ position: 'absolute', inset: 0, background: 'rgba(7,16,10,0.82)', zIndex: 0, pointerEvents: 'none' }} />
+    <div style={{ background: '#07100A', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }} className="relative overflow-hidden flex flex-col">
 
       {/* Gold arc decoration (top-right) */}
       <svg className="absolute pointer-events-none" style={{ top: 0, right: 0, width: '55%', height: '70%', zIndex: 0, opacity: 0.7 }} viewBox="0 0 600 480" fill="none" preserveAspectRatio="xMaxYMin meet">
