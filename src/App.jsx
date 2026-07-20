@@ -8656,7 +8656,7 @@ function OfflineBanner() {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState("landing");
+  const [screen, setScreen] = useState("login");
   const [otpEmail, setOtpEmail] = useState("");
   const [otpType, setOtpType] = useState("login");
   const [session, setSession] = useState(null);
@@ -8890,24 +8890,16 @@ export default function App() {
   return (
     <ThemeContext.Provider value={themeValue}>
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
-      {screen === "landing" && (
-        <LandingScreen
-          onShowSignup={() => setScreen("signup")}
-          onShowLogin={() => setScreen("login")}
-          onForgotPassword={() => setScreen("forgot")}
-          showToast={showToast}
-        />
-      )}
       {screen === "signup" && (
         <SignupScreen
-          onBack={() => setScreen("landing")}
+          onBack={() => setScreen("login")}
           onSuccess={() => setScreen("login")}
           showToast={showToast}
         />
       )}
       {screen === "login" && (
         <LoginScreen
-          onBack={() => setScreen("landing")}
+          onBack={() => setScreen("login")}
           onSuccess={() => {}}
           onForgotPassword={() => setScreen("forgot")}
           onShowSignup={() => setScreen("signup")}
