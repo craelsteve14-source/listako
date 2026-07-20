@@ -940,7 +940,9 @@ function LandingScreen({ onShowSignup, onShowLogin, onForgotPassword, showToast 
   };
 
   return (
-    <div style={{ background: '#07100A', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }} className="relative overflow-hidden flex flex-col">
+    <div style={{ background: '#07100A', minHeight: '100vh', fontFamily: 'Inter, sans-serif', backgroundImage: 'url(/signin-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', backgroundBlendMode: 'luminosity' }} className="relative overflow-hidden flex flex-col">
+      {/* Dark overlay so existing dark design is preserved */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(7,16,10,0.82)', zIndex: 0, pointerEvents: 'none' }} />
 
       {/* Gold arc decoration (top-right) */}
       <svg className="absolute pointer-events-none" style={{ top: 0, right: 0, width: '55%', height: '70%', zIndex: 0, opacity: 0.7 }} viewBox="0 0 600 480" fill="none" preserveAspectRatio="xMaxYMin meet">
@@ -1500,7 +1502,7 @@ function LoginScreen({ onBack, onSuccess, onForgotPassword, showToast }) {
   };
 
   return (
-    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col">
+    <div className="min-h-screen flex flex-col" style={{ backgroundImage: 'url(/signin-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center top', backgroundRepeat: 'no-repeat' }}>
       <div className="bg-forest-800 px-4 py-4 flex items-center gap-2.5 flex-shrink-0">
         <button onClick={onBack} className="text-[15px] font-light" style={{ color: 'rgba(185,150,12,0.5)' }}>
           ←
