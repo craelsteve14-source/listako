@@ -869,6 +869,10 @@ const NavIcon = ({ name, size = 22, color = "currentColor" }) => {
     x: <svg {...props}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
     shield: <svg {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
     cash: <svg {...props}><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+    expenses: <svg {...props}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15h6"/></svg>,
+    suppliers: <svg {...props}><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8Z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>,
+    pl: <svg {...props}><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>,
+    payments: <svg {...props}><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/><path d="M5 15h2"/><path d="M9 15h4"/></svg>,
   };
   return icons[name] || null;
 };
@@ -1971,7 +1975,7 @@ function DiscountSettingsCard({ business, showToast, onSaved }) {
 // ═══════════════════════════════════════════════════════════════
 const CHART_COLORS = ["#1e5631", "#d4af37", "#3d7249", "#c9a84c", "#6b9a74", "#a8872a", "#a8c5af", "#866a22", "#d4e2d7", "#6b5520"];
 
-function AnalyticsDashboard({ business, branches, showToast }) {
+function AnalyticsDashboard({ business, branches, products, showToast }) {
   const theme = useTheme();
   const gridStroke = theme.dark ? "#1A3428" : "#e5e7eb";
   const tickFill = theme.dark ? "#9ca3af" : "#6b7280";
@@ -1986,6 +1990,9 @@ function AnalyticsDashboard({ business, branches, showToast }) {
   const [branchStats, setBranchStats] = useState([]);
   const [shifts, setShifts] = useState([]);
   const [exportingPDF, setExportingPDF] = useState(false);
+  const [paymentBreakdown, setPaymentBreakdown] = useState([]);
+  const [plData, setPlData] = useState({ revenue: 0, cogs: 0, expenses: 0, netProfit: 0, expenseItems: [] });
+  const [plFilter, setPlFilter] = useState("month");
 
   const ANALYTICS_TABS = [
     { key: "revenue", label: "Revenue" },
@@ -1993,6 +2000,8 @@ function AnalyticsDashboard({ business, branches, showToast }) {
     { key: "cashiers", label: "Cashiers" },
     { key: "branches", label: "Branches" },
     { key: "shifts", label: "Shifts" },
+    { key: "payments", label: "Payments" },
+    { key: "pl", label: "P&L" },
   ];
 
   const TIME_FILTERS = [
@@ -2212,6 +2221,57 @@ function AnalyticsDashboard({ business, branches, showToast }) {
     setShifts(data || []);
   }, [business.id, timeFilter, branchFilter, getDateRange]);
 
+  const fetchPaymentBreakdown = useCallback(async () => {
+    const { start } = getDateRange(timeFilter);
+    let query = supabase
+      .from("transactions")
+      .select("payment_method, total_amount")
+      .eq("business_id", business.id)
+      .eq("status", "completed")
+      .gte("created_at", start.toISOString());
+    if (branchFilter !== "all") query = query.eq("branch_id", branchFilter);
+    const { data } = await query;
+    const map = { cash: 0, gcash: 0, maya: 0, card: 0, utang: 0 };
+    (data || []).forEach((tx) => {
+      const m = tx.payment_method || "cash";
+      map[m] = (map[m] || 0) + Number(tx.total_amount);
+    });
+    const total = Object.values(map).reduce((s, v) => s + v, 0);
+    const colors = { cash: "#22C55E", gcash: "#3B82F6", maya: "#8B5CF6", card: "#F59E0B", utang: "#EF4444" };
+    const labels = { cash: "Cash", gcash: "GCash", maya: "Maya", card: "Card", utang: "Utang" };
+    setPaymentBreakdown(
+      Object.entries(map)
+        .filter(([, v]) => v > 0)
+        .map(([key, value]) => ({ key, label: labels[key], value, pct: total > 0 ? ((value / total) * 100).toFixed(1) : "0", color: colors[key] }))
+        .sort((a, b) => b.value - a.value)
+    );
+  }, [business.id, timeFilter, branchFilter, getDateRange]);
+
+  const fetchPL = useCallback(async () => {
+    const now = new Date();
+    let start = new Date(now);
+    if (plFilter === "today") {
+      start.setHours(0, 0, 0, 0);
+    } else if (plFilter === "week") {
+      start.setDate(now.getDate() - 6);
+      start.setHours(0, 0, 0, 0);
+    } else {
+      start.setDate(1);
+      start.setHours(0, 0, 0, 0);
+    }
+    const [txRes, itemsRes, expRes] = await Promise.all([
+      supabase.from("transactions").select("total_amount").eq("business_id", business.id).eq("status", "completed").gte("created_at", start.toISOString()),
+      supabase.from("transaction_items").select("product_id, quantity, subtotal, transactions!inner(business_id, status, created_at)").eq("transactions.business_id", business.id).eq("transactions.status", "completed").gte("transactions.created_at", start.toISOString()),
+      supabase.from("expenses").select("amount, category, description, expense_date").eq("business_id", business.id).gte("expense_date", start.toISOString().slice(0, 10)),
+    ]);
+    const revenue = (txRes.data || []).reduce((s, t) => s + Number(t.total_amount), 0);
+    const productMap = {};
+    (products || []).forEach((p) => { productMap[p.id] = Number(p.cost_price) || 0; });
+    const cogs = (itemsRes.data || []).reduce((s, item) => s + (productMap[item.product_id] || 0) * item.quantity, 0);
+    const totalExpenses = (expRes.data || []).reduce((s, e) => s + Number(e.amount), 0);
+    setPlData({ revenue, cogs, expenses: totalExpenses, netProfit: revenue - cogs - totalExpenses, expenseItems: expRes.data || [] });
+  }, [business.id, plFilter, products]);
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
@@ -2222,11 +2282,15 @@ function AnalyticsDashboard({ business, branches, showToast }) {
         fetchCashierStats(),
         fetchBranchStats(),
         fetchShifts(),
+        fetchPaymentBreakdown(),
+        fetchPL(),
       ]);
       setLoading(false);
     };
     load();
-  }, [fetchRevenue, fetchBestSellers, fetchSlowMovers, fetchCashierStats, fetchBranchStats, fetchShifts]);
+  }, [fetchRevenue, fetchBestSellers, fetchSlowMovers, fetchCashierStats, fetchBranchStats, fetchShifts, fetchPaymentBreakdown, fetchPL]);
+
+  useEffect(() => { fetchPL(); }, [fetchPL]);
 
   const totalRevenue = useMemo(() => revenueData.daily.reduce((s, d) => s + d.revenue, 0), [revenueData.daily]);
 
@@ -2647,6 +2711,128 @@ function AnalyticsDashboard({ business, branches, showToast }) {
           </Card>
         </div>
       )}
+
+      {/* ─── PAYMENTS TAB ─── */}
+      {analyticsTab === "payments" && (
+        <div className="space-y-4">
+          <Card className="p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-4">Payment Method Breakdown</p>
+            {paymentBreakdown.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">No transactions for this period.</p>
+            ) : (
+              <div className="space-y-3">
+                {paymentBreakdown.map((pm) => (
+                  <div key={pm.key}>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="text-sm font-semibold text-gray-700 dark:text-ivory-100">{pm.label}</span>
+                      <div className="text-right">
+                        <span className="text-sm font-black text-gray-800 dark:text-ivory-100">₱{pm.value.toFixed(2)}</span>
+                        <span className="text-xs text-gray-400 ml-2">{pm.pct}%</span>
+                      </div>
+                    </div>
+                    <div className="h-2 bg-gray-100 dark:bg-surface-dark rounded-full overflow-hidden">
+                      <div className="h-full rounded-full transition-all" style={{ width: `${pm.pct}%`, backgroundColor: pm.color }} />
+                    </div>
+                  </div>
+                ))}
+                <div className="border-t border-gray-100 dark:border-forest-600 pt-3 mt-3">
+                  <div className="flex justify-between">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">Total</span>
+                    <span className="text-sm font-black text-forest-700 dark:text-gold-400">
+                      ₱{paymentBreakdown.reduce((s, p) => s + p.value, 0).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </Card>
+          <Card className="p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Bar Chart</p>
+            {paymentBreakdown.length > 0 && (
+              <div className="h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={paymentBreakdown}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} />
+                    <XAxis dataKey="label" tick={{ fontSize: 10, fill: tickFill }} />
+                    <YAxis tick={{ fontSize: 9, fill: tickFill }} tickFormatter={(v) => `₱${v >= 1000 ? `${(v/1000).toFixed(0)}k` : v}`} />
+                    <Tooltip formatter={(v) => [`₱${Number(v).toFixed(2)}`, "Amount"]} />
+                    <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                      {paymentBreakdown.map((pm, i) => (
+                        <Cell key={i} fill={pm.color} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </Card>
+        </div>
+      )}
+
+      {/* ─── P&L TAB ─── */}
+      {analyticsTab === "pl" && (
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            {[{ key: "today", label: "Today" }, { key: "week", label: "This Week" }, { key: "month", label: "This Month" }].map((f) => (
+              <button key={f.key} onClick={() => setPlFilter(f.key)}
+                className={`px-3 py-1 rounded-lg text-xs font-medium ${plFilter === f.key ? "bg-gold-400 text-forest-900" : "bg-gray-100 dark:bg-surface-dark text-gray-500 dark:text-gray-400"}`}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          <Card className="p-4">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-4">Profit & Loss</p>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-forest-600">
+                <span className="text-sm text-gray-600 dark:text-gray-300">Revenue (Sales)</span>
+                <span className="text-sm font-bold text-green-600">+₱{plData.revenue.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-forest-600">
+                <span className="text-sm text-gray-600 dark:text-gray-300">Cost of Goods Sold</span>
+                <span className="text-sm font-bold text-red-500">-₱{plData.cogs.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-forest-600">
+                <span className="text-sm text-gray-600 dark:text-gray-300">Gross Profit</span>
+                <span className={`text-sm font-bold ${(plData.revenue - plData.cogs) >= 0 ? "text-green-600" : "text-red-500"}`}>
+                  {(plData.revenue - plData.cogs) >= 0 ? "+" : ""}₱{(plData.revenue - plData.cogs).toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-forest-600">
+                <span className="text-sm text-gray-600 dark:text-gray-300">Operating Expenses</span>
+                <span className="text-sm font-bold text-red-500">-₱{plData.expenses.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between items-center py-3 bg-forest-50 dark:bg-forest-800/40 rounded-xl px-3 mt-1">
+                <span className="text-sm font-bold text-gray-800 dark:text-ivory-100">Net Profit</span>
+                <span className={`text-lg font-black ${plData.netProfit >= 0 ? "text-forest-600 dark:text-gold-400" : "text-red-600"}`}>
+                  {plData.netProfit >= 0 ? "+" : ""}₱{plData.netProfit.toFixed(2)}
+                </span>
+              </div>
+            </div>
+            {plData.cogs === 0 && (plData.revenue > 0 || plData.expenses > 0) && (
+              <p className="text-xs text-gray-400 mt-3">Tip: Add cost prices to products in Inventory to see accurate COGS and profit.</p>
+            )}
+          </Card>
+
+          {plData.expenseItems.length > 0 && (
+            <Card className="p-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Expense Breakdown</p>
+              <div className="space-y-2">
+                {(() => {
+                  const catMap = {};
+                  plData.expenseItems.forEach(e => { catMap[e.category] = (catMap[e.category] || 0) + Number(e.amount); });
+                  return Object.entries(catMap).sort((a, b) => b[1] - a[1]).map(([cat, amt]) => (
+                    <div key={cat} className="flex justify-between items-center text-sm">
+                      <span className="text-gray-600 dark:text-gray-300">{cat}</span>
+                      <span className="font-bold text-red-500">₱{amt.toFixed(2)}</span>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -3044,6 +3230,225 @@ function SettingsPanel({ business, products, branches, staff, showToast, onLogou
   );
 }
 
+const EXPENSE_CATEGORIES = ["Supplies", "Utilities", "Rent", "Salary", "Maintenance", "Transportation", "Others"];
+
+function ExpensesTab({ business, expenses, showAddExpense, setShowAddExpense, showToast, onSaved }) {
+  const [catFilter, setCatFilter] = useState("all");
+  const [editExpense, setEditExpense] = useState(null);
+
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayTotal = expenses.filter(e => e.expense_date === todayStr).reduce((s, e) => s + Number(e.amount), 0);
+  const monthTotal = expenses.filter(e => e.expense_date?.slice(0, 7) === todayStr.slice(0, 7)).reduce((s, e) => s + Number(e.amount), 0);
+
+  const filtered = catFilter === "all" ? expenses : expenses.filter(e => e.category === catFilter);
+
+  const ExpenseModal = ({ existing, onClose }) => {
+    const [form, setForm] = useState({
+      amount: existing?.amount || "",
+      category: existing?.category || "Supplies",
+      description: existing?.description || "",
+      expense_date: existing?.expense_date || todayStr,
+    });
+    const [saving, setSaving] = useState(false);
+    const save = async () => {
+      if (!form.amount || isNaN(Number(form.amount)) || Number(form.amount) <= 0)
+        return showToast("Enter a valid amount.", "error");
+      setSaving(true);
+      const payload = {
+        business_id: business.id,
+        amount: Number(form.amount),
+        category: form.category,
+        description: form.description.trim() || null,
+        expense_date: form.expense_date,
+      };
+      const { error } = existing
+        ? await supabase.from("expenses").update(payload).eq("id", existing.id)
+        : await supabase.from("expenses").insert(payload);
+      setSaving(false);
+      if (error) return showToast("Hindi na-save. Subukan muli.", "error");
+      showToast(existing ? "Gastos na-update!" : "Gastos na-record!", "success");
+      onClose();
+      onSaved();
+    };
+    const del = async () => {
+      if (!window.confirm("Tanggalin ang gastos na ito?")) return;
+      await supabase.from("expenses").delete().eq("id", existing.id);
+      showToast("Gastos natanggal.", "success");
+      onClose();
+      onSaved();
+    };
+    return (
+      <Modal title={existing ? "I-edit ang Gastos" : "Magdagdag ng Gastos"} onClose={onClose}>
+        <div className="space-y-4">
+          <Field label="Halaga (₱)" value={form.amount} onChange={(v) => setForm(f => ({ ...f, amount: v }))} placeholder="0.00" type="number" />
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Category</label>
+            <select value={form.category} onChange={(e) => setForm(f => ({ ...f, category: e.target.value }))}
+              className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 bg-white dark:bg-surface-dark-card dark:text-ivory-100">
+              {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <Field label="Description (optional)" value={form.description} onChange={(v) => setForm(f => ({ ...f, description: v }))} placeholder="Bayad sa kuryente, etc." />
+          <div>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Petsa</label>
+            <input type="date" value={form.expense_date} onChange={(e) => setForm(f => ({ ...f, expense_date: e.target.value }))}
+              className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 bg-white dark:bg-surface-dark-card dark:text-ivory-100" />
+          </div>
+          <button onClick={save} disabled={saving} className="w-full bg-forest-600 text-white font-bold py-3 rounded-xl disabled:opacity-60">
+            {saving ? "Sine-save..." : existing ? "I-update" : "I-save"}
+          </button>
+          {existing && (
+            <button onClick={del} className="w-full bg-red-50 text-red-500 font-semibold py-2.5 rounded-xl text-sm">Tanggalin</button>
+          )}
+        </div>
+      </Modal>
+    );
+  };
+
+  return (
+    <div className="p-4 space-y-3">
+      {(showAddExpense || editExpense) && (
+        <ExpenseModal existing={editExpense} onClose={() => { setShowAddExpense(false); setEditExpense(null); }} />
+      )}
+      <div className="flex items-center justify-between">
+        <h2 className="font-bold text-gray-700 dark:text-ivory-200 text-sm uppercase tracking-wide">Gastos</h2>
+        <button onClick={() => setShowAddExpense(true)} className="bg-forest-600 text-white text-xs px-3 py-2 rounded-xl font-bold">+ Magdagdag</button>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        <Card className="p-3">
+          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Ngayon</p>
+          <p className="text-lg font-black text-red-500">₱{todayTotal.toFixed(2)}</p>
+        </Card>
+        <Card className="p-3">
+          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Buwanang Gastos</p>
+          <p className="text-lg font-black text-red-500">₱{monthTotal.toFixed(2)}</p>
+        </Card>
+      </div>
+      <div className="flex gap-1 overflow-x-auto hide-scrollbar -mx-1 px-1">
+        {["all", ...EXPENSE_CATEGORIES].map(c => (
+          <button key={c} onClick={() => setCatFilter(c)}
+            className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap ${catFilter === c ? "bg-forest-600 text-white" : "bg-gray-100 dark:bg-surface-dark text-gray-500 dark:text-gray-400"}`}>
+            {c === "all" ? "Lahat" : c}
+          </button>
+        ))}
+      </div>
+      {filtered.length === 0 ? (
+        <Card className="p-8 text-center">
+          <NavIcon name="expenses" size={36} color="#6b7280" />
+          <p className="font-semibold text-gray-600 dark:text-gray-400 text-sm mt-2">Wala pang gastos</p>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map(e => (
+            <Card key={e.id} className="p-3 flex items-center justify-between" onClick={() => setEditExpense(e)}>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-600 font-medium">{e.category}</span>
+                  <span className="text-xs text-gray-400">{e.expense_date}</span>
+                </div>
+                {e.description && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">{e.description}</p>}
+              </div>
+              <p className="font-black text-red-500 ml-3">₱{Number(e.amount).toFixed(2)}</p>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SuppliersTab({ business, suppliers, editSupplier, setEditSupplier, showAddSupplier, setShowAddSupplier, showToast, onSaved }) {
+  const SupplierModal = ({ existing, onClose }) => {
+    const [form, setForm] = useState({
+      name: existing?.name || "",
+      contact_name: existing?.contact_name || "",
+      phone: existing?.phone || "",
+      notes: existing?.notes || "",
+    });
+    const [saving, setSaving] = useState(false);
+    const save = async () => {
+      if (!form.name.trim()) return showToast("Ilagay ang pangalan ng supplier.", "error");
+      setSaving(true);
+      const payload = {
+        business_id: business.id,
+        name: form.name.trim(),
+        contact_name: form.contact_name.trim() || null,
+        phone: form.phone.trim() || null,
+        notes: form.notes.trim() || null,
+      };
+      const { error } = existing
+        ? await supabase.from("suppliers").update(payload).eq("id", existing.id)
+        : await supabase.from("suppliers").insert(payload);
+      setSaving(false);
+      if (error) return showToast("Hindi na-save. Subukan muli.", "error");
+      showToast(existing ? "Supplier na-update!" : "Supplier na-add!", "success");
+      onClose();
+      onSaved();
+    };
+    const del = async () => {
+      if (!window.confirm("Tanggalin ang supplier na ito?")) return;
+      await supabase.from("suppliers").delete().eq("id", existing.id);
+      showToast("Supplier natanggal.", "success");
+      onClose();
+      onSaved();
+    };
+    return (
+      <Modal title={existing ? "I-edit ang Supplier" : "Magdagdag ng Supplier"} onClose={onClose}>
+        <div className="space-y-4">
+          <Field label="Pangalan ng Supplier" value={form.name} onChange={(v) => setForm(f => ({ ...f, name: v }))} placeholder="Juan's Wholesale" />
+          <Field label="Contact Person (optional)" value={form.contact_name} onChange={(v) => setForm(f => ({ ...f, contact_name: v }))} placeholder="Juan dela Cruz" />
+          <Field label="Phone (optional)" value={form.phone} onChange={(v) => setForm(f => ({ ...f, phone: v }))} placeholder="09XX XXX XXXX" type="tel" />
+          <Field label="Notes (optional)" value={form.notes} onChange={(v) => setForm(f => ({ ...f, notes: v }))} placeholder="Delivery schedule, terms, etc." />
+          <button onClick={save} disabled={saving} className="w-full bg-forest-600 text-white font-bold py-3 rounded-xl disabled:opacity-60">
+            {saving ? "Sine-save..." : existing ? "I-update" : "I-save ang Supplier"}
+          </button>
+          {existing && (
+            <button onClick={del} className="w-full bg-red-50 text-red-500 font-semibold py-2.5 rounded-xl text-sm">Tanggalin</button>
+          )}
+        </div>
+      </Modal>
+    );
+  };
+
+  return (
+    <div className="p-4 space-y-3">
+      {(showAddSupplier || editSupplier) && (
+        <SupplierModal existing={editSupplier} onClose={() => { setShowAddSupplier(false); setEditSupplier(null); }} />
+      )}
+      <div className="flex items-center justify-between">
+        <h2 className="font-bold text-gray-700 dark:text-ivory-200 text-sm uppercase tracking-wide">
+          {suppliers.length} Supplier{suppliers.length !== 1 ? "s" : ""}
+        </h2>
+        <button onClick={() => setShowAddSupplier(true)} className="bg-forest-600 text-white text-xs px-3 py-2 rounded-xl font-bold">+ Magdagdag</button>
+      </div>
+      {suppliers.length === 0 ? (
+        <Card className="p-8 text-center">
+          <NavIcon name="suppliers" size={36} color="#6b7280" />
+          <p className="font-semibold text-gray-600 dark:text-gray-400 text-sm mt-2">Wala pang supplier</p>
+          <p className="text-xs text-gray-400 mt-1">Idagdag ang iyong mga supplier para ma-track ang restock.</p>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {suppliers.map(s => (
+            <Card key={s.id} className="p-4" onClick={() => setEditSupplier(s)}>
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-bold text-gray-800 dark:text-ivory-100 text-sm">{s.name}</p>
+                  {s.contact_name && <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{s.contact_name}</p>}
+                  {s.phone && <p className="text-xs text-gray-400">{s.phone}</p>}
+                  {s.notes && <p className="text-xs text-gray-400 italic mt-0.5 truncate max-w-[200px]">{s.notes}</p>}
+                </div>
+                <button onClick={(e) => { e.stopPropagation(); setEditSupplier(s); }}
+                  className="text-xs bg-gray-100 dark:bg-surface-dark text-gray-600 dark:text-gray-400 px-2 py-1.5 rounded-lg font-medium ml-2">Edit</button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }) {
   const [tab, setTab] = useState(() => {
     return localStorage.getItem("owner_tab") || "dashboard";
@@ -3073,12 +3478,17 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
   const [showAddCustomer, setShowAddCustomer] = useState(false);
   const [editCustomer, setEditCustomer] = useState(null);
   const [customerSearch, setCustomerSearch] = useState("");
+  const [expenses, setExpenses] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
+  const [showAddExpense, setShowAddExpense] = useState(false);
+  const [showAddSupplier, setShowAddSupplier] = useState(false);
+  const [editSupplier, setEditSupplier] = useState(null);
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const [b, p, s, tx, utang, pending, notifs, xfers, cust] = await Promise.all([
+    const [b, p, s, tx, utang, pending, notifs, xfers, cust, exp, sup] = await Promise.all([
       supabase.from("branches").select("*").eq("business_id", business.id).order("created_at"),
       supabase.from("products").select("*").eq("business_id", business.id).eq("status", "active").order("name"),
       supabase.from("profiles").select("*").eq("business_id", business.id).neq("role", "owner").order("full_name"),
@@ -3089,6 +3499,8 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
       supabase.from("product_transfers").select("*, products(name, stock_quantity), from_branch:branches!product_transfers_from_branch_id_fkey(name), to_branch:branches!product_transfers_to_branch_id_fkey(name), requester:profiles!product_transfers_requested_by_fkey(full_name)")
         .eq("business_id", business.id).eq("status", "pending").order("created_at", { ascending: false }),
       supabase.from("customers").select("*").eq("business_id", business.id).order("name"),
+      supabase.from("expenses").select("*").eq("business_id", business.id).order("expense_date", { ascending: false }).limit(100),
+      supabase.from("suppliers").select("*").eq("business_id", business.id).order("name"),
     ]);
     setBranches(b.data || []);
     setProducts(p.data || []);
@@ -3098,6 +3510,8 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     setNotifications(notifs.data || []);
     setPendingTransfers(xfers.data || []);
     setCustomers(cust.data || []);
+    setExpenses(exp.data || []);
+    setSuppliers(sup.data || []);
     const revenue = (tx.data || []).reduce((sum, t) => sum + Number(t.total_amount), 0);
     setTodayRevenue(revenue);
     setTodayTxCount((tx.data || []).length);
@@ -3163,12 +3577,14 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
       name: existing?.name || "",
       barcode: existing?.barcode || "",
       price: existing?.price || "",
+      cost_price: existing?.cost_price || "",
       wholesale_price: existing?.wholesale_price || "",
       wholesale_min_qty: existing?.wholesale_min_qty || "12",
       stock_quantity: existing?.stock_quantity || "",
       low_stock_threshold: existing?.low_stock_threshold || "10",
       category: existing?.category || "Others",
       image_url: existing?.image_url || "",
+      supplier_id: existing?.supplier_id || "",
     });
     const [saving, setSaving] = useState(false);
     const save = async () => {
@@ -3181,12 +3597,14 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
         name: form.name.trim(),
         barcode: form.barcode.trim() || null,
         price: Number(form.price),
+        cost_price: Number(form.cost_price) || 0,
         wholesale_price: form.wholesale_price ? Number(form.wholesale_price) : null,
         wholesale_min_qty: Number(form.wholesale_min_qty) || 1,
         stock_quantity: Number(form.stock_quantity) || 0,
         low_stock_threshold: Number(form.low_stock_threshold) || 10,
         category: form.category,
         image_url: form.image_url.trim() || null,
+        supplier_id: form.supplier_id || null,
       };
       const { error } = existing
         ? await supabase.from("products").update(payload).eq("id", existing.id)
@@ -3245,6 +3663,20 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
               type="number"
             />
             <Field
+              label="Cost Price (₱)"
+              value={form.cost_price}
+              onChange={(v) => setForm((f) => ({ ...f, cost_price: v }))}
+              placeholder="0.00"
+              type="number"
+            />
+          </div>
+          {form.price && form.cost_price && Number(form.price) > 0 && (
+            <p className="text-xs text-forest-600 dark:text-gold-400 font-medium -mt-2">
+              Margin: {(((Number(form.price) - Number(form.cost_price)) / Number(form.price)) * 100).toFixed(1)}% · Profit per unit: ₱{(Number(form.price) - Number(form.cost_price)).toFixed(2)}
+            </p>
+          )}
+          <div className="grid grid-cols-2 gap-3">
+            <Field
               label="Stock"
               value={form.stock_quantity}
               onChange={(v) => setForm((f) => ({ ...f, stock_quantity: v }))}
@@ -3275,6 +3707,17 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
               type="number"
             />
           </div>
+          {suppliers.length > 0 && (
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Supplier (optional)</label>
+              <select value={form.supplier_id}
+                onChange={(e) => setForm((f) => ({ ...f, supplier_id: e.target.value }))}
+                className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 bg-white dark:bg-surface-dark-card dark:text-ivory-100">
+                <option value="">-- No Supplier --</option>
+                {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
+          )}
           <div>
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-1 block">Product Image (optional)</label>
             {form.image_url && (
@@ -3471,6 +3914,8 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
     { key: "branches", icon: "branch", label: "Branches" },
     { key: "pending", icon: "pending", label: "Pending", badge: (pendingProducts.length + pendingTransfers.length) > 0 },
     { key: "customers", icon: "customers", label: "Suki" },
+    { key: "expenses", icon: "expenses", label: "Gastos" },
+    { key: "suppliers", icon: "suppliers", label: "Suppliers" },
     { key: "logs", icon: "logs", label: "Logs" },
     { key: "settings", icon: "settings", label: "Settings" },
     ...(isSuperAdmin ? [{ key: "admin", icon: "admin", label: "Admin" }] : []),
@@ -3890,7 +4335,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
             )}
 
             {tab === "analytics" && (
-              <AnalyticsDashboard business={business} branches={branches} showToast={showToast} />
+              <AnalyticsDashboard business={business} branches={branches} products={products} showToast={showToast} />
             )}
 
             {tab === "sales" && (
@@ -4010,6 +4455,11 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                             <span className="text-sm font-black text-forest-700 dark:text-gold-400">
                               ₱{Number(p.price).toFixed(2)}
                             </span>
+                            {p.cost_price > 0 && (
+                              <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-forest-50 dark:bg-forest-800/50 text-forest-600 dark:text-gold-400">
+                                {(((Number(p.price) - Number(p.cost_price)) / Number(p.price)) * 100).toFixed(0)}% margin
+                              </span>
+                            )}
                             <span
                               className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                                 p.stock_quantity <= 0
@@ -4295,6 +4745,30 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
                   </div>
                 )}
               </div>
+            )}
+
+            {tab === "expenses" && (
+              <ExpensesTab
+                business={business}
+                expenses={expenses}
+                showAddExpense={showAddExpense}
+                setShowAddExpense={setShowAddExpense}
+                showToast={showToast}
+                onSaved={fetchAll}
+              />
+            )}
+
+            {tab === "suppliers" && (
+              <SuppliersTab
+                business={business}
+                suppliers={suppliers}
+                editSupplier={editSupplier}
+                setEditSupplier={setEditSupplier}
+                showAddSupplier={showAddSupplier}
+                setShowAddSupplier={setShowAddSupplier}
+                showToast={showToast}
+                onSaved={fetchAll}
+              />
             )}
 
             {tab === "logs" && (
@@ -4837,6 +5311,9 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
     localStorage.setItem("cashier_customer_phone", val);
     setCustomerPhone(val);
   };
+
+  const [utangDueDate, setUtangDueDate] = useState("");
+  const [utangNotes, setUtangNotes] = useState("");
 
   const [gcashRef, setGcashRef] = useState(() => {
     return localStorage.getItem("cashier_gcash_ref") || "";
@@ -5502,6 +5979,8 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
           amount: total,
           amount_paid: 0,
           status: "unpaid",
+          due_date: utangDueDate || null,
+          notes: utangNotes.trim() || null,
         });
       }
 
@@ -5578,6 +6057,8 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
       setAmountTenderedPersisted("");
       setCustomerNamePersisted("");
       setCustomerPhonePersisted("");
+      setUtangDueDate("");
+      setUtangNotes("");
       setGcashRefPersisted("");
       setDiscountValuePersisted("");
       setDiscountReasonPersisted("");
@@ -6176,6 +6657,27 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                       placeholder="Phone number (optional)..."
                       className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100"
                     />
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <div>
+                        <p className="text-xs text-gray-400 mb-1">Due Date (optional)</p>
+                        <input
+                          type="date"
+                          value={utangDueDate}
+                          onChange={(e) => setUtangDueDate(e.target.value)}
+                          className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-400 mb-1">Notes (optional)</p>
+                        <input
+                          type="text"
+                          value={utangNotes}
+                          onChange={(e) => setUtangNotes(e.target.value)}
+                          placeholder="Notes..."
+                          className="w-full border border-gray-200 dark:border-forest-600 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-forest-500 dark:bg-surface-dark-card dark:text-ivory-100"
+                        />
+                      </div>
+                    </div>
                     <div className="mt-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
                       <p className="text-xs text-orange-700 font-medium">
                         This transaction will be recorded as utang. The customer owes ₱{total.toFixed(2)}.
@@ -6433,13 +6935,20 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>
-                      <p className="font-semibold text-gray-800 dark:text-ivory-100 text-sm">{u.customer_name}</p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="font-semibold text-gray-800 dark:text-ivory-100 text-sm">{u.customer_name}</p>
+                        {u.due_date && new Date(u.due_date) < new Date(new Date().toDateString()) && (
+                          <span className="text-[9px] font-black bg-red-500 text-white px-1.5 py-0.5 rounded-full">OVERDUE</span>
+                        )}
+                      </div>
                       {u.customer_phone && (
                         <p className="text-xs text-gray-400">{u.customer_phone}</p>
                       )}
                       <p className="text-xs text-gray-400 mt-0.5">
                         {new Date(u.created_at).toLocaleDateString("en-PH")}
+                        {u.due_date && ` · Due: ${new Date(u.due_date).toLocaleDateString("en-PH")}`}
                       </p>
+                      {u.notes && <p className="text-xs text-gray-400 italic mt-0.5">{u.notes}</p>}
                     </div>
                     <div className="text-right">
                       <p className="font-black text-red-600">
