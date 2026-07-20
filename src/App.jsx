@@ -1480,7 +1480,7 @@ function LoginScreen({ onBack, onSuccess, onForgotPassword, onShowSignup, showTo
         </div>
 
         {/* Form */}
-        <div style={{ display:'flex', flexDirection:'column', gap:'10px', marginBottom:'20px' }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:'6px', marginBottom:'20px' }}>
           {/* Email */}
           <div style={{ display:'flex', flexDirection:'column', gap:'7px' }}>
             <label style={{ fontSize:'12.5px', fontWeight:'600', color:C.forest, letterSpacing:'0.15px' }}>Email address</label>
