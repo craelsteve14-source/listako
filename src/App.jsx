@@ -1133,131 +1133,87 @@ function LandingScreen({ onShowSignup, onShowLogin, onForgotPassword, showToast 
 
         {/* ─── RIGHT: LOGIN CARD (desktop only) ─── */}
         <div className="hidden md:block w-[420px] lg:w-[450px] flex-shrink-0 pt-6 lg:pt-10">
-          <div style={{ background:'rgba(9,20,12,0.96)', border:'1px solid rgba(185,150,12,0.13)', borderRadius:'20px', padding:'34px 30px 28px', backdropFilter:'blur(20px)', boxShadow:'0 24px 64px rgba(0,0,0,0.55), 0 0 0 1px rgba(185,150,12,0.04)' }}>
-
-            <h3 className="font-playfair font-bold text-white mb-1" style={{ fontSize:'26px' }}>Welcome Back</h3>
-            <p className="mb-6" style={{ fontSize:'13px', color:'rgba(245,240,232,0.42)' }}>Sign in to continue managing your business.</p>
-
+          <div style={{ background:'rgba(255,255,255,0.93)', backdropFilter:'blur(14px)', WebkitBackdropFilter:'blur(14px)', borderRadius:'24px', padding:'36px 28px 28px', boxShadow:'0 8px 48px rgba(10,27,18,0.13),0 1px 4px rgba(10,27,18,0.06)' }}>
+            {/* Logo */}
+            <div style={{ textAlign:'center', marginBottom:'24px' }}>
+              <img src="/logo-mark.png" alt="ListaKo" style={{ width:'68px', height:'68px', objectFit:'contain', margin:'0 auto 10px', display:'block' }} />
+              <div style={{ fontSize:'24px', fontWeight:'800', letterSpacing:'-0.8px', color:'#1C4430', lineHeight:1, marginBottom:'4px' }}>Lista<span style={{ color:'#4A9B72' }}>Ko</span></div>
+              <div style={{ fontSize:'7.5px', fontWeight:'600', letterSpacing:'3px', textTransform:'uppercase', color:'#6B7280' }}>Business Operating System</div>
+            </div>
+            {/* Heading */}
+            <div style={{ textAlign:'center', marginBottom:'24px' }}>
+              <h3 style={{ fontSize:'22px', fontWeight:'700', letterSpacing:'-0.5px', color:'#111827', margin:'0 0 8px', lineHeight:1.15 }}>Welcome back.</h3>
+              <p style={{ fontSize:'12.5px', color:'#6B7280', lineHeight:1.65, margin:0 }}>Sign in to access your business dashboard,<br/>manage operations, and grow with confidence.</p>
+            </div>
             {/* Email */}
-            <div className="mb-4">
-              <label style={{ display:'block', fontSize:'11px', fontWeight:'600', color:'rgba(245,240,232,0.85)', marginBottom:'7px', letterSpacing:'0.3px' }}>Email Address</label>
+            <div style={{ marginBottom:'14px' }}>
+              <label style={{ display:'block', fontSize:'12px', fontWeight:'600', color:'#1C4430', marginBottom:'7px', letterSpacing:'0.15px' }}>Email address</label>
               <div style={{ position:'relative' }}>
-                <div style={{ position:'absolute', left:'13px', top:'50%', transform:'translateY(-50%)', color:'rgba(245,240,232,0.3)', display:'flex' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                </div>
-                <input
-                  type="email"
-                  value={form.email}
-                  onChange={e => setF('email', e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                  placeholder="you@example.com"
-                  style={{ ...inputStyle, padding:'12px 14px 12px 40px' }}
-                />
+                <span style={{ position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', color:'#9CA3AF', display:'flex', pointerEvents:'none' }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></span>
+                <input type="email" value={form.email} onChange={e => setF('email', e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Enter your email" style={{ width:'100%', padding:'13px 14px 13px 42px', background:'#fff', border:'1.5px solid #E5E7EB', borderRadius:'12px', fontSize:'14px', color:'#111827', fontFamily:'inherit', outline:'none' }} />
               </div>
             </div>
-
             {/* Password */}
-            <div className="mb-4">
-              <label style={{ display:'block', fontSize:'11px', fontWeight:'600', color:'rgba(245,240,232,0.85)', marginBottom:'7px', letterSpacing:'0.3px' }}>Password</label>
+            <div style={{ marginBottom:'6px' }}>
+              <label style={{ display:'block', fontSize:'12px', fontWeight:'600', color:'#1C4430', marginBottom:'7px', letterSpacing:'0.15px' }}>Password</label>
               <div style={{ position:'relative' }}>
-                <div style={{ position:'absolute', left:'13px', top:'50%', transform:'translateY(-50%)', color:'rgba(245,240,232,0.3)', display:'flex' }}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                </div>
-                <input
-                  type={showPass ? 'text' : 'password'}
-                  value={form.password}
-                  onChange={e => setF('password', e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleLogin()}
-                  placeholder="Enter your password"
-                  style={{ ...inputStyle, padding:'12px 42px 12px 40px' }}
-                />
-                <button type="button" onClick={() => setShowPass(p => !p)} style={{ position:'absolute', right:'13px', top:'50%', transform:'translateY(-50%)', color:'rgba(245,240,232,0.3)', background:'none', border:'none', cursor:'pointer', display:'flex', padding:0 }}>
-                  {showPass
-                    ? <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                    : <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                  }
+                <span style={{ position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', color:'#9CA3AF', display:'flex', pointerEvents:'none' }}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+                <input type={showPass ? 'text' : 'password'} value={form.password} onChange={e => setF('password', e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Enter your password" style={{ width:'100%', padding:'13px 42px 13px 42px', background:'#fff', border:'1.5px solid #E5E7EB', borderRadius:'12px', fontSize:'14px', color:'#111827', fontFamily:'inherit', outline:'none' }} />
+                <button type="button" onClick={() => setShowPass(p => !p)} style={{ position:'absolute', right:'14px', top:'50%', transform:'translateY(-50%)', color:'#9CA3AF', background:'none', border:'none', cursor:'pointer', display:'flex', padding:0 }}>
+                  {showPass ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
                 </button>
               </div>
             </div>
-
-            {/* Remember me + Forgot Password */}
-            <div className="flex items-center justify-between mb-5">
-              <label className="flex items-center gap-2" style={{ cursor:'pointer' }}>
-                <div onClick={() => setF('remember', !form.remember)} style={{ width:'16px', height:'16px', borderRadius:'4px', border: form.remember ? 'none' : '1.5px solid rgba(185,150,12,0.38)', background: form.remember ? '#B9960C' : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', flexShrink:0, transition:'all 0.15s' }}>
-                  {form.remember && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3.5"><polyline points="20 6 9 17 4 12"/></svg>}
-                </div>
-                <span style={{ fontSize:'12px', color:'rgba(245,240,232,0.58)' }}>Remember me</span>
-              </label>
-              <button onClick={onForgotPassword} style={{ fontSize:'12px', color:'#B9960C', fontWeight:'500', background:'none', border:'none', cursor:'pointer', padding:0 }}>Forgot Password?</button>
+            {/* Forgot */}
+            <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:'18px' }}>
+              <button onClick={onForgotPassword} style={{ fontSize:'12px', fontWeight:'600', color:'#1C4430', background:'none', border:'none', cursor:'pointer', textDecoration:'underline', textUnderlineOffset:'2px', fontFamily:'inherit', padding:0 }}>Forgot password?</button>
             </div>
-
-            {/* Sign In button */}
-            <button
-              onClick={handleLogin}
-              disabled={loading}
-              style={{ width:'100%', background: loading ? 'rgba(185,150,12,0.55)' : '#B9960C', color:'#060E08', fontWeight:'700', fontSize:'14px', padding:'14px', borderRadius:'10px', border:'none', cursor: loading ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', marginBottom:'20px', transition:'opacity 0.2s', letterSpacing:'0.2px' }}
-            >
-              {loading ? 'Signing in...' : <><span>Sign In</span><span style={{ fontSize:'16px', lineHeight:1 }}>→</span></>}
+            {/* Sign In */}
+            <button onClick={handleLogin} disabled={loading} style={{ width:'100%', padding:'14px 20px', background: loading ? 'rgba(28,68,48,0.6)' : '#1C4430', color:'#fff', border:'none', borderRadius:'12px', fontSize:'15px', fontWeight:'600', cursor: loading ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', fontFamily:'inherit', marginBottom:'16px' }}>
+              {loading ? 'Signing in…' : <><span>Sign In</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></>}
             </button>
-
-            {/* OR CONTINUE WITH */}
-            <div className="flex items-center gap-3 mb-3">
-              <div style={{ flex:1, height:'1px', background:'rgba(185,150,12,0.1)' }}/>
-              <span style={{ fontSize:'9.5px', fontWeight:'600', letterSpacing:'2px', color:'rgba(245,240,232,0.28)' }}>OR CONTINUE WITH</span>
-              <div style={{ flex:1, height:'1px', background:'rgba(185,150,12,0.1)' }}/>
+            {/* OR */}
+            <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'12px', fontSize:'10px', fontWeight:'600', letterSpacing:'1.5px', textTransform:'uppercase', color:'#9CA3AF' }}>
+              <div style={{ flex:1, height:'1px', background:'#E5E7EB' }}/> or <div style={{ flex:1, height:'1px', background:'#E5E7EB' }}/>
             </div>
-
             {/* Google */}
-            <button style={{ width:'100%', background:'transparent', border:'1px solid rgba(245,240,232,0.11)', borderRadius:'10px', padding:'12px 16px', display:'flex', alignItems:'center', gap:'10px', marginBottom:'8px', cursor:'pointer', color:'rgba(245,240,232,0.75)', fontSize:'13px', fontWeight:'500' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+            <button style={{ width:'100%', padding:'12px 20px', background:'#fff', border:'1.5px solid #E5E7EB', borderRadius:'12px', fontSize:'13.5px', fontWeight:'500', color:'#111827', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', fontFamily:'inherit', marginBottom:'22px' }}>
+              <svg width="17" height="17" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
               Continue with Google
             </button>
-
-            {/* Microsoft */}
-            <button style={{ width:'100%', background:'transparent', border:'1px solid rgba(245,240,232,0.11)', borderRadius:'10px', padding:'12px 16px', display:'flex', alignItems:'center', gap:'10px', marginBottom:'8px', cursor:'pointer', color:'rgba(245,240,232,0.75)', fontSize:'13px', fontWeight:'500' }}>
-              <svg width="16" height="16" viewBox="0 0 24 24"><rect x="1" y="1" width="10.5" height="10.5" fill="#F25022"/><rect x="12.5" y="1" width="10.5" height="10.5" fill="#7FBA00"/><rect x="1" y="12.5" width="10.5" height="10.5" fill="#00A4EF"/><rect x="12.5" y="12.5" width="10.5" height="10.5" fill="#FFB900"/></svg>
-              Continue with Microsoft
-            </button>
-
-            {/* Biometrics */}
-            <button style={{ width:'100%', background:'rgba(6,14,8,0.7)', border:'1px solid rgba(185,150,12,0.11)', borderRadius:'10px', padding:'11px 16px', display:'flex', alignItems:'center', gap:'10px', marginBottom:'20px', cursor:'pointer', color:'rgba(245,240,232,0.65)', fontSize:'13px' }}>
-              <div style={{ width:'34px', height:'34px', borderRadius:'8px', background:'linear-gradient(145deg,#142218 0%,#1E3428 100%)', border:'1px solid rgba(185,150,12,0.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
-                  <path d="M16 3C9.373 3 4 8.373 4 15v4" stroke="url(#fp1)" strokeWidth="2" strokeLinecap="round"/>
-                  <path d="M28 15c0-6.627-5.373-12-12-12" stroke="url(#fp2)" strokeWidth="2" strokeLinecap="round"/>
-                  <path d="M8 19v-4a8 8 0 0 1 16 0v4" stroke="url(#fp3)" strokeWidth="2" strokeLinecap="round"/>
-                  <path d="M12 19v-4a4 4 0 0 1 8 0v4" stroke="url(#fp4)" strokeWidth="2" strokeLinecap="round"/>
-                  <path d="M16 15v8" stroke="url(#fp5)" strokeWidth="2" strokeLinecap="round"/>
-                  <defs>
-                    <linearGradient id="fp1" x1="4" y1="3" x2="4" y2="19" gradientUnits="userSpaceOnUse"><stop stopColor="#22C55E"/><stop offset="1" stopColor="#16A34A"/></linearGradient>
-                    <linearGradient id="fp2" x1="16" y1="3" x2="28" y2="15" gradientUnits="userSpaceOnUse"><stop stopColor="#22C55E"/><stop offset="1" stopColor="#B9960C"/></linearGradient>
-                    <linearGradient id="fp3" x1="8" y1="11" x2="24" y2="19" gradientUnits="userSpaceOnUse"><stop stopColor="#22C55E"/><stop offset="1" stopColor="#B9960C"/></linearGradient>
-                    <linearGradient id="fp4" x1="12" y1="11" x2="20" y2="19" gradientUnits="userSpaceOnUse"><stop stopColor="#B9960C"/><stop offset="1" stopColor="#22C55E"/></linearGradient>
-                    <linearGradient id="fp5" x1="16" y1="15" x2="16" y2="23" gradientUnits="userSpaceOnUse"><stop stopColor="#B9960C"/><stop offset="1" stopColor="#22C55E"/></linearGradient>
-                  </defs>
-                </svg>
-              </div>
-              <div>
-                <div style={{ fontWeight:'600', fontSize:'13px', color:'rgba(245,240,232,0.82)' }}>Use Biometrics</div>
-                <div style={{ fontSize:'10px', color:'rgba(245,240,232,0.36)' }}>Sign in with your fingerprint</div>
-              </div>
-            </button>
-
-            {/* Create Business */}
-            <div className="text-center mb-4">
-              <span style={{ fontSize:'13px', color:'rgba(245,240,232,0.45)' }}>Don't have an account? </span>
-              <button onClick={onShowSignup} style={{ fontSize:'13px', color:'#B9960C', fontWeight:'600', background:'none', border:'none', cursor:'pointer', padding:0, display:'inline-flex', alignItems:'center', gap:'5px' }}>
-                Create Business
-                <span style={{ width:'17px', height:'17px', borderRadius:'50%', border:'1.5px solid #B9960C', display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:'10px', lineHeight:1 }}>→</span>
-              </button>
+            {/* Trust badges */}
+            <div style={{ display:'flex', borderTop:'1px solid #E5E7EB', borderBottom:'1px solid #E5E7EB', padding:'14px 0', marginBottom:'18px' }}>
+              {[['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z M9 12l2 2 4-4','Bank-level\nsecurity'],['M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z','Cloud sync\nacross devices'],['M18 20v-10 M12 20v-16 M6 20v-6','Built for\nbusinesses']].map(([d,label],i) => (
+                <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:'5px', textAlign:'center', padding:'0 4px', borderRight: i<2 ? '1px solid #E5E7EB' : 'none' }}>
+                  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1C4430" strokeWidth="1.75"><path d={d}/></svg>
+                  <span style={{ fontSize:'9px', fontWeight:'500', color:'#6B7280', lineHeight:1.45, whiteSpace:'pre-line' }}>{label}</span>
+                </div>
+              ))}
             </div>
-
-            {/* Encrypted badge */}
-            <div className="flex items-center justify-center gap-1.5">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(245,240,232,0.28)" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-              <span style={{ fontSize:'11px', color:'rgba(245,240,232,0.32)' }}>
-                Your data is <span style={{ color:'#22C55E' }}>encrypted</span> and <span style={{ color:'#0EA5E9' }}>secure.</span>
-              </span>
+            {/* Create account */}
+            <div style={{ textAlign:'center', marginBottom:'20px' }}>
+              <p style={{ fontSize:'12.5px', color:'#6B7280', margin:'0 0 4px' }}>Don't have an account?</p>
+              <button onClick={onShowSignup} style={{ fontSize:'13.5px', fontWeight:'700', color:'#1C4430', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', padding:0 }}>Create one →</button>
+            </div>
+            {/* Footer */}
+            <div style={{ borderTop:'1px solid #E5E7EB', paddingTop:'18px', textAlign:'center' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', marginBottom:'9px' }}>
+                <img src="/logo-mark.png" alt="" style={{ width:'20px', height:'20px', objectFit:'contain' }} />
+                <div>
+                  <div style={{ fontSize:'12px', fontWeight:'700', color:'#1C4430', lineHeight:1 }}>Lista<span style={{ color:'#4A9B72' }}>Ko</span></div>
+                  <div style={{ fontSize:'6px', letterSpacing:'2px', textTransform:'uppercase', color:'#9CA3AF' }}>Business Operating System</div>
+                </div>
+              </div>
+              <div style={{ display:'flex', justifyContent:'center', alignItems:'center', gap:'6px', flexWrap:'wrap', marginBottom:'5px' }}>
+                {['Privacy Policy','Terms of Service','Help Center'].map((l,i,a) => (
+                  <span key={l} style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+                    <span style={{ fontSize:'9.5px', color:'#9CA3AF' }}>{l}</span>
+                    {i < a.length-1 && <span style={{ color:'#E5E7EB' }}>•</span>}
+                  </span>
+                ))}
+              </div>
+              <p style={{ fontSize:'9.5px', color:'#9CA3AF', margin:0 }}>© 2025 ListaKo. All rights reserved.</p>
             </div>
           </div>
         </div>
@@ -1454,9 +1410,10 @@ function SignupScreen({ onBack, onSuccess, showToast }) {
 // ═══════════════════════════════════════════════════════════════
 // LOGIN SCREEN
 // ═══════════════════════════════════════════════════════════════
-function LoginScreen({ onBack, onSuccess, onForgotPassword, showToast }) {
+function LoginScreen({ onBack, onSuccess, onForgotPassword, onShowSignup, showToast }) {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
+  const [showPass, setShowPass] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [lockedUntil, setLockedUntil] = useState(null);
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
@@ -1499,54 +1456,97 @@ function LoginScreen({ onBack, onSuccess, onForgotPassword, showToast }) {
     }
   };
 
+  const S = {
+    card: { width:'100%', maxWidth:'400px', background:'rgba(255,255,255,0.93)', backdropFilter:'blur(14px)', WebkitBackdropFilter:'blur(14px)', borderRadius:'24px', padding:'36px 28px 28px', boxShadow:'0 8px 48px rgba(10,27,18,0.13),0 1px 4px rgba(10,27,18,0.06)' },
+    label: { display:'block', fontSize:'12px', fontWeight:'600', color:'#1C4430', marginBottom:'7px', letterSpacing:'0.15px' },
+    input: { width:'100%', padding:'13px 14px 13px 42px', background:'#fff', border:'1.5px solid #E5E7EB', borderRadius:'12px', fontSize:'14px', color:'#111827', fontFamily:'inherit', outline:'none' },
+    iconL: { position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', color:'#9CA3AF', display:'flex', pointerEvents:'none' },
+    iconR: { position:'absolute', right:'14px', top:'50%', transform:'translateY(-50%)', color:'#9CA3AF', background:'none', border:'none', cursor:'pointer', display:'flex', padding:0 },
+  };
   return (
-    <div className="min-h-screen flex flex-col" style={{ backgroundImage: 'url(/signin-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center top', backgroundRepeat: 'no-repeat' }}>
-      <div className="bg-forest-800 px-4 py-4 flex items-center gap-2.5 flex-shrink-0">
-        <button onClick={onBack} className="text-[15px] font-light" style={{ color: 'rgba(185,150,12,0.5)' }}>
-          ←
-        </button>
-        <LedgerIcon className="w-[18px] h-[18px]" />
-        <h2 className="text-ivory-100 font-playfair text-[15px] font-semibold">Sign In</h2>
-      </div>
-      <div className="flex-1 flex flex-col justify-center px-4 py-5 max-w-md mx-auto w-full">
-        <div className="text-center mb-5">
-          <div className="w-12 h-12 bg-forest-50 dark:bg-surface-dark-card rounded-xl flex items-center justify-center mx-auto mb-2" style={{ border: '1px solid rgba(185,150,12,0.15)' }}>
-            <NavIcon name="lock" size={22} color="#B9960C" />
-          </div>
-          <p className="text-[9.5px] text-gray-400 dark:text-gray-500 font-light">Enter your ListaKo credentials to continue</p>
+    <div style={{ minHeight:'100vh', backgroundImage:'url(/signin-bg.png)', backgroundSize:'cover', backgroundPosition:'center top', backgroundRepeat:'no-repeat', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'40px 20px' }}>
+      <div style={S.card}>
+        {/* Logo */}
+        <div style={{ textAlign:'center', marginBottom:'24px' }}>
+          <img src="/logo-mark.png" alt="ListaKo" style={{ width:'68px', height:'68px', objectFit:'contain', margin:'0 auto 10px', display:'block' }} />
+          <div style={{ fontSize:'24px', fontWeight:'800', letterSpacing:'-0.8px', color:'#1C4430', lineHeight:1, marginBottom:'4px' }}>Lista<span style={{ color:'#4A9B72' }}>Ko</span></div>
+          <div style={{ fontSize:'7.5px', fontWeight:'600', letterSpacing:'3px', textTransform:'uppercase', color:'#6B7280' }}>Business Operating System</div>
         </div>
-        <Field
-          label="Email Address"
-          value={form.email}
-          onChange={(v) => set("email", v)}
-          placeholder="juan@email.com"
-          type="email"
-        />
-        <Field
-          label="Password"
-          value={form.password}
-          onChange={(v) => set("password", v)}
-          placeholder="Your password"
-          type="password"
-        />
-        <button
-          onClick={handleLogin}
-          disabled={loading}
-          className="w-full bg-forest-500 text-ivory-100 font-semibold py-3 rounded-lg disabled:opacity-60 active:scale-95 transition-transform text-[9.5px] tracking-[2px] uppercase mt-1"
-        >
-          {loading ? "Signing in..." : "Sign In"}
+        {/* Heading */}
+        <div style={{ textAlign:'center', marginBottom:'24px' }}>
+          <h1 style={{ fontSize:'22px', fontWeight:'700', letterSpacing:'-0.5px', color:'#111827', margin:'0 0 8px', lineHeight:1.15 }}>Welcome back.</h1>
+          <p style={{ fontSize:'12.5px', color:'#6B7280', lineHeight:1.65, margin:0 }}>Sign in to access your business dashboard,<br/>manage operations, and grow with confidence.</p>
+        </div>
+        {/* Email */}
+        <div style={{ marginBottom:'14px' }}>
+          <label style={S.label}>Email address</label>
+          <div style={{ position:'relative' }}>
+            <span style={S.iconL}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></span>
+            <input type="email" value={form.email} onChange={e => set('email', e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Enter your email" style={S.input} />
+          </div>
+        </div>
+        {/* Password */}
+        <div style={{ marginBottom:'6px' }}>
+          <label style={S.label}>Password</label>
+          <div style={{ position:'relative' }}>
+            <span style={S.iconL}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+            <input type={showPass ? 'text' : 'password'} value={form.password} onChange={e => set('password', e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Enter your password" style={{ ...S.input, paddingRight:'42px' }} />
+            <button type="button" onClick={() => setShowPass(p => !p)} style={S.iconR}>
+              {showPass ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+              : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+            </button>
+          </div>
+        </div>
+        {/* Forgot */}
+        <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:'18px' }}>
+          <button onClick={onForgotPassword} style={{ fontSize:'12px', fontWeight:'600', color:'#1C4430', background:'none', border:'none', cursor:'pointer', textDecoration:'underline', textUnderlineOffset:'2px', fontFamily:'inherit', padding:0 }}>Forgot password?</button>
+        </div>
+        {/* Sign In */}
+        <button onClick={handleLogin} disabled={loading} style={{ width:'100%', padding:'14px 20px', background: loading ? 'rgba(28,68,48,0.6)' : '#1C4430', color:'#fff', border:'none', borderRadius:'12px', fontSize:'15px', fontWeight:'600', cursor: loading ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', fontFamily:'inherit', marginBottom:'16px' }}>
+          {loading ? 'Signing in…' : <><span>Sign In</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></>}
         </button>
-        <button
-          onClick={onForgotPassword}
-          className="text-center text-[9.5px] text-gold-400 font-normal py-3 self-center"
-          style={{ borderBottom: '1px solid rgba(184,150,12,0.18)', paddingBottom: '1px' }}
-        >
-          Forgot your password?
+        {/* OR */}
+        <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'12px', fontSize:'10px', fontWeight:'600', letterSpacing:'1.5px', textTransform:'uppercase', color:'#9CA3AF' }}>
+          <div style={{ flex:1, height:'1px', background:'#E5E7EB' }}/> or <div style={{ flex:1, height:'1px', background:'#E5E7EB' }}/>
+        </div>
+        {/* Google */}
+        <button style={{ width:'100%', padding:'12px 20px', background:'#fff', border:'1.5px solid #E5E7EB', borderRadius:'12px', fontSize:'13.5px', fontWeight:'500', color:'#111827', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', fontFamily:'inherit', marginBottom:'22px' }}>
+          <svg width="17" height="17" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+          Continue with Google
         </button>
-        <div className="w-px h-4 bg-ivory-300 dark:bg-forest-600 mx-auto my-3" />
-        <p className="text-center text-[8.5px] text-gray-400 dark:text-gray-500 font-light leading-relaxed">
-          No account? Contact your store owner<br />to receive an invitation.
-        </p>
+        {/* Trust badges */}
+        <div style={{ display:'flex', borderTop:'1px solid #E5E7EB', borderBottom:'1px solid #E5E7EB', padding:'14px 0', marginBottom:'18px' }}>
+          {[['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z M9 12l2 2 4-4','Bank-level\nsecurity'],['M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z','Cloud sync\nacross devices'],['M18 20v-10 M12 20v-16 M6 20v-6','Built for\nbusinesses']].map(([d,label],i) => (
+            <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:'5px', textAlign:'center', padding:'0 4px', borderRight: i<2 ? '1px solid #E5E7EB' : 'none' }}>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1C4430" strokeWidth="1.75"><path d={d}/></svg>
+              <span style={{ fontSize:'9px', fontWeight:'500', color:'#6B7280', lineHeight:1.45, whiteSpace:'pre-line' }}>{label}</span>
+            </div>
+          ))}
+        </div>
+        {/* Create account */}
+        <div style={{ textAlign:'center', marginBottom:'20px' }}>
+          <p style={{ fontSize:'12.5px', color:'#6B7280', margin:'0 0 4px' }}>Don't have an account?</p>
+          <button onClick={onShowSignup || onBack} style={{ fontSize:'13.5px', fontWeight:'700', color:'#1C4430', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', padding:0 }}>Create one →</button>
+        </div>
+        {/* Footer */}
+        <div style={{ borderTop:'1px solid #E5E7EB', paddingTop:'18px', textAlign:'center' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', marginBottom:'9px' }}>
+            <img src="/logo-mark.png" alt="" style={{ width:'20px', height:'20px', objectFit:'contain' }} />
+            <div>
+              <div style={{ fontSize:'12px', fontWeight:'700', color:'#1C4430', lineHeight:1 }}>Lista<span style={{ color:'#4A9B72' }}>Ko</span></div>
+              <div style={{ fontSize:'6px', letterSpacing:'2px', textTransform:'uppercase', color:'#9CA3AF' }}>Business Operating System</div>
+            </div>
+          </div>
+          <div style={{ display:'flex', justifyContent:'center', alignItems:'center', gap:'6px', flexWrap:'wrap', marginBottom:'5px' }}>
+            {['Privacy Policy','Terms of Service','Help Center'].map((l,i,a) => (
+              <span key={l} style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+                <span style={{ fontSize:'9.5px', color:'#9CA3AF' }}>{l}</span>
+                {i < a.length-1 && <span style={{ color:'#E5E7EB' }}>•</span>}
+              </span>
+            ))}
+          </div>
+          <p style={{ fontSize:'9.5px', color:'#9CA3AF', margin:0 }}>© 2025 ListaKo. All rights reserved.</p>
+        </div>
       </div>
     </div>
   );
@@ -8887,6 +8887,7 @@ export default function App() {
           onBack={() => setScreen("landing")}
           onSuccess={() => {}}
           onForgotPassword={() => setScreen("forgot")}
+          onShowSignup={() => setScreen("signup")}
           showToast={showToast}
         />
       )}
