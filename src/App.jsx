@@ -940,7 +940,7 @@ function LandingScreen({ onShowSignup, onShowLogin, onForgotPassword, showToast 
   };
 
   return (
-    <div style={{ background: '#07100A', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }} className="relative overflow-hidden flex flex-col">
+    <div style={{ backgroundImage: 'url(/signin-bg.png)', backgroundSize: 'cover', backgroundPosition: 'center', backgroundRepeat: 'no-repeat', minHeight: '100vh', fontFamily: 'Inter, sans-serif' }} className="relative overflow-hidden flex flex-col">
 
       {/* Gold arc decoration (top-right) */}
       <svg className="absolute pointer-events-none" style={{ top: 0, right: 0, width: '55%', height: '70%', zIndex: 0, opacity: 0.7 }} viewBox="0 0 600 480" fill="none" preserveAspectRatio="xMaxYMin meet">
@@ -954,21 +954,21 @@ function LandingScreen({ onShowSignup, onShowLogin, onForgotPassword, showToast 
         </defs>
       </svg>
 
-      {/* Subtle radial glow */}
-      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(ellipse at 72% 8%, rgba(185,150,12,0.07) 0%, transparent 40%), radial-gradient(ellipse at 20% 90%, rgba(26,52,40,0.18) 0%, transparent 45%)' }} />
+      {/* Light overlay to unify background tone */}
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'rgba(240,235,218,0.35)' }} />
 
       {/* ─── HEADER ─── */}
       <header className="relative z-10 flex items-center justify-between px-6 md:px-10 pt-5 pb-3">
         <div className="flex flex-col">
           <div className="flex items-center gap-2.5">
             <LogoMark size={40} />
-            <h1 className="font-playfair text-[22px] font-semibold text-white tracking-tight leading-none">
+            <h1 className="font-playfair text-[22px] font-semibold tracking-tight leading-none" style={{ color: '#0A1B1E' }}>
               Lista<em className="italic" style={{ color: '#B9960C' }}>Ko</em>
             </h1>
           </div>
           <p className="text-[7px] font-semibold tracking-[3px] uppercase mt-0.5 ml-[50px]" style={{ color: 'rgba(185,150,12,0.4)' }}>Business Operating System</p>
         </div>
-        <button className="hidden md:flex items-center gap-1.5 text-[11px] font-light" style={{ color: 'rgba(245,240,232,0.45)' }}>
+        <button className="hidden md:flex items-center gap-1.5 text-[11px] font-light" style={{ color: 'rgba(10,27,30,0.55)' }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
           English
           <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
@@ -988,13 +988,13 @@ function LandingScreen({ onShowSignup, onShowLogin, onForgotPassword, showToast 
           </div>
 
           {/* Headline */}
-          <h2 className="font-playfair font-bold text-white mb-4" style={{ fontSize: 'clamp(30px, 4.2vw, 54px)', lineHeight: '1.08', letterSpacing: '-0.5px' }}>
+          <h2 className="font-playfair font-bold mb-4" style={{ fontSize: 'clamp(30px, 4.2vw, 54px)', lineHeight: '1.08', letterSpacing: '-0.5px', color: '#0A1B1E' }}>
             Run your<br />business with<br />
             <em className="italic" style={{ color: '#B9960C' }}>confidence.</em>
           </h2>
 
           {/* Body */}
-          <p className="mb-6 leading-relaxed" style={{ color: 'rgba(245,240,232,0.52)', fontSize: '13px', maxWidth: '270px' }}>
+          <p className="mb-6 leading-relaxed" style={{ color: 'rgba(10,27,30,0.68)', fontSize: '13px', maxWidth: '270px' }}>
             Everything your business needs—<br />
             POS, inventory, staff, reports,<br />
             and growth—in one powerful<br />
@@ -1013,8 +1013,8 @@ function LandingScreen({ onShowSignup, onShowLogin, onForgotPassword, showToast 
                   {icon}
                 </div>
                 <div>
-                  <p className="font-semibold text-white" style={{ fontSize: '12px' }}>{title}</p>
-                  <p style={{ fontSize: '10px', color: 'rgba(245,240,232,0.4)' }}>{sub}</p>
+                  <p className="font-semibold" style={{ fontSize: '12px', color: '#0A1B1E' }}>{title}</p>
+                  <p style={{ fontSize: '10px', color: 'rgba(10,27,30,0.55)' }}>{sub}</p>
                 </div>
               </div>
             ))}
@@ -1108,26 +1108,26 @@ function LandingScreen({ onShowSignup, onShowLogin, onForgotPassword, showToast 
 
           {/* Trusted by */}
           <div>
-            <p className="font-semibold uppercase tracking-[2px] mb-2.5" style={{ fontSize:'8.5px', color:'rgba(245,240,232,0.3)', textAlign:'left' }}>
+            <p className="font-semibold uppercase tracking-[2px] mb-2.5" style={{ fontSize:'8.5px', color:'rgba(10,27,30,0.5)', textAlign:'left' }}>
               Trusted by thousands of Filipino businesses nationwide
             </p>
             <div className="flex items-center gap-4 flex-wrap mb-3">
               {['PUREGOLD','AllDay','MiniStop','WalterMart','Robinsons'].map(b=>(
-                <span key={b} style={{ fontSize:'9px', fontWeight:'700', color:'rgba(245,240,232,0.28)', letterSpacing:'0.3px' }}>{b}</span>
+                <span key={b} style={{ fontSize:'9px', fontWeight:'700', color:'rgba(10,27,30,0.38)', letterSpacing:'0.3px' }}>{b}</span>
               ))}
             </div>
             <div className="flex items-center gap-1.5">
               <div className="flex gap-px">
                 {[1,2,3,4,5].map(i=><span key={i} style={{ color:'#B9960C', fontSize:'14px', lineHeight:1 }}>★</span>)}
               </div>
-              <span style={{ fontSize:'11px', fontWeight:'600', color:'rgba(245,240,232,0.75)' }}>4.9/5 average rating</span>
+              <span style={{ fontSize:'11px', fontWeight:'600', color:'rgba(10,27,30,0.8)' }}>4.9/5 average rating</span>
             </div>
           </div>
 
           {/* Mobile-only CTA (hidden on desktop) */}
           <div className="flex flex-col gap-2 mt-6 md:hidden">
             <button onClick={onShowLogin} style={{ background:'#B9960C', color:'#060E08', fontWeight:'700', padding:'13px', borderRadius:'10px', fontSize:'13px', border:'none', cursor:'pointer' }}>Sign In →</button>
-            <button onClick={onShowSignup} style={{ background:'transparent', color:'rgba(245,240,232,0.6)', padding:'11px', borderRadius:'10px', fontSize:'12px', border:'1px solid rgba(185,150,12,0.22)', cursor:'pointer', letterSpacing:'1px' }}>Create Business</button>
+            <button onClick={onShowSignup} style={{ background:'transparent', color:'rgba(10,27,30,0.7)', padding:'11px', borderRadius:'10px', fontSize:'12px', border:'1px solid rgba(10,27,30,0.25)', cursor:'pointer', letterSpacing:'1px' }}>Create Business</button>
           </div>
         </div>
 
