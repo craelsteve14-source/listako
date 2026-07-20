@@ -1,4 +1,4 @@
-const CACHE_NAME = "listako-v6";
+const CACHE_NAME = "listako-v7";
 const OFFLINE_URL = "/";
 
 const PRECACHE_URLS = [
