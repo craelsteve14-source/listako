@@ -1513,10 +1513,15 @@ function LoginScreen({ onBack, onSuccess, onForgotPassword, onShowSignup, showTo
           </div>
         </div>
 
-        {/* Sign In */}
-        <button onClick={handleLogin} disabled={loading} style={{ width:'100%', padding:'15px 20px', background: loading ? 'rgba(28,68,48,0.6)' : C.forest, color:'#fff', border:'none', borderRadius:'12px', fontSize:'15px', fontWeight:'600', letterSpacing:'0.1px', cursor: loading ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', fontFamily:'inherit', marginBottom:'20px', transition:'filter 0.15s' }}>
-          {loading ? 'Signing in…' : <><span>Sign In</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></>}
-        </button>
+        {/* Sign In + Create a Business */}
+        <div style={{ display:'flex', flexDirection:'column', gap:'8px', marginBottom:'20px' }}>
+          <button onClick={handleLogin} disabled={loading} style={{ width:'100%', padding:'15px 20px', background: loading ? 'rgba(28,68,48,0.6)' : C.forest, color:'#fff', border:'none', borderRadius:'12px', fontSize:'15px', fontWeight:'600', letterSpacing:'0.1px', cursor: loading ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', fontFamily:'inherit', transition:'filter 0.15s' }}>
+            {loading ? 'Signing in…' : <><span>Sign In</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></>}
+          </button>
+          <button onClick={onShowSignup || onBack} style={{ width:'100%', padding:'13px 20px', background:'#fff', border:`1.5px solid ${C.border}`, borderRadius:'12px', fontSize:'14px', fontWeight:'500', color:C.text, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit' }}>
+            Create a Business
+          </button>
+        </div>
 
         {/* OR */}
         <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'16px', fontSize:'10.5px', fontWeight:'600', letterSpacing:'1.5px', textTransform:'uppercase', color:C.muted }}>
