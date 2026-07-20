@@ -299,7 +299,7 @@ function OTPScreen({ email, type, onBack, onSuccess, showToast }) {
   };
 
   return (
-    <div className="min-h-screen bg-ivory-100/[.88] flex flex-col">
+    <div className="min-h-screen bg-ivory-100 flex flex-col">
       <div className="bg-forest-800 px-4 py-4 flex items-center gap-2.5">
         <button onClick={onBack} className="text-[15px] font-light" style={{ color: 'rgba(184,150,12,0.5)' }}>←</button>
         <LedgerIcon className="w-[18px] h-[18px]" color="rgba(245,240,232,0.45)" />
@@ -356,7 +356,7 @@ function OTPScreen({ email, type, onBack, onSuccess, showToast }) {
 // ═══════════════════════════════════════════════════════════════
 function PendingScreen({ business, onLogout }) {
   return (
-    <div className="min-h-screen bg-ivory-100/[.88] dark:bg-surface-dark flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm text-center">
         <div className="w-20 h-20 bg-yellow-100 dark:bg-yellow-900/30 rounded-3xl flex items-center justify-center mx-auto mb-4 text-4xl">
           <NavIcon name="clock" size={48} color="#d97706" />
@@ -394,7 +394,7 @@ function PendingScreen({ business, onLogout }) {
 // ═══════════════════════════════════════════════════════════════
 function RejectedScreen({ business, onLogout }) {
   return (
-    <div className="min-h-screen bg-ivory-100/[.88] dark:bg-surface-dark flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm text-center">
         <div className="w-20 h-20 bg-red-100 dark:bg-red-900/30 rounded-3xl flex items-center justify-center mx-auto mb-4 text-4xl">
           <NavIcon name="x" size={48} color="#dc2626" />
@@ -433,7 +433,7 @@ function RejectedScreen({ business, onLogout }) {
 // ═══════════════════════════════════════════════════════════════
 function TrialExpiredScreen({ business, onLogout }) {
   return (
-    <div className="min-h-screen bg-ivory-100/[.88] dark:bg-surface-dark flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
           <div className="w-20 h-20 bg-orange-100 dark:bg-orange-900/30 rounded-3xl flex items-center justify-center mx-auto mb-4 text-4xl">
@@ -602,7 +602,7 @@ function SuperAdminPanel({ showToast }) {
   const FILTERS = ["all", "pending", "approved", "rejected", "suspended"];
 
   return (
-    <div className="min-h-screen bg-ivory-100/[.88] dark:bg-surface-dark flex flex-col max-w-lg mx-auto">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col max-w-lg mx-auto">
       {/* Header */}
       <div className="px-4 pt-8 pb-4 relative overflow-hidden bg-surface-dark">
         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 80% 15%, rgba(185,150,12,0.07) 0%, transparent 55%)' }} />
@@ -1312,7 +1312,7 @@ function SignupScreen({ onBack, onSuccess, showToast }) {
   };
 
   return (
-    <div className="min-h-screen bg-ivory-100/[.88] dark:bg-surface-dark flex flex-col">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col">
       <div className="bg-forest-800 px-4 py-4 flex items-center gap-2.5">
         <button onClick={step === 1 ? onBack : () => setStep(1)} className="text-[15px] font-light" style={{ color: 'rgba(185,150,12,0.5)' }}>←</button>
         <LedgerIcon className="w-[18px] h-[18px]" />
@@ -1598,7 +1598,7 @@ function ForgotPasswordScreen({ onBack, onVerifyOTP, showToast }) {
   };
 
   return (
-    <div className="min-h-screen bg-ivory-100/[.88] dark:bg-surface-dark flex flex-col">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col">
       <div className="bg-forest-800 px-4 py-4 flex items-center gap-2.5">
         <button onClick={onBack} className="text-[15px] font-light" style={{ color: 'rgba(185,150,12,0.5)' }}>←</button>
         <LedgerIcon className="w-[18px] h-[18px]" />
@@ -3946,7 +3946,7 @@ function OwnerDashboard({ profile, business, isSuperAdmin, onLogout, showToast }
   const ALL_TABS = [...MAIN_TABS.filter(t => t.key !== "more"), ...MORE_TABS];
 
   return (
-    <div className="min-h-screen bg-ivory-100/[.88] dark:bg-surface-dark flex flex-col max-w-lg mx-auto">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col max-w-lg mx-auto">
       <TrialBanner business={business} />
       <div className="bg-forest-800 dark:bg-surface-dark px-4 pt-8 pb-4 relative overflow-hidden">
         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 85% 10%, rgba(185,150,12,0.09) 0%, transparent 55%)' }} />
@@ -6178,7 +6178,7 @@ function CashierPOS({ profile, business, branch, onLogout, showToast }) {
   ];
 
   return (
-    <div className="min-h-screen bg-ivory-100/[.88] dark:bg-surface-dark flex flex-col max-w-lg mx-auto">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col max-w-lg mx-auto">
       {/* Header */}
       <div className="bg-forest-800 dark:bg-surface-dark px-4 pt-5 pb-4 flex-shrink-0">
         <div className="flex items-center justify-between mb-1">
@@ -7687,7 +7687,7 @@ function InventoryStaffPanel({ profile, business, branch, onLogout, showToast })
     "border-gray-100 dark:border-forest-600";
 
   return (
-    <div className="min-h-screen bg-ivory-100/[.88] dark:bg-surface-dark flex flex-col max-w-lg mx-auto">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col max-w-lg mx-auto">
       <div className="bg-forest-800 dark:bg-surface-dark px-4 pt-5 pb-4 flex-shrink-0">
         <div className="flex items-center justify-between mb-1">
           <div>
@@ -8158,10 +8158,10 @@ function BranchManagerDashboard({ profile, business, branch, onLogout, showToast
     { key: "transfers", icon: "transfers", label: "Transfers" },
   ];
 
-  if (loading) return <div className="min-h-screen bg-ivory-100/[.88] dark:bg-surface-dark flex items-center justify-center"><Spinner /></div>;
+  if (loading) return <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex items-center justify-center"><Spinner /></div>;
 
   return (
-    <div className="min-h-screen bg-ivory-100/[.88] dark:bg-surface-dark flex flex-col max-w-lg mx-auto">
+    <div className="min-h-screen bg-ivory-100 dark:bg-surface-dark flex flex-col max-w-lg mx-auto">
       <div className="bg-forest-800 dark:bg-surface-dark px-4 pt-8 pb-4 relative overflow-hidden">
         <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse at 85% 10%, rgba(185,150,12,0.09) 0%, transparent 55%)' }} />
         <div className="flex items-start justify-between mb-1 relative z-10">
@@ -8461,7 +8461,7 @@ function StaffDashboard({ profile, business, branch, onLogout, showToast }) {
   }
 
   return (
-    <div className="min-h-screen bg-ivory-100/[.88] flex flex-col items-center justify-center px-6">
+    <div className="min-h-screen bg-ivory-100 flex flex-col items-center justify-center px-6">
       <div className="w-full max-w-sm text-center">
         <div className="w-20 h-20 bg-forest-100 rounded-3xl flex items-center justify-center mx-auto mb-4">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
