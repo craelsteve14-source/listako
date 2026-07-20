@@ -1468,8 +1468,8 @@ function LoginScreen({ onBack, onSuccess, onForgotPassword, onShowSignup, showTo
 
         {/* Logo */}
         <div style={{ textAlign:'center', marginBottom:'36px' }}>
-          <img src="/logo-mark.png" alt="ListaKo" style={{ width:'72px', height:'72px', objectFit:'contain', display:'block', margin:'0 auto 14px' }} />
-          <div style={{ fontSize:'30px', fontWeight:'800', letterSpacing:'-0.8px', color:C.forest, lineHeight:1, marginBottom:'6px' }}>Lista<span style={{ color:C.sage }}>Ko</span></div>
+          <img src="/logo-mark.png" alt="ListaKo" style={{ width:'100px', height:'100px', objectFit:'contain', display:'block', margin:'0 auto -6px' }} />
+          <div style={{ fontSize:'43px', fontWeight:'800', letterSpacing:'-1px', color:C.forest, lineHeight:1, marginBottom:'6px' }}>Lista<span style={{ color:C.sage }}>Ko</span></div>
           <div style={{ fontSize:'8.5px', fontWeight:'600', letterSpacing:'3px', textTransform:'uppercase', color:C.muted }}>Business Operating System</div>
         </div>
 
