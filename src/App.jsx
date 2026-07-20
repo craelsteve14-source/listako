@@ -1456,97 +1456,115 @@ function LoginScreen({ onBack, onSuccess, onForgotPassword, onShowSignup, showTo
     }
   };
 
-  const S = {
-    card: { width:'100%', maxWidth:'400px', background:'rgba(255,255,255,0.93)', backdropFilter:'blur(14px)', WebkitBackdropFilter:'blur(14px)', borderRadius:'24px', padding:'36px 28px 28px', boxShadow:'0 8px 48px rgba(10,27,18,0.13),0 1px 4px rgba(10,27,18,0.06)' },
-    label: { display:'block', fontSize:'12px', fontWeight:'600', color:'#1C4430', marginBottom:'7px', letterSpacing:'0.15px' },
-    input: { width:'100%', padding:'13px 14px 13px 42px', background:'#fff', border:'1.5px solid #E5E7EB', borderRadius:'12px', fontSize:'14px', color:'#111827', fontFamily:'inherit', outline:'none' },
-    iconL: { position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', color:'#9CA3AF', display:'flex', pointerEvents:'none' },
-    iconR: { position:'absolute', right:'14px', top:'50%', transform:'translateY(-50%)', color:'#9CA3AF', background:'none', border:'none', cursor:'pointer', display:'flex', padding:0 },
-  };
+  const [emailFocus, setEmailFocus] = useState(false);
+  const [passFocus, setPassFocus] = useState(false);
+
+  const C = { forest:'#1C4430', sage:'#4A9B72', muted:'#6B7280', border:'#E5E7EB', text:'#111827', ring:'rgba(28,68,48,0.15)' };
+  const inp = (focused) => ({ width:'100%', padding:'13px 14px 13px 44px', background:'#fff', border:`1.5px solid ${focused ? C.forest : C.border}`, borderRadius:'12px', fontSize:'14px', color:C.text, fontFamily:'inherit', outline:'none', boxShadow: focused ? `0 0 0 3px ${C.ring}` : 'none', transition:'border-color 0.15s ease, box-shadow 0.15s ease' });
+
   return (
-    <div style={{ minHeight:'100vh', backgroundImage:'url(/signin-bg.png)', backgroundSize:'cover', backgroundPosition:'center top', backgroundRepeat:'no-repeat', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'40px 20px' }}>
-      <div style={S.card}>
+    <div style={{ minHeight:'100vh', backgroundImage:'url(/signin-bg.png)', backgroundSize:'cover', backgroundPosition:'center top', backgroundRepeat:'no-repeat', backgroundColor:'#EDE8D8', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'48px 24px' }}>
+      <div style={{ width:'100%', maxWidth:'400px', background:'rgba(255,255,255,0.92)', backdropFilter:'blur(14px)', WebkitBackdropFilter:'blur(14px)', borderRadius:'24px', padding:'40px 32px 36px', boxShadow:'0 8px 48px rgba(10,27,18,0.13),0 1px 4px rgba(10,27,18,0.06)' }}>
+
         {/* Logo */}
-        <div style={{ textAlign:'center', marginBottom:'24px' }}>
-          <img src="/logo-mark.png" alt="ListaKo" style={{ width:'68px', height:'68px', objectFit:'contain', margin:'0 auto 10px', display:'block' }} />
-          <div style={{ fontSize:'24px', fontWeight:'800', letterSpacing:'-0.8px', color:'#1C4430', lineHeight:1, marginBottom:'4px' }}>Lista<span style={{ color:'#4A9B72' }}>Ko</span></div>
-          <div style={{ fontSize:'7.5px', fontWeight:'600', letterSpacing:'3px', textTransform:'uppercase', color:'#6B7280' }}>Business Operating System</div>
+        <div style={{ textAlign:'center', marginBottom:'36px' }}>
+          <img src="/logo-mark.png" alt="ListaKo" style={{ width:'72px', height:'72px', objectFit:'contain', display:'block', margin:'0 auto 14px' }} />
+          <div style={{ fontSize:'30px', fontWeight:'800', letterSpacing:'-0.8px', color:C.forest, lineHeight:1, marginBottom:'6px' }}>Lista<span style={{ color:C.sage }}>Ko</span></div>
+          <div style={{ fontSize:'8.5px', fontWeight:'600', letterSpacing:'3px', textTransform:'uppercase', color:C.muted }}>Business Operating System</div>
         </div>
+
         {/* Heading */}
-        <div style={{ textAlign:'center', marginBottom:'24px' }}>
-          <h1 style={{ fontSize:'22px', fontWeight:'700', letterSpacing:'-0.5px', color:'#111827', margin:'0 0 8px', lineHeight:1.15 }}>Welcome back.</h1>
-          <p style={{ fontSize:'12.5px', color:'#6B7280', lineHeight:1.65, margin:0 }}>Sign in to access your business dashboard,<br/>manage operations, and grow with confidence.</p>
+        <div style={{ textAlign:'center', marginBottom:'32px' }}>
+          <h1 style={{ fontSize:'28px', fontWeight:'700', letterSpacing:'-0.5px', color:C.text, margin:'0 0 10px', lineHeight:1.15 }}>Welcome back.</h1>
+          <p style={{ fontSize:'13px', color:C.muted, lineHeight:1.65, margin:0 }}>Sign in to access your business dashboard,<br/>manage operations, and grow with confidence.</p>
         </div>
-        {/* Email */}
-        <div style={{ marginBottom:'14px' }}>
-          <label style={S.label}>Email address</label>
-          <div style={{ position:'relative' }}>
-            <span style={S.iconL}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></span>
-            <input type="email" value={form.email} onChange={e => set('email', e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Enter your email" style={S.input} />
+
+        {/* Form */}
+        <div style={{ display:'flex', flexDirection:'column', gap:'18px', marginBottom:'20px' }}>
+          {/* Email */}
+          <div style={{ display:'flex', flexDirection:'column', gap:'7px' }}>
+            <label style={{ fontSize:'12.5px', fontWeight:'600', color:C.forest, letterSpacing:'0.15px' }}>Email address</label>
+            <div style={{ position:'relative' }}>
+              <span style={{ position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', color:C.muted, display:'flex', pointerEvents:'none' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+              </span>
+              <input type="email" value={form.email} onChange={e => set('email', e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} onFocus={() => setEmailFocus(true)} onBlur={() => setEmailFocus(false)} placeholder="Enter your email" style={inp(emailFocus)} />
+            </div>
+          </div>
+
+          {/* Password */}
+          <div style={{ display:'flex', flexDirection:'column', gap:'7px' }}>
+            <label style={{ fontSize:'12.5px', fontWeight:'600', color:C.forest, letterSpacing:'0.15px' }}>Password</label>
+            <div style={{ position:'relative' }}>
+              <span style={{ position:'absolute', left:'14px', top:'50%', transform:'translateY(-50%)', color:C.muted, display:'flex', pointerEvents:'none' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </span>
+              <input type={showPass ? 'text' : 'password'} value={form.password} onChange={e => set('password', e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} onFocus={() => setPassFocus(true)} onBlur={() => setPassFocus(false)} placeholder="Enter your password" style={{ ...inp(passFocus), paddingRight:'44px' }} />
+              <button type="button" onClick={() => setShowPass(p => !p)} style={{ position:'absolute', right:'14px', top:'50%', transform:'translateY(-50%)', color:C.muted, background:'none', border:'none', cursor:'pointer', display:'flex', padding:0 }}>
+                {showPass
+                  ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                  : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
+              </button>
+            </div>
+            {/* Forgot password — inside the password field group */}
+            <div style={{ display:'flex', justifyContent:'flex-end', marginTop:'2px' }}>
+              <button onClick={onForgotPassword} style={{ fontSize:'12.5px', fontWeight:'600', color:C.forest, background:'none', border:'none', cursor:'pointer', textDecoration:'underline', textUnderlineOffset:'2px', fontFamily:'inherit', padding:0 }}>Forgot password?</button>
+            </div>
           </div>
         </div>
-        {/* Password */}
-        <div style={{ marginBottom:'6px' }}>
-          <label style={S.label}>Password</label>
-          <div style={{ position:'relative' }}>
-            <span style={S.iconL}><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
-            <input type={showPass ? 'text' : 'password'} value={form.password} onChange={e => set('password', e.target.value)} onKeyDown={e => e.key === 'Enter' && handleLogin()} placeholder="Enter your password" style={{ ...S.input, paddingRight:'42px' }} />
-            <button type="button" onClick={() => setShowPass(p => !p)} style={S.iconR}>
-              {showPass ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-              : <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>}
-            </button>
-          </div>
-        </div>
-        {/* Forgot */}
-        <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:'18px' }}>
-          <button onClick={onForgotPassword} style={{ fontSize:'12px', fontWeight:'600', color:'#1C4430', background:'none', border:'none', cursor:'pointer', textDecoration:'underline', textUnderlineOffset:'2px', fontFamily:'inherit', padding:0 }}>Forgot password?</button>
-        </div>
+
         {/* Sign In */}
-        <button onClick={handleLogin} disabled={loading} style={{ width:'100%', padding:'14px 20px', background: loading ? 'rgba(28,68,48,0.6)' : '#1C4430', color:'#fff', border:'none', borderRadius:'12px', fontSize:'15px', fontWeight:'600', cursor: loading ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', fontFamily:'inherit', marginBottom:'16px' }}>
+        <button onClick={handleLogin} disabled={loading} style={{ width:'100%', padding:'15px 20px', background: loading ? 'rgba(28,68,48,0.6)' : C.forest, color:'#fff', border:'none', borderRadius:'12px', fontSize:'15px', fontWeight:'600', letterSpacing:'0.1px', cursor: loading ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', fontFamily:'inherit', marginBottom:'20px', transition:'filter 0.15s' }}>
           {loading ? 'Signing in…' : <><span>Sign In</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg></>}
         </button>
+
         {/* OR */}
-        <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'12px', fontSize:'10px', fontWeight:'600', letterSpacing:'1.5px', textTransform:'uppercase', color:'#9CA3AF' }}>
-          <div style={{ flex:1, height:'1px', background:'#E5E7EB' }}/> or <div style={{ flex:1, height:'1px', background:'#E5E7EB' }}/>
+        <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'16px', fontSize:'10.5px', fontWeight:'600', letterSpacing:'1.5px', textTransform:'uppercase', color:C.muted }}>
+          <div style={{ flex:1, height:'1px', background:C.border }}/> or <div style={{ flex:1, height:'1px', background:C.border }}/>
         </div>
+
         {/* Google */}
-        <button style={{ width:'100%', padding:'12px 20px', background:'#fff', border:'1.5px solid #E5E7EB', borderRadius:'12px', fontSize:'13.5px', fontWeight:'500', color:'#111827', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', fontFamily:'inherit', marginBottom:'22px' }}>
-          <svg width="17" height="17" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+        <button style={{ width:'100%', padding:'13px 20px', background:'#fff', border:`1.5px solid ${C.border}`, borderRadius:'12px', fontSize:'14px', fontWeight:'500', color:C.text, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:'10px', fontFamily:'inherit', marginBottom:'28px', transition:'background 0.15s' }}>
+          <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
           Continue with Google
         </button>
+
         {/* Trust badges */}
-        <div style={{ display:'flex', borderTop:'1px solid #E5E7EB', borderBottom:'1px solid #E5E7EB', padding:'14px 0', marginBottom:'18px' }}>
+        <div style={{ display:'flex', borderTop:`1px solid ${C.border}`, borderBottom:`1px solid ${C.border}`, padding:'20px 0', marginBottom:'28px' }}>
           {[['M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z M9 12l2 2 4-4','Bank-level\nsecurity'],['M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z','Cloud sync\nacross devices'],['M18 20v-10 M12 20v-16 M6 20v-6','Built for\nbusinesses']].map(([d,label],i) => (
-            <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:'5px', textAlign:'center', padding:'0 4px', borderRight: i<2 ? '1px solid #E5E7EB' : 'none' }}>
-              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#1C4430" strokeWidth="1.75"><path d={d}/></svg>
-              <span style={{ fontSize:'9px', fontWeight:'500', color:'#6B7280', lineHeight:1.45, whiteSpace:'pre-line' }}>{label}</span>
+            <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:'7px', textAlign:'center', padding:'0 8px', borderRight: i<2 ? `1px solid ${C.border}` : 'none' }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={C.forest} strokeWidth="1.75"><path d={d}/></svg>
+              <span style={{ fontSize:'10px', fontWeight:'500', color:C.muted, lineHeight:1.45, whiteSpace:'pre-line' }}>{label}</span>
             </div>
           ))}
         </div>
+
         {/* Create account */}
-        <div style={{ textAlign:'center', marginBottom:'20px' }}>
-          <p style={{ fontSize:'12.5px', color:'#6B7280', margin:'0 0 4px' }}>Don't have an account?</p>
-          <button onClick={onShowSignup || onBack} style={{ fontSize:'13.5px', fontWeight:'700', color:'#1C4430', background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', padding:0 }}>Create one →</button>
+        <div style={{ textAlign:'center', marginBottom:'36px' }}>
+          <p style={{ fontSize:'13px', color:C.muted, margin:'0 0 5px' }}>Don't have an account?</p>
+          <button onClick={onShowSignup || onBack} style={{ fontSize:'14px', fontWeight:'700', color:C.forest, background:'none', border:'none', cursor:'pointer', fontFamily:'inherit', padding:0 }}>Create one →</button>
         </div>
+
         {/* Footer */}
-        <div style={{ borderTop:'1px solid #E5E7EB', paddingTop:'18px', textAlign:'center' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', marginBottom:'9px' }}>
-            <img src="/logo-mark.png" alt="" style={{ width:'20px', height:'20px', objectFit:'contain' }} />
+        <div style={{ borderTop:`1px solid ${C.border}`, paddingTop:'24px', textAlign:'center' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'9px', marginBottom:'14px' }}>
+            <img src="/logo-mark.png" alt="" style={{ width:'24px', height:'24px', objectFit:'contain' }} />
             <div>
-              <div style={{ fontSize:'12px', fontWeight:'700', color:'#1C4430', lineHeight:1 }}>Lista<span style={{ color:'#4A9B72' }}>Ko</span></div>
-              <div style={{ fontSize:'6px', letterSpacing:'2px', textTransform:'uppercase', color:'#9CA3AF' }}>Business Operating System</div>
+              <div style={{ fontSize:'14px', fontWeight:'700', color:C.forest, lineHeight:1 }}>Lista<span style={{ color:C.sage }}>Ko</span></div>
+              <div style={{ fontSize:'7px', letterSpacing:'2px', textTransform:'uppercase', color:C.muted, marginTop:'3px' }}>Business Operating System</div>
             </div>
           </div>
-          <div style={{ display:'flex', justifyContent:'center', alignItems:'center', gap:'6px', flexWrap:'wrap', marginBottom:'5px' }}>
+          <div style={{ display:'flex', justifyContent:'center', alignItems:'center', gap:'8px', flexWrap:'wrap', marginBottom:'8px' }}>
             {['Privacy Policy','Terms of Service','Help Center'].map((l,i,a) => (
-              <span key={l} style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-                <span style={{ fontSize:'9.5px', color:'#9CA3AF' }}>{l}</span>
-                {i < a.length-1 && <span style={{ color:'#E5E7EB' }}>•</span>}
+              <span key={l} style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                <span style={{ fontSize:'11px', color:C.muted }}>{l}</span>
+                {i < a.length-1 && <span style={{ fontSize:'11px', color:C.border }}>•</span>}
               </span>
             ))}
           </div>
-          <p style={{ fontSize:'9.5px', color:'#9CA3AF', margin:0 }}>© 2025 ListaKo. All rights reserved.</p>
+          <p style={{ fontSize:'11px', color:C.muted, margin:0 }}>© 2025 ListaKo. All rights reserved.</p>
         </div>
+
       </div>
     </div>
   );
